@@ -32,9 +32,7 @@ export default function CategoryFormPage() {
   const categoryId = params.id as string;
   const isNew = categoryId === "new";
 
-  const { data: category } = useAdminCategory(categoryId, {
-    enabled: !isNew,
-  });
+  const { data: category } = useAdminCategory(isNew ? "" : categoryId);
   const updateCategory = useAdminUpdateCategory();
   const createCategory = useAdminCreateCategory();
 
@@ -64,16 +62,22 @@ export default function CategoryFormPage() {
       if (isNew) {
         await createCategory.mutateAsync({
           id: "",
-          ...data,
+          name: data.name,
+          slug: data.slug,
+          description: data.description ?? null,
+          parentCategoryId: data.parentCategoryId ?? null,
         });
         toast.success("Category created successfully");
       } else {
         await updateCategory.mutateAsync({
           id: categoryId,
-          data: {
-            id: categoryId,
-            ...data,
-          },
+            data: {
+              id: categoryId,
+              name: data.name,
+              slug: data.slug,
+              description: data.description ?? null,
+              parentCategoryId: data.parentCategoryId ?? null,
+            },
         });
         toast.success("Category updated successfully");
       }

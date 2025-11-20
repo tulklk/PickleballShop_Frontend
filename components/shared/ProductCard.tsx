@@ -12,6 +12,10 @@ interface ProductCardProps {
   product: ProductListDto | ProductDto;
 }
 
+function isProductDto(product: ProductListDto | ProductDto): product is ProductDto {
+  return "imageUrls" in product;
+}
+
 export function ProductCard({ product }: ProductCardProps) {
   const addCartItem = useAddCartItem();
 
@@ -30,11 +34,10 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   };
 
-  const imageUrl = "primaryImageUrl" in product 
-    ? product.primaryImageUrl 
-    : "imageUrls" in product && product.imageUrls?.[0]
-    ? product.imageUrls[0]
-    : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EProduct Image%3C/text%3E%3C/svg%3E";
+  const imageUrl =
+    product.primaryImageUrl ??
+    (isProductDto(product) ? product.imageUrls?.[0] : undefined) ??
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EProduct Image%3C/text%3E%3C/svg%3E";
 
   const price = product.price;
   const originalPrice = "originalPrice" in product ? product.originalPrice : null;

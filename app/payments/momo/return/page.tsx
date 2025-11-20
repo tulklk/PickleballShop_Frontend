@@ -1,20 +1,19 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
 
-export default function MoMoReturnPage() {
+function MoMoReturnContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
 
   useEffect(() => {
-    // The backend will handle the payment verification
-    // This page just shows the result
     const resultCode = searchParams.get("resultCode");
     if (resultCode === "0") {
       setStatus("success");
@@ -24,7 +23,7 @@ export default function MoMoReturnPage() {
   }, [searchParams]);
 
   return (
-    <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[60vh]">
+    <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-16">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">
@@ -33,13 +32,13 @@ export default function MoMoReturnPage() {
             {status === "error" && "Payment Failed"}
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-center space-y-4">
+        <CardContent className="space-y-4 text-center">
           {status === "loading" && (
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
           )}
           {status === "success" && (
             <>
-              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
+              <CheckCircle2 className="mx-auto h-16 w-16 text-green-500" />
               <p className="text-muted-foreground">
                 Your payment has been processed successfully.
               </p>
@@ -50,11 +49,11 @@ export default function MoMoReturnPage() {
           )}
           {status === "error" && (
             <>
-              <XCircle className="h-16 w-16 text-destructive mx-auto" />
+              <XCircle className="mx-auto h-16 w-16 text-destructive" />
               <p className="text-muted-foreground">
                 Your payment could not be processed. Please try again.
               </p>
-              <div className="flex gap-4 justify-center">
+              <div className="flex justify-center gap-4">
                 <Link href="/checkout">
                   <Button>Try Again</Button>
                 </Link>
@@ -67,6 +66,14 @@ export default function MoMoReturnPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function MoMoReturnPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-20 text-center">Processing payment...</div>}>
+      <MoMoReturnContent />
+    </Suspense>
   );
 }
 

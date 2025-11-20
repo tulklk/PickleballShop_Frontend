@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ProductGrid } from "@/components/shared/ProductGrid";
 import { useProducts, useCategories } from "@/lib/api/hooks";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,14 @@ import {
 } from "@/components/ui/select";
 
 export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-16">Loading products...</div>}>
+      <ProductsPageContent />
+    </Suspense>
+  );
+}
+
+function ProductsPageContent() {
   const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState<string | undefined>(

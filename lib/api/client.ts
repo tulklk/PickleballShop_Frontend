@@ -65,13 +65,19 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers = new Headers({
       "Content-Type": "application/json",
-      ...options.headers,
-    };
+    });
+
+    if (options.headers) {
+      const extraHeaders = new Headers(options.headers as HeadersInit);
+      extraHeaders.forEach((value, key) => {
+        headers.set(key, value);
+      });
+    }
 
     if (this.accessToken) {
-      headers["Authorization"] = `Bearer ${this.accessToken}`;
+      headers.set("Authorization", `Bearer ${this.accessToken}`);
     }
 
     const response = await fetch(url, {
