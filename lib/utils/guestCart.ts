@@ -11,6 +11,8 @@ export interface GuestCartItem extends AddCartItemRequest {
   unitPrice?: number;
 }
 
+export type GuestCartItemInput = Omit<GuestCartItem, "addedAt">;
+
 export function getGuestCart(): GuestCartItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -21,7 +23,7 @@ export function getGuestCart(): GuestCartItem[] {
   }
 }
 
-export function addToGuestCart(item: GuestCartItem): void {
+export function addToGuestCart(item: GuestCartItemInput): void {
   if (typeof window === "undefined") return;
   try {
     const cart = getGuestCart();

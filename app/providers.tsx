@@ -27,12 +27,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
               }
               return failureCount < 1; // Retry tối đa 1 lần
             },
-            onError: (error) => {
-              // Log error nhưng không crash app
-              if (process.env.NODE_ENV === "development") {
-                console.warn("[React Query Error]", error);
-              }
-            },
           },
         },
       })
