@@ -18,6 +18,7 @@ import type {
   UpdateOrderStatusRequest,
   OrderStatus,
   PaymentStatus,
+  GoogleLoginRequest,
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend-1.onrender.com";
@@ -102,6 +103,14 @@ class ApiClient {
     return this.request<AuthResponse>("/api/Auth/login", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  }
+
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    const payload: GoogleLoginRequest = { idToken };
+    return this.request<AuthResponse>("/api/Auth/google-login", {
+      method: "POST",
+      body: JSON.stringify(payload),
     });
   }
 

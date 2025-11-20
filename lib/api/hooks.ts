@@ -46,6 +46,17 @@ export function useRefreshToken() {
   });
 }
 
+export function useGoogleAuthLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idToken: string) => apiClient.loginWithGoogle(idToken),
+    onSuccess: (data) => {
+      apiClient.setAccessToken(data.accessToken);
+      queryClient.setQueryData(["user"], data.user);
+    },
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({

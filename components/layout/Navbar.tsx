@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Menu, Search } from "lucide-react";
+import { ShoppingCart, User, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -10,6 +11,8 @@ import { useCart } from "@/lib/api/hooks";
 import { useLogout } from "@/lib/api/hooks";
 import { useState } from "react";
 import { apiClient } from "@/lib/api/client";
+
+import logo from "@/app/img/logopickleball.png";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -38,12 +41,28 @@ export function Navbar() {
   const cartItemCount = cart?.totalItems || 0;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 w-full border-b border-emerald-100 bg-white/90 backdrop-blur supports-backdrop-filter:bg-white/80">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/" className="text-xl font-bold text-primary">
-              PickleBall Shop
+            <Link href="/" className="flex items-center gap-3">
+              <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 p-1">
+                <Image
+                  src={logo}
+                  alt="IKA Sport Pickleball"
+                  priority
+                  className="object-contain"
+                  sizes="40px"
+                />
+              </span>
+              <div className="leading-tight">
+                <p className="text-xs uppercase tracking-[0.4em] text-emerald-400">
+                  IKA
+                </p>
+                <p className="text-xl font-bold text-emerald-950">
+                  PickleBall Shop
+                </p>
+              </div>
             </Link>
             <div className="hidden md:flex items-center gap-4">
               <Link
@@ -67,7 +86,10 @@ export function Navbar() {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex flex-1 max-w-md mx-4"
+          >
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
