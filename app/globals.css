@@ -78,3 +78,19 @@
 [data-sonner-toast][data-type="success"] [data-title] {
   color: #047857 !important;
 }
+
+[data-sonner-toast][data-type="error"] {
+  background-color: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1px solid #fecaca !important;
+  box-shadow: 0 15px 40px rgba(220, 38, 38, 0.15) !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-description],
+[data-sonner-toast][data-type="error"] [data-title] {
+  color: #b91c1c !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: #dc2626 !important;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useProduct, useAddCartItem } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
@@ -10,23 +10,66 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ShoppingCart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/lib/auth/useAuth";
+import { addToGuestCart } from "@/lib/utils/guestCart";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = params.id as string;
   const { data: product, isLoading } = useProduct(productId);
   const addCartItem = useAddCartItem();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = async () => {
+    if (!product) {
+      toast.error("Không tìm thấy sản phẩm");
+      return;
+    }
+
+    // If not authenticated, save to localStorage (guest cart)
+    if (!isAuthenticated) {
+      addToGuestCart({
+        productId: product.id,
+        quantity,
+        productName: product.name || undefined,
+        productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
+        unitPrice: product.price,
+      });
+      toast.success("Đã thêm vào giỏ hàng! Đăng nhập để thanh toán.");
+      // Invalidate cart query to update cart count in navbar
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      return;
+    }
+
+    // If authenticated, use API
     try {
       await addCartItem.mutateAsync({
-        productId: product!.id,
+        productId: product.id,
         quantity,
       });
-      toast.success("Added to cart!");
-    } catch (error) {
-      toast.error("Failed to add to cart");
+      toast.success("Đã thêm vào giỏ hàng!");
+    } catch (error: any) {
+      // If API fails, fallback to guest cart
+      if (error?.status === 500 || error?.status >= 500) {
+        console.warn("API failed, saving to guest cart as fallback:", error);
+        addToGuestCart({
+          productId: product.id,
+          quantity,
+          productName: product.name || undefined,
+          productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
+          unitPrice: product.price,
+        });
+        toast.warning("Đã lưu vào giỏ hàng tạm thời. Vui lòng thử lại sau.");
+        queryClient.invalidateQueries({ queryKey: ["cart"] });
+      } else {
+        const errorMessage = 
+          error?.data?.message || error?.message || "Không thể thêm vào giỏ hàng";
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -176,7 +219,7 @@ export default function ProductDetailPage() {
             disabled={addCartItem.isPending || product.stockQuantity === 0}
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
-            Add to Cart
+            {addCartItem.isPending ? "Đang thêm..." : "Thêm vào giỏ hàng"}
           </Button>
         </div>
       </div>

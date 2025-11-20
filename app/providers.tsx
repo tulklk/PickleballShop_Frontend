@@ -14,7 +14,25 @@ export function Providers({ children }: { children: React.ReactNode }) {
             staleTime: 5 * 60 * 1000, // 5 minutes - giảm refetch không cần thiết
             refetchOnWindowFocus: false,
             refetchOnMount: false, // Không refetch khi mount lại nếu data còn fresh
-            retry: 1, // Giảm số lần retry để fail nhanh hơn
+            retry: (failureCount, error) => {
+              // Không retry nếu là lỗi 4xx (client error) hoặc 5xx (server error) từ backend
+              if (error && typeof error === "object" && "status" in error) {
+                const status = (error as { status: number }).status;
+                if (status >= 400 && status < 500) {
+                  return false; // Không retry cho client errors
+                }
+                if (status >= 500 && failureCount >= 1) {
+                  return false; // Chỉ retry 1 lần cho server errors
+                }
+              }
+              return failureCount < 1; // Retry tối đa 1 lần
+            },
+            onError: (error) => {
+              // Log error nhưng không crash app
+              if (process.env.NODE_ENV === "development") {
+                console.warn("[React Query Error]", error);
+              }
+            },
           },
         },
       })

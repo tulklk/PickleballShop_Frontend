@@ -14,14 +14,27 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
 import { RequireAuth } from "@/lib/auth/guards";
 import { PaymentMethod } from "@/lib/api/types";
+import Image from "next/image";
+import { 
+  User, 
+  Phone, 
+  MapPin, 
+  CreditCard, 
+  ShoppingBag, 
+  ArrowRight,
+  CheckCircle2,
+  Loader2
+} from "lucide-react";
+import momoIcon from "@/app/img/momo_icon.png";
+import vnpayLogo from "@/app/img/Logo-VNPAY-QR-350x65.png";
 
 const checkoutSchema = z.object({
-  fullName: z.string().min(2, "Full name is required"),
-  phoneNumber: z.string().min(10, "Phone number is required"),
-  addressLine: z.string().min(5, "Address is required"),
-  ward: z.string().min(1, "Ward is required"),
-  district: z.string().min(1, "District is required"),
-  city: z.string().min(1, "City is required"),
+  fullName: z.string().min(2, "Vui lòng nhập họ tên"),
+  phoneNumber: z.string().min(10, "Số điện thoại phải có ít nhất 10 số"),
+  addressLine: z.string().min(5, "Vui lòng nhập địa chỉ"),
+  ward: z.string().min(1, "Vui lòng nhập phường/xã"),
+  district: z.string().min(1, "Vui lòng nhập quận/huyện"),
+  city: z.string().min(1, "Vui lòng nhập thành phố"),
   paymentMethod: z.nativeEnum(PaymentMethod),
 });
 
@@ -80,20 +93,25 @@ function CheckoutContent() {
         }
       }
 
-      toast.success("Order created successfully!");
+      toast.success("Đặt hàng thành công!");
       router.push(`/account/orders/${order.id}`);
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to create order");
+      toast.error(error?.data?.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
     }
   };
 
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-          <Button onClick={() => router.push("/products")}>
-            Continue Shopping
+        <div className="text-center py-16">
+          <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-emerald-500/50" />
+          <h2 className="text-2xl font-bold mb-2 text-emerald-900">Giỏ hàng trống</h2>
+          <p className="text-muted-foreground mb-6">
+            Bạn chưa có sản phẩm nào trong giỏ hàng
+          </p>
+          <Button onClick={() => router.push("/products")} size="lg">
+            Tiếp tục mua sắm
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -101,100 +119,236 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
+          Thanh toán
+        </h1>
+        <p className="text-muted-foreground">
+          Vui lòng điền thông tin giao hàng và chọn phương thức thanh toán
+        </p>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Shipping Information</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Shipping Information */}
+          <Card className="border-emerald-100 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+              <CardTitle className="flex items-center gap-2 text-emerald-900">
+                <MapPin className="h-5 w-5" />
+                Thông tin giao hàng
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div>
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" {...register("fullName")} />
-                  {errors.fullName && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.fullName.message}
-                    </p>
-                  )}
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="flex items-center gap-2 text-emerald-900">
+                      <User className="h-4 w-4" />
+                      Họ và tên
+                    </Label>
+                    <Input 
+                      id="fullName" 
+                      {...register("fullName")} 
+                      placeholder="Nguyễn Văn A"
+                      className="border-emerald-200 focus:border-emerald-500"
+                    />
+                    {errors.fullName && (
+                      <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                        {errors.fullName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber" className="flex items-center gap-2 text-emerald-900">
+                      <Phone className="h-4 w-4" />
+                      Số điện thoại
+                    </Label>
+                    <Input 
+                      id="phoneNumber" 
+                      {...register("phoneNumber")} 
+                      placeholder="0901234567"
+                      className="border-emerald-200 focus:border-emerald-500"
+                    />
+                    {errors.phoneNumber && (
+                      <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                        {errors.phoneNumber.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input id="phoneNumber" {...register("phoneNumber")} />
-                  {errors.phoneNumber && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.phoneNumber.message}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="addressLine">Address Line</Label>
-                  <Input id="addressLine" {...register("addressLine")} />
+                <div className="space-y-2">
+                  <Label htmlFor="addressLine" className="flex items-center gap-2 text-emerald-900">
+                    <MapPin className="h-4 w-4" />
+                    Địa chỉ
+                  </Label>
+                  <Input 
+                    id="addressLine" 
+                    {...register("addressLine")} 
+                    placeholder="Số nhà, tên đường"
+                    className="border-emerald-200 focus:border-emerald-500"
+                  />
                   {errors.addressLine && (
-                    <p className="text-sm text-destructive mt-1">
+                    <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
                       {errors.addressLine.message}
                     </p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="ward">Ward</Label>
-                    <Input id="ward" {...register("ward")} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="ward" className="text-emerald-900">Phường/Xã</Label>
+                    <Input 
+                      id="ward" 
+                      {...register("ward")} 
+                      placeholder="Phường 1"
+                      className="border-emerald-200 focus:border-emerald-500"
+                    />
                     {errors.ward && (
-                      <p className="text-sm text-destructive mt-1">
+                      <p className="text-sm text-red-600 mt-1">
                         {errors.ward.message}
                       </p>
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="district">District</Label>
-                    <Input id="district" {...register("district")} />
+                  <div className="space-y-2">
+                    <Label htmlFor="district" className="text-emerald-900">Quận/Huyện</Label>
+                    <Input 
+                      id="district" 
+                      {...register("district")} 
+                      placeholder="Quận 1"
+                      className="border-emerald-200 focus:border-emerald-500"
+                    />
                     {errors.district && (
-                      <p className="text-sm text-destructive mt-1">
+                      <p className="text-sm text-red-600 mt-1">
                         {errors.district.message}
                       </p>
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input id="city" {...register("city")} />
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-emerald-900">Thành phố</Label>
+                    <Input 
+                      id="city" 
+                      {...register("city")} 
+                      placeholder="TP. Hồ Chí Minh"
+                      className="border-emerald-200 focus:border-emerald-500"
+                    />
                     {errors.city && (
-                      <p className="text-sm text-destructive mt-1">
+                      <p className="text-sm text-red-600 mt-1">
                         {errors.city.message}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <Select
-                    id="paymentMethod"
-                    value={paymentMethod?.toString()}
-                    onValueChange={(value) =>
-                      setValue("paymentMethod", parseInt(value) as PaymentMethod)
-                    }
-                  >
-                    <SelectItem value={PaymentMethod.COD.toString()}>
-                      Cash on Delivery (COD)
-                    </SelectItem>
-                    <SelectItem value={PaymentMethod.MoMo.toString()}>
-                      MoMo
-                    </SelectItem>
-                    <SelectItem value={PaymentMethod.VNPay.toString()}>
-                      VNPay
-                    </SelectItem>
-                  </Select>
+                {/* Payment Method */}
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="paymentMethod" className="flex items-center gap-2 text-emerald-900">
+                    <CreditCard className="h-4 w-4" />
+                    Phương thức thanh toán
+                  </Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {/* COD Option */}
+                    <button
+                      type="button"
+                      onClick={() => setValue("paymentMethod", PaymentMethod.COD)}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        paymentMethod === PaymentMethod.COD
+                          ? "border-emerald-500 bg-emerald-50 shadow-md"
+                          : "border-emerald-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50"
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        paymentMethod === PaymentMethod.COD
+                          ? "bg-emerald-100"
+                          : "bg-emerald-50"
+                      }`}>
+                        <CreditCard className={`h-6 w-6 ${
+                          paymentMethod === PaymentMethod.COD
+                            ? "text-emerald-600"
+                            : "text-emerald-400"
+                        }`} />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-emerald-900">Thanh toán khi nhận hàng</div>
+                        <div className="text-xs text-muted-foreground">Cash on Delivery (COD)</div>
+                      </div>
+                      {paymentMethod === PaymentMethod.COD && (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      )}
+                    </button>
+
+                    {/* MoMo Option */}
+                    <button
+                      type="button"
+                      onClick={() => setValue("paymentMethod", PaymentMethod.MoMo)}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        paymentMethod === PaymentMethod.MoMo
+                          ? "border-purple-500 bg-purple-50 shadow-md"
+                          : "border-emerald-200 bg-white hover:border-purple-300 hover:bg-purple-50/50"
+                      }`}
+                    >
+                      <div className={`w-14 h-14 rounded-lg flex items-center justify-center overflow-hidden ${
+                        paymentMethod === PaymentMethod.MoMo
+                          ? "bg-white border-2 border-purple-200"
+                          : "bg-purple-50"
+                      }`}>
+                        <Image
+                          src={momoIcon}
+                          alt="MoMo"
+                          width={56}
+                          height={56}
+                          className="object-contain"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-purple-900">MoMo</div>
+                        <div className="text-xs text-muted-foreground">Ví điện tử MoMo</div>
+                      </div>
+                      {paymentMethod === PaymentMethod.MoMo && (
+                        <CheckCircle2 className="h-5 w-5 text-purple-600" />
+                      )}
+                    </button>
+
+                    {/* VNPay Option */}
+                    <button
+                      type="button"
+                      onClick={() => setValue("paymentMethod", PaymentMethod.VNPay)}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        paymentMethod === PaymentMethod.VNPay
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-emerald-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
+                      }`}
+                    >
+                      <div className={`w-20 h-12 rounded-lg flex items-center justify-center overflow-hidden ${
+                        paymentMethod === PaymentMethod.VNPay
+                          ? "bg-white border-2 border-blue-200"
+                          : "bg-blue-50"
+                      }`}>
+                        <Image
+                          src={vnpayLogo}
+                          alt="VNPay"
+                          width={80}
+                          height={30}
+                          className="object-contain"
+                          unoptimized
+                        />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-blue-900">VNPay</div>
+                        <div className="text-xs text-muted-foreground">Cổng thanh toán VNPay</div>
+                      </div>
+                      {paymentMethod === PaymentMethod.VNPay && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                      )}
+                    </button>
+                  </div>
                   {errors.paymentMethod && (
-                    <p className="text-sm text-destructive mt-1">
+                    <p className="text-sm text-red-600 mt-1">
                       {errors.paymentMethod.message}
                     </p>
                   )}
@@ -202,13 +356,21 @@ function CheckoutContent() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg shadow-emerald-500/30"
                   size="lg"
                   disabled={createOrder.isPending || createPayment.isPending}
                 >
-                  {createOrder.isPending || createPayment.isPending
-                    ? "Processing..."
-                    : "Place Order"}
+                  {createOrder.isPending || createPayment.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Đặt hàng ngay
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -216,25 +378,57 @@ function CheckoutContent() {
         </div>
 
         <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+          <Card className="sticky top-4 border-emerald-100 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+              <CardTitle className="flex items-center gap-2 text-emerald-900">
+                <ShoppingBag className="h-5 w-5" />
+                Tóm tắt đơn hàng
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="pt-6 space-y-4">
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                 {cart.items.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>
-                      {item.productName} x {item.quantity}
-                    </span>
-                    <span>{formatCurrency(item.lineTotal)}</span>
+                  <div key={item.id} className="flex gap-3 pb-4 border-b border-emerald-100 last:border-0">
+                    <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-emerald-50">
+                      <Image
+                        src={item.productImageUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23e5e7eb'/%3E%3C/svg%3E"}
+                        alt={item.productName || "Product"}
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm text-emerald-900 line-clamp-2">
+                        {item.productName || "Sản phẩm"}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Số lượng: {item.quantity}
+                      </p>
+                      <p className="text-sm font-semibold text-emerald-600 mt-1">
+                        {formatCurrency(item.lineTotal)}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
+              
+              <div className="space-y-3 pt-4 border-t border-emerald-200">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Tạm tính ({cart.totalItems} sản phẩm)</span>
                   <span>{formatCurrency(cart.subTotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Phí vận chuyển</span>
+                  <span className="text-emerald-600 font-medium">Miễn phí</span>
+                </div>
+                <div className="border-t border-emerald-200 pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-emerald-900">Tổng cộng</span>
+                    <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
+                      {formatCurrency(cart.subTotal)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>

@@ -21,7 +21,14 @@ import type {
   GoogleLoginRequest,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend-1.onrender.com";
+// Ensure URL has protocol and no trailing slash
+const getApiBaseUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend-1.onrender.com";
+  // Remove trailing slash if present
+  return url.replace(/\/$/, "");
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiError extends Error {
   constructor(
@@ -29,8 +36,14 @@ class ApiError extends Error {
     public statusText: string,
     public data?: unknown
   ) {
-    super(`API Error: ${status} ${statusText}`);
+    // Don't include stack trace in message to avoid triggering Next.js error overlay
+    super(`API Error: ${status}`);
     this.name = "ApiError";
+    // Suppress error display in Next.js dev overlay
+    if (typeof window !== "undefined" && (window as any).__NEXT_DATA__) {
+      // Mark as handled to prevent Next.js error overlay
+      (this as any).__NEXT_ERROR_HANDLED = true;
+    }
   }
 }
 
@@ -39,9 +52,24 @@ class ApiClient {
   private accessToken: string | null = null;
 
   constructor(baseURL: string) {
-    this.baseURL = baseURL;
+    // Ensure baseURL has protocol
+    if (!baseURL.startsWith("http://") && !baseURL.startsWith("https://")) {
+      console.warn(`[API Client] Base URL missing protocol, defaulting to https://`);
+      this.baseURL = `https://${baseURL}`;
+    } else {
+      this.baseURL = baseURL;
+    }
+    
+    // Remove trailing slash
+    this.baseURL = this.baseURL.replace(/\/$/, "");
+    
     if (typeof window !== "undefined") {
       this.accessToken = localStorage.getItem("accessToken");
+    }
+    
+    // Debug logging in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[API Client] Initialized with base URL: ${this.baseURL}`);
     }
   }
 
@@ -64,20 +92,28 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-    const headers = new Headers({
+    // Ensure endpoint starts with /
+    const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    const url = `${this.baseURL}${normalizedEndpoint}`;
+    
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-    });
+    };
 
     if (options.headers) {
       const extraHeaders = new Headers(options.headers as HeadersInit);
       extraHeaders.forEach((value, key) => {
-        headers.set(key, value);
+        headers[key] = value;
       });
     }
 
     if (this.accessToken) {
-      headers.set("Authorization", `Bearer ${this.accessToken}`);
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
+    // Debug logging in development
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[API Request] ${options.method || "GET"} ${url}`);
     }
 
     const response = await fetch(url, {
@@ -88,11 +124,32 @@ class ApiClient {
     if (!response.ok) {
       let errorData: unknown;
       try {
-        errorData = await response.json();
+        const text = await response.text();
+        // Try to parse as JSON, fallback to text
+        try {
+          errorData = text ? JSON.parse(text) : { message: "Empty response" };
+        } catch {
+          errorData = text || { message: "Unknown error occurred" };
+        }
       } catch {
-        errorData = await response.text();
+        errorData = { message: "Failed to read error response" };
       }
-      throw new ApiError(response.status, response.statusText, errorData);
+      
+      // Debug logging in development (use console.warn to avoid triggering Next.js error overlay)
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[API Error] ${response.status} ${response.statusText}`, {
+          url,
+          errorData,
+        });
+      }
+      
+      // Create error with better message
+      const errorMessage = 
+        (errorData && typeof errorData === "object" && "message" in errorData)
+          ? String(errorData.message)
+          : response.statusText || "Unknown error";
+      
+      throw new ApiError(response.status, errorMessage, errorData);
     }
 
     // Handle empty responses

@@ -223,21 +223,25 @@ function BrandPromises() {
 }
 
 function FeaturedProducts() {
-  const { data: products, isLoading } = useFeaturedProducts(8);
+  const { data: products, isLoading, isError } = useFeaturedProducts(8);
 
   if (isLoading) {
     return <ProductGridSkeleton count={8} />;
   }
 
-  if (!products || products.length === 0) {
-    return <div className="text-center py-8">No featured products available.</div>;
+  if (isError || !products || products.length === 0) {
+    return (
+      <div className="text-center py-8 text-emerald-900/60">
+        Không có sản phẩm nổi bật.
+      </div>
+    );
   }
 
   return <ProductGrid products={products} />;
 }
 
 function CategoriesGrid() {
-  const { data: categories, isLoading } = useCategories();
+  const { data: categories, isLoading, isError } = useCategories();
 
   if (isLoading) {
     return (
@@ -247,7 +251,7 @@ function CategoriesGrid() {
     );
   }
 
-  if (!categories || categories.length === 0) {
+  if (isError || !categories || categories.length === 0) {
     return null;
   }
 

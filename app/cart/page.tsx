@@ -8,17 +8,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
-import { RequireAuth } from "@/lib/auth/guards";
+import { useAuth } from "@/lib/auth/useAuth";
+import { useRouter } from "next/navigation";
+import { getGuestCart, clearGuestCart } from "@/lib/utils/guestCart";
 
 export default function CartPage() {
-  return (
-    <RequireAuth>
-      <CartContent />
-    </RequireAuth>
-  );
+  return <CartContent />;
 }
 
 function CartContent() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const { data: cart, isLoading } = useCart();
   const updateCartItem = useUpdateCartItem();
   const deleteCartItem = useDeleteCartItem();
@@ -26,32 +26,80 @@ function CartContent() {
 
   const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
+    
+    if (!isAuthenticated) {
+      // Update guest cart
+      const guestCart = getGuestCart();
+      const itemIndex = guestCart.findIndex(
+        (item, idx) => `guest-${idx}` === cartItemId
+      );
+      if (itemIndex >= 0) {
+        guestCart[itemIndex].quantity = newQuantity;
+        localStorage.setItem("guestCart", JSON.stringify(guestCart));
+        // Trigger cart refresh
+        window.dispatchEvent(new Event("storage"));
+        toast.success("Đã cập nhật số lượng");
+      }
+      return;
+    }
+
     try {
       await updateCartItem.mutateAsync({
         cartItemId,
         data: { quantity: newQuantity },
       });
     } catch (error) {
-      toast.error("Failed to update quantity");
+      toast.error("Không thể cập nhật số lượng");
     }
   };
 
   const handleRemoveItem = async (cartItemId: string) => {
+    if (!isAuthenticated) {
+      // Remove from guest cart
+      const guestCart = getGuestCart();
+      const itemIndex = guestCart.findIndex(
+        (item, idx) => `guest-${idx}` === cartItemId
+      );
+      if (itemIndex >= 0) {
+        guestCart.splice(itemIndex, 1);
+        localStorage.setItem("guestCart", JSON.stringify(guestCart));
+        window.dispatchEvent(new Event("storage"));
+        toast.success("Đã xóa sản phẩm");
+      }
+      return;
+    }
+
     try {
       await deleteCartItem.mutateAsync(cartItemId);
-      toast.success("Item removed from cart");
+      toast.success("Đã xóa sản phẩm");
     } catch (error) {
-      toast.error("Failed to remove item");
+      toast.error("Không thể xóa sản phẩm");
     }
   };
 
   const handleClearCart = async () => {
+    if (!isAuthenticated) {
+      clearGuestCart();
+      window.dispatchEvent(new Event("storage"));
+      toast.success("Đã xóa giỏ hàng");
+      return;
+    }
+
     try {
       await clearCart.mutateAsync();
-      toast.success("Cart cleared");
+      toast.success("Đã xóa giỏ hàng");
     } catch (error) {
-      toast.error("Failed to clear cart");
+      toast.error("Không thể xóa giỏ hàng");
     }
+  };
+
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để thanh toán");
+      router.push("/login");
+      return;
+    }
+    router.push("/checkout");
   };
 
   if (isLoading) {
@@ -159,11 +207,13 @@ function CartContent() {
                   <span>{formatCurrency(cart.subTotal)}</span>
                 </div>
               </div>
-              <Link href="/checkout" className="block">
-                <Button className="w-full" size="lg">
-                  Proceed to Checkout
-                </Button>
-              </Link>
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={handleCheckout}
+              >
+                {isAuthenticated ? "Thanh toán" : "Đăng nhập để thanh toán"}
+              </Button>
             </CardContent>
           </Card>
         </div>

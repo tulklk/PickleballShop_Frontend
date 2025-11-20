@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
+import { useAuth } from "@/lib/auth/useAuth";
 import type {
   LoginRequest,
   RegisterRequest,
@@ -14,14 +15,59 @@ import type {
   PaymentStatus,
 } from "./types";
 
+// Helper to sync guest cart to server
+async function syncGuestCart() {
+  if (typeof window === "undefined") return;
+  try {
+    const { getGuestCart, clearGuestCart } = await import("@/lib/utils/guestCart");
+    const guestCart = getGuestCart();
+    if (guestCart.length === 0) return;
+
+    // Wait a bit to ensure token is set
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const failedItems: typeof guestCart = [];
+    
+    // Add each item from guest cart to server cart
+    for (const item of guestCart) {
+      try {
+        // Only send productId and quantity to API
+        await apiClient.addCartItem({
+          productId: item.productId,
+          quantity: item.quantity,
+        });
+      } catch (error) {
+        console.warn("Failed to sync cart item:", error);
+        // Keep failed items to retry later
+        failedItems.push(item);
+      }
+    }
+
+    // Only clear guest cart if ALL items were synced successfully
+    if (failedItems.length === 0) {
+      clearGuestCart();
+    } else {
+      // Save failed items back to guest cart for retry
+      localStorage.setItem("guestCart", JSON.stringify(failedItems));
+      console.warn(`Failed to sync ${failedItems.length} items. They will be kept in guest cart.`);
+    }
+  } catch (error) {
+    console.warn("Failed to sync guest cart:", error);
+    // Don't clear guest cart on error
+  }
+}
+
 // Auth hooks
 export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: LoginRequest) => apiClient.login(data),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       apiClient.setAccessToken(data.accessToken);
       queryClient.setQueryData(["user"], data.user);
+      // Sync guest cart to server after login
+      await syncGuestCart();
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
 }
@@ -30,9 +76,12 @@ export function useRegister() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: RegisterRequest) => apiClient.register(data),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       apiClient.setAccessToken(data.accessToken);
       queryClient.setQueryData(["user"], data.user);
+      // Sync guest cart to server after register
+      await syncGuestCart();
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
 }
@@ -50,9 +99,12 @@ export function useGoogleAuthLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (idToken: string) => apiClient.loginWithGoogle(idToken),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       apiClient.setAccessToken(data.accessToken);
       queryClient.setQueryData(["user"], data.user);
+      // Sync guest cart to server after Google login
+      await syncGuestCart();
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
 }
@@ -73,6 +125,8 @@ export function useCategories() {
   return useQuery({
     queryKey: ["categories"],
     queryFn: () => apiClient.getCategories(),
+    retry: 1,
+    retryOnMount: false,
   });
 }
 
@@ -108,6 +162,8 @@ export function useProducts(params?: {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => apiClient.getProducts(params),
+    retry: 1,
+    retryOnMount: false,
   });
 }
 
@@ -131,6 +187,8 @@ export function useFeaturedProducts(count?: number) {
   return useQuery({
     queryKey: ["products", "featured", count],
     queryFn: () => apiClient.getFeaturedProducts(count),
+    retry: 1,
+    retryOnMount: false,
   });
 }
 
@@ -148,9 +206,58 @@ export function useSearchProducts(params?: {
 
 // Cart hooks
 export function useCart() {
+  const { isAuthenticated } = useAuth();
+  
   return useQuery({
     queryKey: ["cart"],
-    queryFn: () => apiClient.getCart(),
+    queryFn: async () => {
+      if (isAuthenticated) {
+        try {
+          return await apiClient.getCart();
+        } catch (error) {
+          // If API fails, fallback to guest cart
+          console.warn("Failed to get cart from API, using guest cart:", error);
+          const { getGuestCart } = await import("@/lib/utils/guestCart");
+          const guestCart = getGuestCart();
+          const items = guestCart.map((item, index) => ({
+            id: `guest-${index}`,
+            productId: item.productId,
+            productName: item.productName || null,
+            productImageUrl: item.productImageUrl || null,
+            unitPrice: item.unitPrice || 0,
+            quantity: item.quantity,
+            lineTotal: (item.unitPrice || 0) * item.quantity,
+          }));
+          return {
+            items,
+            totalItems: guestCart.reduce((sum, item) => sum + item.quantity, 0),
+            subTotal: items.reduce((sum, item) => sum + item.lineTotal, 0),
+            totalAmount: items.reduce((sum, item) => sum + item.lineTotal, 0),
+          };
+        }
+      } else {
+        // Return guest cart from localStorage
+        const { getGuestCart } = await import("@/lib/utils/guestCart");
+        const guestCart = getGuestCart();
+        // Transform to CartDto format
+        const items = guestCart.map((item, index) => ({
+          id: `guest-${index}`,
+          productId: item.productId,
+          productName: item.productName || null,
+          productImageUrl: item.productImageUrl || null,
+          unitPrice: item.unitPrice || 0,
+          quantity: item.quantity,
+          lineTotal: (item.unitPrice || 0) * item.quantity,
+        }));
+        return {
+          items,
+          totalItems: guestCart.reduce((sum, item) => sum + item.quantity, 0),
+          subTotal: items.reduce((sum, item) => sum + item.lineTotal, 0),
+          totalAmount: items.reduce((sum, item) => sum + item.lineTotal, 0),
+        };
+      }
+    },
+    enabled: true, // Always enabled to show guest cart
   });
 }
 
@@ -160,6 +267,16 @@ export function useAddCartItem() {
     mutationFn: (data: AddCartItemRequest) => apiClient.addCartItem(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+    onError: (error: any) => {
+      // Log error for debugging
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[Add Cart Item Error]", {
+          status: error?.status,
+          message: error?.message,
+          data: error?.data,
+        });
+      }
     },
   });
 }

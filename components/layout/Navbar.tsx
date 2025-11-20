@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useCart } from "@/lib/api/hooks";
 import { useLogout } from "@/lib/api/hooks";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api/client";
+import { getGuestCartItemCount } from "@/lib/utils/guestCart";
 
 import logo from "@/app/img/logopickleball.png";
 
@@ -21,6 +22,29 @@ export function Navbar() {
   const { data: cart } = useCart();
   const logoutMutation = useLogout();
   const [searchQuery, setSearchQuery] = useState("");
+  const [guestCartCount, setGuestCartCount] = useState(0);
+
+  // Update guest cart count when not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setGuestCartCount(getGuestCartItemCount());
+      // Listen for storage changes to update count
+      const handleStorageChange = () => {
+        setGuestCartCount(getGuestCartItemCount());
+      };
+      window.addEventListener("storage", handleStorageChange);
+      // Also check periodically (for same-tab updates)
+      const interval = setInterval(() => {
+        setGuestCartCount(getGuestCartItemCount());
+      }, 1000);
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+        clearInterval(interval);
+      };
+    } else {
+      setGuestCartCount(0);
+    }
+  }, [isAuthenticated]);
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken");
@@ -38,7 +62,7 @@ export function Navbar() {
     }
   };
 
-  const cartItemCount = cart?.totalItems || 0;
+  const cartItemCount = isAuthenticated ? (cart?.totalItems || 0) : guestCartCount;
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-emerald-100 bg-white/90 backdrop-blur supports-backdrop-filter:bg-white/80">
