@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { PackagePlus, Trash2, Eye, Pencil } from "lucide-react";
 import type { Product, ProductListDto } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function AdminProductsPage() {
   const { isAdmin } = useAuth();
@@ -36,16 +36,22 @@ export default function AdminProductsPage() {
   const {
     data: adminProducts,
     isLoading: isLoadingAdmin,
+    isError: isAdminErrorQuery,
   } = useAdminProducts({
     enabled: isAdmin,
-    onError: () => setAdminError(true),
   });
+
+  useEffect(() => {
+    if (isAdminErrorQuery) {
+      setAdminError(true);
+    }
+  }, [isAdminErrorQuery]);
   const { data: publicProducts } = useProducts({ Page: 1, PageSize: 100 });
   const deleteProduct = useAdminDeleteProduct();
 
-  const normalizedProducts = (adminProducts?.length
+  const normalizedProducts = (Array.isArray(adminProducts) && adminProducts.length > 0
     ? adminProducts
-    : publicProducts?.items ?? []) as Array<Product | ProductListDto>;
+    : Array.isArray(publicProducts?.items) ? publicProducts.items : []) as Array<Product | ProductListDto>;
 
   const handleDelete = async (productId: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -174,7 +180,7 @@ export default function AdminProductsPage() {
           ) : (
             <div className="py-10 text-center text-muted-foreground">
               No products found.
-              {isAdminError && (
+              {adminError && (
                 <p className="text-sm">
                   (Bạn cần đăng nhập bằng tài khoản admin để xem dữ liệu trực
                   tiếp.)
