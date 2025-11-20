@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectItem } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
 import { RequireAuth } from "@/lib/auth/guards";
@@ -177,25 +177,21 @@ function CheckoutContent() {
                 <div>
                   <Label htmlFor="paymentMethod">Payment Method</Label>
                   <Select
+                    id="paymentMethod"
                     value={paymentMethod?.toString()}
                     onValueChange={(value) =>
                       setValue("paymentMethod", parseInt(value) as PaymentMethod)
                     }
                   >
-                    <SelectTrigger id="paymentMethod">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={PaymentMethod.COD.toString()}>
-                        Cash on Delivery (COD)
-                      </SelectItem>
-                      <SelectItem value={PaymentMethod.MoMo.toString()}>
-                        MoMo
-                      </SelectItem>
-                      <SelectItem value={PaymentMethod.VNPay.toString()}>
-                        VNPay
-                      </SelectItem>
-                    </SelectContent>
+                    <SelectItem value={PaymentMethod.COD.toString()}>
+                      Cash on Delivery (COD)
+                    </SelectItem>
+                    <SelectItem value={PaymentMethod.MoMo.toString()}>
+                      MoMo
+                    </SelectItem>
+                    <SelectItem value={PaymentMethod.VNPay.toString()}>
+                      VNPay
+                    </SelectItem>
                   </Select>
                   {errors.paymentMethod && (
                     <p className="text-sm text-destructive mt-1">

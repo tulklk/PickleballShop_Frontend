@@ -325,10 +325,13 @@ export function useAdminUpdateOrderStatus() {
   });
 }
 
-export function useAdminProducts() {
+export function useAdminProducts(options?: { enabled?: boolean; onError?: (error: unknown) => void }) {
   return useQuery({
     queryKey: ["admin", "products"],
     queryFn: () => apiClient.adminGetProducts(),
+    enabled: options?.enabled ?? true,
+    retry: 1,
+    onError: options?.onError,
   });
 }
 

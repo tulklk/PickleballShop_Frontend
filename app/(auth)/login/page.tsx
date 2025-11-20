@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { useLogin, useGoogleAuthLogin } from "@/lib/api/hooks";
+import { useAuth } from "@/lib/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowRight, ShieldCheck, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Trophy } from "lucide-react";
+import { useState } from "react";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -37,6 +39,8 @@ export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
   const googleLoginMutation = useGoogleAuthLogin();
+  const { isAdmin } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -53,7 +57,7 @@ export default function LoginPage() {
         localStorage.setItem("refreshToken", response.refreshToken);
       }
       toast.success("Login successful!");
-      router.push("/");
+      router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
       toast.error(error?.data?.message || "Login failed");
     }
@@ -73,7 +77,7 @@ export default function LoginPage() {
         localStorage.setItem("refreshToken", response.refreshToken);
       }
       toast.success("Đăng nhập Google thành công!");
-      router.push("/");
+      router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
       toast.error(error?.data?.message || "Google login failed");
     }
@@ -181,12 +185,26 @@ export default function LoginPage() {
                     Quên mật khẩu?
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  {...register("password")}
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    {...register("password")}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 transition hover:text-emerald-800"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-destructive">
                     {errors.password.message}

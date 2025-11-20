@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDateTime } from "@/lib/utils/formatDate";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectItem } from "@/components/ui/select";
 import { OrderStatus } from "@/lib/api/types";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -145,31 +145,27 @@ export default function AdminOrderDetailPage() {
         <CardContent>
           <div className="flex gap-4">
             <Select
+              className="w-64"
               value={selectedStatus?.toString()}
               onValueChange={(value) =>
                 setSelectedStatus(parseInt(value) as OrderStatus)
               }
             >
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Select new status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={OrderStatus.Pending.toString()}>
-                  Pending
-                </SelectItem>
-                <SelectItem value={OrderStatus.Processing.toString()}>
-                  Processing
-                </SelectItem>
-                <SelectItem value={OrderStatus.Shipped.toString()}>
-                  Shipped
-                </SelectItem>
-                <SelectItem value={OrderStatus.Completed.toString()}>
-                  Completed
-                </SelectItem>
-                <SelectItem value={OrderStatus.Cancelled.toString()}>
-                  Cancelled
-                </SelectItem>
-              </SelectContent>
+              <SelectItem value={OrderStatus.Pending.toString()}>
+                Pending
+              </SelectItem>
+              <SelectItem value={OrderStatus.Processing.toString()}>
+                Processing
+              </SelectItem>
+              <SelectItem value={OrderStatus.Shipped.toString()}>
+                Shipped
+              </SelectItem>
+              <SelectItem value={OrderStatus.Completed.toString()}>
+                Completed
+              </SelectItem>
+              <SelectItem value={OrderStatus.Cancelled.toString()}>
+                Cancelled
+              </SelectItem>
             </Select>
             <Button
               onClick={handleUpdateStatus}

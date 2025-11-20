@@ -6,6 +6,7 @@ import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/shared/ProductGrid";
+import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
 import { useFeaturedProducts, useCategories } from "@/lib/api/hooks";
 
 import logo from "@/app/img/logopickleball.png";
@@ -225,7 +226,7 @@ function FeaturedProducts() {
   const { data: products, isLoading } = useFeaturedProducts(8);
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading featured products...</div>;
+    return <ProductGridSkeleton count={8} />;
   }
 
   if (!products || products.length === 0) {
