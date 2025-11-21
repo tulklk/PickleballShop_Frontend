@@ -53,14 +53,14 @@ export default function AdminProductsPage() {
   const showError = isAdminErrorQuery && !isLoadingAdmin && !isLoadingPublic && normalizedProducts.length === 0;
 
   const handleDelete = async (productId: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) return;
     try {
       await deleteProduct.mutateAsync(productId);
-      toast.success("Product deleted successfully");
-    } catch (error) {
-      toast.error(
-        "Failed to delete product. Make sure you are logged in as an admin."
-      );
+      toast.success("Xóa sản phẩm thành công");
+    } catch (error: any) {
+      console.error("Delete product error:", error);
+      const errorMessage = error?.message || error?.data?.message || "Không thể xóa sản phẩm. Vui lòng đảm bảo bạn đã đăng nhập bằng tài khoản admin.";
+      toast.error(errorMessage);
     }
   };
 

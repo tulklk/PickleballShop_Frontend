@@ -62,7 +62,8 @@ export default function AdminProductEditPage() {
           weightRange: values.weightRange as any,
           surfaceType: values.surfaceType as any,
           material: values.material || null,
-        },
+          imageUrls: values.imageUrls && values.imageUrls.length > 0 ? values.imageUrls : null,
+        } as any,
       });
       toast.success("Cập nhật sản phẩm thành công");
       router.push("/admin/products");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
 import type { Product, ProductCategory } from "@/lib/api/types";
+import { X, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 const productSchema = z.object({
   name: z.string().min(2, "Required"),
@@ -27,6 +29,7 @@ const productSchema = z.object({
   weightRange: z.number().int().min(1),
   surfaceType: z.number().int().min(1),
   material: z.string().optional(),
+  imageUrls: z.array(z.string().url("URL không hợp lệ")).optional(),
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
@@ -95,8 +98,13 @@ export function ProductForm({
       weightRange: 2,
       surfaceType: 1,
       material: undefined,
+      imageUrls: [],
     },
   });
+
+  // State for managing image URLs
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -115,8 +123,84 @@ export function ProductForm({
       setValue("weightRange", initialData.weightRange);
       setValue("surfaceType", initialData.surfaceType);
       setValue("material", initialData.material || "");
+      
+      // Load imageUrls from initialData (if it has imageUrls property)
+      const initialImageUrls = (initialData as any).imageUrls || [];
+      setImageUrls(Array.isArray(initialImageUrls) ? initialImageUrls : []);
+      setValue("imageUrls", Array.isArray(initialImageUrls) ? initialImageUrls : []);
     }
   }, [initialData, setValue]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          throw new Error(`File ${file.name} không phải là hình ảnh`);
+        }
+
+        // Validate file size (max 5MB for better performance)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`File ${file.name} quá lớn (tối đa 5MB). Vui lòng nén ảnh trước khi upload.`);
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
+
+        try {
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Lỗi khi upload ảnh");
+          }
+
+          const data = await response.json();
+          return data.url;
+        } catch (error: any) {
+          clearTimeout(timeoutId);
+          if (error.name === "AbortError") {
+            throw new Error("Upload timeout - ảnh quá lớn hoặc kết nối chậm");
+          }
+          throw error;
+        }
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      const updated = [...imageUrls, ...uploadedUrls];
+      setImageUrls(updated);
+      setValue("imageUrls", updated);
+      toast.success(`Đã upload ${uploadedUrls.length} ảnh thành công`);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast.error(error.message || "Lỗi khi upload ảnh");
+    } finally {
+      setUploading(false);
+      // Reset input
+      event.target.value = "";
+    }
+  };
+
+  const removeImageUrl = (index: number) => {
+    const updated = imageUrls.filter((_, i) => i !== index);
+    setImageUrls(updated);
+    setValue("imageUrls", updated);
+  };
 
   return (
     <form
@@ -128,6 +212,7 @@ export function ProductForm({
           weightRange: Number(values.weightRange),
           surfaceType: Number(values.surfaceType),
           originalPrice: values.originalPrice === undefined ? null : values.originalPrice,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         })
       )}
       className="space-y-6"
@@ -270,6 +355,72 @@ export function ProductForm({
       <div>
         <Label>Mô tả</Label>
         <Textarea rows={4} {...register("description")} />
+      </div>
+
+      <div>
+        <Label>Hình ảnh sản phẩm</Label>
+        <div className="space-y-2">
+          <div>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileUpload}
+              disabled={uploading}
+              className="hidden"
+              id="image-upload"
+            />
+            <Label
+              htmlFor="image-upload"
+              className="cursor-pointer inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {uploading ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Đang upload...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Chọn ảnh từ máy tính
+                </>
+              )}
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              Có thể chọn nhiều ảnh cùng lúc. Tối đa 5MB mỗi ảnh (khuyến nghị &lt; 2MB để upload nhanh hơn).
+            </p>
+          </div>
+          {imageUrls.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+              {imageUrls.map((url, index) => (
+                <div key={index} className="relative group">
+                  <div className="aspect-square rounded-lg overflow-hidden border">
+                    <img
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeImageUrl(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {errors.imageUrls && (
+          <p className="text-sm text-destructive">{errors.imageUrls.message}</p>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

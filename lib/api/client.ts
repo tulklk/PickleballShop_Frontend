@@ -393,7 +393,38 @@ class ApiClient {
   }
 
   async adminGetProducts(): Promise<Product[]> {
-    return this.request<Product[]>("/api/admin/AdminProducts");
+    // Try admin endpoint first, fallback to public Products endpoint
+    try {
+      // Try the admin endpoint if it exists (may not be in Swagger but might work)
+      return await this.request<Product[]>("/api/admin/AdminProducts");
+    } catch (error) {
+      // Fallback to /api/Products endpoint with authentication for admin list
+      // This endpoint returns paginated results
+      const result = await this.request<ProductListDtoPagedResultDto>("/api/Products?PageSize=1000");
+      if (!result.items || result.items.length === 0) {
+        return [];
+      }
+      
+      // Convert ProductListDto[] to Product[] with default values for missing fields
+      return result.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        description: null,
+        categoryId: "",
+        price: item.price,
+        originalPrice: item.originalPrice,
+        stockQuantity: item.stockQuantity,
+        sku: null,
+        brand: item.brand,
+        isActive: true,
+        productType: (item.productType ? parseInt(item.productType) : 1) as any,
+        skillLevel: 1 as any,
+        weightRange: 2 as any,
+        surfaceType: 1 as any,
+        material: null,
+      })) as Product[];
+    }
   }
 
   async adminGetProductById(id: string): Promise<Product> {

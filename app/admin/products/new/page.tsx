@@ -30,11 +30,14 @@ export default function AdminProductCreatePage() {
         weightRange: values.weightRange as any,
         surfaceType: values.surfaceType as any,
         material: values.material || null,
-      });
-      toast.success("Product created successfully");
+        imageUrls: values.imageUrls && values.imageUrls.length > 0 ? values.imageUrls : null,
+      } as any);
+      toast.success("Tạo sản phẩm thành công");
       router.push("/admin/products");
-    } catch (error) {
-      toast.error("Failed to create product");
+    } catch (error: any) {
+      console.error("Create product error:", error);
+      const errorMessage = error?.message || error?.data?.message || "Không thể tạo sản phẩm";
+      toast.error(errorMessage);
     }
   };
 
