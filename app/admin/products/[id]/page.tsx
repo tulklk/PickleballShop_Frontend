@@ -6,20 +6,42 @@ import {
   useAdminCategories,
   useAdminProduct,
   useAdminUpdateProduct,
+  useProduct,
 } from "@/lib/api/hooks";
 import { ProductForm, ProductFormValues } from "../ProductForm";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth/useAuth";
+import { Button } from "@/components/ui/button";
 
 export default function AdminProductEditPage() {
   const params = useParams();
   const productId = params.id as string;
   const router = useRouter();
-  const { data: product, isLoading } = useAdminProduct(productId);
+  const { isAdmin } = useAuth();
+  const { 
+    data: adminProduct, 
+    isLoading: isLoadingAdmin, 
+    isError: isAdminError 
+  } = useAdminProduct(productId);
+  const { 
+    data: publicProduct, 
+    isLoading: isLoadingPublic 
+  } = useProduct(productId);
   const { data: categories } = useAdminCategories();
   const updateProduct = useAdminUpdateProduct();
 
+  // Use admin product if available, otherwise fallback to public product
+  const product = adminProduct || publicProduct;
+  const isLoading = isLoadingAdmin || isLoadingPublic;
+
   const handleSubmit = async (values: ProductFormValues) => {
     if (!productId) return;
+    
+    if (!isAdmin) {
+      toast.error("Bạn cần đăng nhập bằng tài khoản admin để chỉnh sửa sản phẩm");
+      return;
+    }
+    
     try {
       await updateProduct.mutateAsync({
         id: productId,
@@ -42,17 +64,43 @@ export default function AdminProductEditPage() {
           material: values.material || null,
         },
       });
-      toast.success("Product updated successfully");
+      toast.success("Cập nhật sản phẩm thành công");
       router.push("/admin/products");
-    } catch (error) {
-      toast.error("Failed to update product");
+    } catch (error: any) {
+      console.error("Update product error:", error);
+      const errorMessage = error?.message || error?.data?.message || "Không thể cập nhật sản phẩm";
+      toast.error(errorMessage);
     }
   };
 
-  if (isLoading || !product) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading product...</div>
+        <div className="text-center">Đang tải sản phẩm...</div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive mb-2">Không tìm thấy sản phẩm</p>
+            {isAdminError && !isAdmin && (
+              <p className="text-sm text-muted-foreground">
+                Bạn cần đăng nhập bằng tài khoản admin để chỉnh sửa sản phẩm.
+              </p>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => router.push("/admin/products")}
+              className="mt-4"
+            >
+              Quay lại danh sách
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

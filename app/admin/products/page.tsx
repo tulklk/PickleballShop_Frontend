@@ -28,11 +28,9 @@ import { toast } from "sonner";
 import { PackagePlus, Trash2, Eye, Pencil } from "lucide-react";
 import type { Product, ProductListDto } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/useAuth";
-import { useState, useEffect } from "react";
 
 export default function AdminProductsPage() {
   const { isAdmin } = useAuth();
-  const [adminError, setAdminError] = useState(false);
   const {
     data: adminProducts,
     isLoading: isLoadingAdmin,
@@ -41,17 +39,18 @@ export default function AdminProductsPage() {
     enabled: isAdmin,
   });
 
-  useEffect(() => {
-    if (isAdminErrorQuery) {
-      setAdminError(true);
-    }
-  }, [isAdminErrorQuery]);
-  const { data: publicProducts } = useProducts({ Page: 1, PageSize: 100 });
+  const { data: publicProducts, isLoading: isLoadingPublic } = useProducts({ Page: 1, PageSize: 100 });
   const deleteProduct = useAdminDeleteProduct();
 
+  // Use admin products if available, otherwise fallback to public products
   const normalizedProducts = (Array.isArray(adminProducts) && adminProducts.length > 0
     ? adminProducts
-    : Array.isArray(publicProducts?.items) ? publicProducts.items : []) as Array<Product | ProductListDto>;
+    : Array.isArray(publicProducts?.items) && publicProducts.items.length > 0
+    ? publicProducts.items
+    : []) as Array<Product | ProductListDto>;
+  
+  // Only show error if both admin and public products fail, and we're not still loading
+  const showError = isAdminErrorQuery && !isLoadingAdmin && !isLoadingPublic && normalizedProducts.length === 0;
 
   const handleDelete = async (productId: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -98,13 +97,13 @@ export default function AdminProductsPage() {
             </CardDescription>
         </CardHeader>
         <CardContent>
-            {adminError ? (
+            {showError ? (
               <div className="py-12 text-center text-destructive">
-                Không thể tải dữ liệu admin. Vui lòng kiểm tra quyền truy cập hoặc thử lại.
+                Không thể tải dữ liệu sản phẩm. Vui lòng kiểm tra quyền truy cập hoặc thử lại.
               </div>
-            ) : isLoadingAdmin && !normalizedProducts.length ? (
+            ) : (isLoadingAdmin || isLoadingPublic) && normalizedProducts.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              Loading products...
+              Đang tải sản phẩm...
             </div>
           ) : normalizedProducts.length > 0 ? (
             <div className="overflow-x-auto">
@@ -179,11 +178,10 @@ export default function AdminProductsPage() {
             </div>
           ) : (
             <div className="py-10 text-center text-muted-foreground">
-              No products found.
-              {adminError && (
-                <p className="text-sm">
-                  (Bạn cần đăng nhập bằng tài khoản admin để xem dữ liệu trực
-                  tiếp.)
+              Không tìm thấy sản phẩm nào.
+              {isAdminErrorQuery && !isAdmin && (
+                <p className="text-sm mt-2">
+                  (Bạn cần đăng nhập bằng tài khoản admin để xem dữ liệu đầy đủ.)
                 </p>
               )}
             </div>
