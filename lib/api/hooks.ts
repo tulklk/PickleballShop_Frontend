@@ -209,11 +209,16 @@ export function useCart() {
   const { isAuthenticated } = useAuth();
   
   return useQuery({
-    queryKey: ["cart"],
+    queryKey: ["cart", isAuthenticated], // Include isAuthenticated in query key to refetch when auth state changes
     queryFn: async () => {
       if (isAuthenticated) {
         try {
-          return await apiClient.getCart();
+          const cart = await apiClient.getCart();
+          // Debug logging in development
+          if (process.env.NODE_ENV === "development") {
+            console.log("[useCart] Fetched cart from API:", cart);
+          }
+          return cart;
         } catch (error) {
           // If API fails, fallback to guest cart
           console.warn("Failed to get cart from API, using guest cart:", error);
@@ -258,15 +263,40 @@ export function useCart() {
       }
     },
     enabled: true, // Always enabled to show guest cart
+    refetchOnMount: true, // Refetch when component mounts
+    staleTime: 0, // Always consider data stale to ensure fresh data after mutations
   });
 }
 
 export function useAddCartItem() {
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
   return useMutation({
-    mutationFn: (data: AddCartItemRequest) => apiClient.addCartItem(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    mutationFn: async (data: AddCartItemRequest) => {
+      const result = await apiClient.addCartItem(data);
+      // Debug logging in development
+      if (process.env.NODE_ENV === "development") {
+        console.log("[useAddCartItem] Added item to cart:", result);
+      }
+      return result;
+    },
+    onSuccess: async () => {
+      // Small delay to ensure backend has processed the request
+      await new Promise(resolve => setTimeout(resolve, 200));
+      // Invalidate all cart queries (both authenticated and guest)
+      await queryClient.invalidateQueries({ 
+        queryKey: ["cart"],
+        refetchType: "active" // Only refetch active queries
+      });
+      // Also explicitly refetch the current cart query to ensure it updates
+      await queryClient.refetchQueries({ 
+        queryKey: ["cart", isAuthenticated],
+        type: "active"
+      });
+      // Debug logging in development
+      if (process.env.NODE_ENV === "development") {
+        console.log("[useAddCartItem] Invalidated and refetched cart queries");
+      }
     },
     onError: (error: any) => {
       // Log error for debugging
@@ -291,8 +321,11 @@ export function useUpdateCartItem() {
       cartItemId: string;
       data: UpdateCartItemRequest;
     }) => apiClient.updateCartItem(cartItemId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ 
+        queryKey: ["cart"],
+        refetchType: "active"
+      });
     },
   });
 }
@@ -301,8 +334,11 @@ export function useDeleteCartItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (cartItemId: string) => apiClient.deleteCartItem(cartItemId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ 
+        queryKey: ["cart"],
+        refetchType: "active"
+      });
     },
   });
 }
@@ -311,8 +347,11 @@ export function useClearCart() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => apiClient.clearCart(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ 
+        queryKey: ["cart"],
+        refetchType: "active"
+      });
     },
   });
 }

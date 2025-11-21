@@ -7,6 +7,9 @@ import type { ProductListDto, ProductDto } from "@/lib/api/types";
 import { useAddCartItem } from "@/lib/api/hooks";
 import { toast } from "sonner";
 import { ShoppingCart } from "lucide-react";
+import { useAuth } from "@/lib/auth/useAuth";
+import { addToGuestCart } from "@/lib/utils/guestCart";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ProductCardProps {
   product: ProductListDto | ProductDto;
@@ -18,19 +21,53 @@ function isProductDto(product: ProductListDto | ProductDto): product is ProductD
 
 export function ProductCard({ product }: ProductCardProps) {
   const addCartItem = useAddCartItem();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
+    // If not authenticated, save to localStorage (guest cart)
+    if (!isAuthenticated) {
+      addToGuestCart({
+        productId: product.id,
+        quantity: 1,
+        productName: product.name || undefined,
+        productImageUrl: product.primaryImageUrl || (isProductDto(product) ? product.imageUrls?.[0] : undefined) || undefined,
+        unitPrice: product.price,
+      });
+      toast.success("Đã thêm vào giỏ hàng! Đăng nhập để thanh toán.");
+      // Invalidate cart query to update cart count in navbar
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      return;
+    }
+
+    // If authenticated, use API
     try {
       await addCartItem.mutateAsync({
         productId: product.id,
         quantity: 1,
       });
-      toast.success("Added to cart!");
-    } catch (error) {
-      toast.error("Failed to add to cart");
+      toast.success("Đã thêm vào giỏ hàng!");
+    } catch (error: any) {
+      // If API fails, fallback to guest cart
+      if (error?.status === 500 || error?.status >= 500) {
+        console.warn("API failed, saving to guest cart as fallback:", error);
+        addToGuestCart({
+          productId: product.id,
+          quantity: 1,
+          productName: product.name || undefined,
+          productImageUrl: product.primaryImageUrl || (isProductDto(product) ? product.imageUrls?.[0] : undefined) || undefined,
+          unitPrice: product.price,
+        });
+        toast.warning("Đã lưu vào giỏ hàng tạm thời. Vui lòng thử lại sau.");
+        queryClient.invalidateQueries({ queryKey: ["cart"] });
+      } else {
+        const errorMessage = 
+          error?.data?.message || error?.message || "Không thể thêm vào giỏ hàng";
+        toast.error(errorMessage);
+      }
     }
   };
 

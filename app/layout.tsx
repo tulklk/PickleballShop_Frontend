@@ -4,6 +4,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { ChatBox } from "@/components/chat/ChatBox";
+import { ZaloButton } from "@/components/chat/ZaloButton";
 import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -27,6 +29,8 @@ export default function RootLayout({
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <ChatBox />
+          <ZaloButton />
           <Toaster position="top-right" />
         </Providers>
       </body>

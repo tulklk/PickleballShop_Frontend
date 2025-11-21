@@ -12,8 +12,15 @@ import { useLogout } from "@/lib/api/hooks";
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api/client";
 import { getGuestCartItemCount } from "@/lib/utils/guestCart";
+import { Poppins } from "next/font/google";
 
 import logo from "@/app/img/logopickleball.png";
+
+const poppins = Poppins({
+  weight: ["600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export function Navbar() {
   const pathname = usePathname();
@@ -70,21 +77,18 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-3">
-              <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 p-1">
+              <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 p-1.5">
                 <Image
                   src={logo}
                   alt="IKA Sport Pickleball"
                   priority
                   className="object-contain"
-                  sizes="40px"
+                  sizes="48px"
                 />
               </span>
               <div className="leading-tight">
-                <p className="text-xs uppercase tracking-[0.4em] text-emerald-400">
-                  IKA
-                </p>
-                <p className="text-xl font-bold text-emerald-950">
-                  PickleBall Shop
+                <p className={`text-xl font-semibold text-emerald-950 tracking-tight ${poppins.className}`}>
+                  IKA Sport
                 </p>
               </div>
             </Link>
