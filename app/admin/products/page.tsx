@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   useAdminProducts,
@@ -28,9 +29,14 @@ import { toast } from "sonner";
 import { PackagePlus, Trash2, Eye, Pencil } from "lucide-react";
 import type { Product, ProductListDto } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/useAuth";
+import { DeleteConfirmationDialog } from "@/components/shared/DeleteConfirmationDialog";
 
 export default function AdminProductsPage() {
   const { isAdmin } = useAuth();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [productName, setProductName] = useState<string>("");
+
   const {
     data: adminProducts,
     isLoading: isLoadingAdmin,
@@ -52,11 +58,21 @@ export default function AdminProductsPage() {
   // Only show error if both admin and public products fail, and we're not still loading
   const showError = isAdminErrorQuery && !isLoadingAdmin && !isLoadingPublic && normalizedProducts.length === 0;
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) return;
+  const handleDeleteClick = (productId: string, name: string) => {
+    setProductToDelete(productId);
+    setProductName(name);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+    
     try {
-      await deleteProduct.mutateAsync(productId);
+      await deleteProduct.mutateAsync(productToDelete);
       toast.success("Xóa sản phẩm thành công");
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+      setProductName("");
     } catch (error: any) {
       console.error("Delete product error:", error);
       const errorMessage = error?.message || error?.data?.message || "Không thể xóa sản phẩm. Vui lòng đảm bảo bạn đã đăng nhập bằng tài khoản admin.";
@@ -162,7 +178,7 @@ export default function AdminProductsPage() {
                               <Button
                                 size="icon"
                                 variant="destructive"
-                                onClick={() => handleDelete(product.id)}
+                                onClick={() => handleDeleteClick(product.id, product.name || "sản phẩm này")}
                                 disabled={deleteProduct.isPending}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -188,6 +204,16 @@ export default function AdminProductsPage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa sản phẩm"
+        description={`Bạn có chắc chắn muốn xóa sản phẩm "${productName}"? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa sản phẩm"
+        isLoading={deleteProduct.isPending}
+      />
     </div>
   );
 }

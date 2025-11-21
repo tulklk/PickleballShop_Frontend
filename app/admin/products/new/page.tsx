@@ -13,8 +13,8 @@ export default function AdminProductCreatePage() {
 
   const handleSubmit = async (values: ProductFormValues) => {
     try {
-      await createProduct.mutateAsync({
-        id: "",
+      // Only send fields that backend supports
+      const productData: any = {
         name: values.name,
         slug: values.slug,
         description: values.description || null,
@@ -25,13 +25,16 @@ export default function AdminProductCreatePage() {
         sku: values.sku || null,
         brand: values.brand || null,
         isActive: values.isActive,
-        productType: values.productType as any,
-        skillLevel: values.skillLevel as any,
-        weightRange: values.weightRange as any,
-        surfaceType: values.surfaceType as any,
-        material: values.material || null,
-        imageUrls: values.imageUrls && values.imageUrls.length > 0 ? values.imageUrls : null,
-      } as any);
+      };
+      
+      // Only include imageUrls if there are images
+      if (values.imageUrls && values.imageUrls.length > 0) {
+        productData.imageUrls = values.imageUrls;
+      }
+      
+      console.log("Product data to send:", productData);
+      
+      await createProduct.mutateAsync(productData);
       toast.success("Tạo sản phẩm thành công");
       router.push("/admin/products");
     } catch (error: any) {

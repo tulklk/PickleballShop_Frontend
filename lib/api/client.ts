@@ -328,7 +328,22 @@ class ApiClient {
 
   // Admin endpoints
   async adminGetCategories(): Promise<ProductCategory[]> {
-    return this.request<ProductCategory[]>("/api/admin/AdminCategories");
+    // Use public Categories endpoint as admin endpoint doesn't have GET all
+    // This endpoint should work with admin authentication
+    try {
+      const result = await this.request<CategoryDto[]>("/api/Categories");
+      // Convert CategoryDto[] to ProductCategory[]
+      return result.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        description: cat.description,
+        parentCategoryId: cat.parentCategoryId,
+      }));
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+      throw error;
+    }
   }
 
   async adminGetCategoryById(id: string): Promise<ProductCategory> {

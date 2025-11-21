@@ -35,41 +35,58 @@ export default function AdminProductEditPage() {
   const isLoading = isLoadingAdmin || isLoadingPublic;
 
   const handleSubmit = async (values: ProductFormValues) => {
-    if (!productId) return;
+    if (!productId) {
+      toast.error("Không tìm thấy ID sản phẩm");
+      return;
+    }
     
     if (!isAdmin) {
       toast.error("Bạn cần đăng nhập bằng tài khoản admin để chỉnh sửa sản phẩm");
       return;
     }
     
+    console.log("Submitting product update:", { productId, values });
+    
     try {
+      // Only send fields that backend supports (matching Swagger API)
+      const productData: any = {
+        name: values.name,
+        slug: values.slug || null,
+        description: values.description || null,
+        categoryId: values.categoryId,
+        price: values.price,
+        originalPrice: values.originalPrice ?? null,
+        stockQuantity: values.stockQuantity,
+        sku: values.sku || null,
+        brand: values.brand || null,
+        isActive: values.isActive,
+      };
+      
+      // Only include imageUrls if there are images
+      if (values.imageUrls && values.imageUrls.length > 0) {
+        productData.imageUrls = values.imageUrls;
+      }
+      
+      console.log("Product data to send:", productData);
+      console.log("Category ID:", values.categoryId);
+      console.log("Available categories:", categories);
+      
       await updateProduct.mutateAsync({
         id: productId,
-        data: {
-          id: productId,
-          name: values.name,
-          slug: values.slug,
-          description: values.description || null,
-          categoryId: values.categoryId,
-          price: values.price,
-          originalPrice: values.originalPrice ?? null,
-          stockQuantity: values.stockQuantity,
-          sku: values.sku || null,
-          brand: values.brand || null,
-          isActive: values.isActive,
-          productType: values.productType as any,
-          skillLevel: values.skillLevel as any,
-          weightRange: values.weightRange as any,
-          surfaceType: values.surfaceType as any,
-          material: values.material || null,
-          imageUrls: values.imageUrls && values.imageUrls.length > 0 ? values.imageUrls : null,
-        } as any,
+        data: productData,
       });
+      
       toast.success("Cập nhật sản phẩm thành công");
       router.push("/admin/products");
     } catch (error: any) {
       console.error("Update product error:", error);
-      const errorMessage = error?.message || error?.data?.message || "Không thể cập nhật sản phẩm";
+      console.error("Error details:", {
+        message: error?.message,
+        status: error?.status,
+        data: error?.data,
+        stack: error?.stack,
+      });
+      const errorMessage = error?.message || error?.data?.message || error?.data?.error || "Không thể cập nhật sản phẩm";
       toast.error(errorMessage);
     }
   };

@@ -14,53 +14,20 @@ import { X, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const productSchema = z.object({
-  name: z.string().min(2, "Required"),
-  slug: z.string().min(2, "Required"),
-  description: z.string().optional(),
-  categoryId: z.string().min(1, "Required"),
-  price: z.number().min(0),
+  name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
+  slug: z.string().min(1, "Slug là bắt buộc"),
+  description: z.string().optional().nullable(),
+  categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
+  price: z.number().min(0, "Giá phải lớn hơn hoặc bằng 0"),
   originalPrice: z.number().nullable().optional(),
-  stockQuantity: z.number().int().min(0),
-  sku: z.string().optional(),
-  brand: z.string().optional(),
+  stockQuantity: z.number().int().min(0, "Tồn kho phải lớn hơn hoặc bằng 0"),
+  sku: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
   isActive: z.boolean(),
-  productType: z.number().int().min(1),
-  skillLevel: z.number().int().min(1),
-  weightRange: z.number().int().min(1),
-  surfaceType: z.number().int().min(1),
-  material: z.string().optional(),
   imageUrls: z.array(z.string().url("URL không hợp lệ")).optional(),
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
-
-const productTypeOptions = [
-  { value: 1, label: "Performance Paddle" },
-  { value: 2, label: "Ball" },
-  { value: 3, label: "Shoes" },
-  { value: 4, label: "Net" },
-  { value: 5, label: "Bag" },
-  { value: 6, label: "Accessory" },
-  { value: 7, label: "Other" },
-];
-
-const skillLevelOptions = [
-  { value: 1, label: "Beginner" },
-  { value: 2, label: "Intermediate" },
-  { value: 3, label: "Advanced" },
-];
-
-const weightOptions = [
-  { value: 1, label: "Light" },
-  { value: 2, label: "Balanced" },
-  { value: 3, label: "Heavy" },
-];
-
-const surfaceOptions = [
-  { value: 1, label: "Carbon" },
-  { value: 2, label: "Composite" },
-  { value: 3, label: "Graphite" },
-];
 
 interface ProductFormProps {
   categories: ProductCategory[] | undefined;
@@ -80,6 +47,7 @@ export function ProductForm({
     handleSubmit,
     formState: { errors },
     setValue,
+    watch,
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -93,14 +61,12 @@ export function ProductForm({
       sku: undefined,
       brand: undefined,
       isActive: true,
-      productType: 1,
-      skillLevel: 1,
-      weightRange: 2,
-      surfaceType: 1,
-      material: undefined,
       imageUrls: [],
     },
   });
+
+  // Watch form values for Select components
+  const categoryId = watch("categoryId");
 
   // State for managing image URLs
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -111,18 +77,21 @@ export function ProductForm({
       setValue("name", initialData.name || "");
       setValue("slug", initialData.slug || "");
       setValue("description", initialData.description || "");
-      setValue("categoryId", initialData.categoryId);
+      
+      // Ensure categoryId is a valid UUID string
+      const categoryId = initialData.categoryId || "";
+      if (categoryId && typeof categoryId === 'string') {
+        setValue("categoryId", categoryId);
+      } else {
+        console.warn("Invalid categoryId:", categoryId);
+      }
+      
       setValue("price", initialData.price);
       setValue("originalPrice", initialData.originalPrice ?? undefined);
       setValue("stockQuantity", initialData.stockQuantity);
       setValue("sku", initialData.sku || "");
       setValue("brand", initialData.brand || "");
       setValue("isActive", initialData.isActive);
-      setValue("productType", initialData.productType);
-      setValue("skillLevel", initialData.skillLevel);
-      setValue("weightRange", initialData.weightRange);
-      setValue("surfaceType", initialData.surfaceType);
-      setValue("material", initialData.material || "");
       
       // Load imageUrls from initialData (if it has imageUrls property)
       const initialImageUrls = (initialData as any).imageUrls || [];
@@ -202,19 +171,28 @@ export function ProductForm({
     setValue("imageUrls", updated);
   };
 
+  const onSubmitForm = async (values: ProductFormValues) => {
+    console.log("Form values before submit:", values);
+    console.log("Image URLs:", imageUrls);
+    
+    try {
+      const submitData = {
+        ...values,
+        originalPrice: values.originalPrice === undefined ? null : values.originalPrice,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+      };
+      console.log("Submitting data:", submitData);
+      await onSubmit(submitData);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      // Error is already handled in parent component
+      throw error; // Re-throw to let parent handle it
+    }
+  };
+
   return (
     <form
-      onSubmit={handleSubmit((values) =>
-        onSubmit({
-          ...values,
-          productType: Number(values.productType),
-          skillLevel: Number(values.skillLevel),
-          weightRange: Number(values.weightRange),
-          surfaceType: Number(values.surfaceType),
-          originalPrice: values.originalPrice === undefined ? null : values.originalPrice,
-          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-        })
-      )}
+      onSubmit={handleSubmit(onSubmitForm)}
       className="space-y-6"
     >
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -236,21 +214,36 @@ export function ProductForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <Label>Danh mục</Label>
+          <Label>Danh mục *</Label>
           <Select
-            {...register("categoryId")}
-            defaultValue={initialData?.categoryId || ""}
+            value={categoryId || ""}
+            onValueChange={(value) => {
+              if (value && value.trim() !== "") {
+                setValue("categoryId", value);
+              }
+            }}
           >
             <SelectItem value="">Chọn danh mục</SelectItem>
-            {categories?.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
+            {categories && categories.length > 0 ? (
+              categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name || "Không có tên"}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="" disabled>
+                Đang tải danh mục...
               </SelectItem>
-            ))}
+            )}
           </Select>
           {errors.categoryId && (
             <p className="text-sm text-destructive">
               {errors.categoryId.message}
+            </p>
+          )}
+          {(!categories || categories.length === 0) && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Chưa có danh mục nào. Vui lòng tạo danh mục trước.
             </p>
           )}
         </div>
@@ -287,69 +280,6 @@ export function ProductForm({
           <Label>Mã SKU</Label>
           <Input {...register("sku")} />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <Label>Loại sản phẩm</Label>
-          <Select
-            {...register("productType")}
-            defaultValue={String(initialData?.productType ?? 1)}
-          >
-            {productTypeOptions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Trình độ người chơi</Label>
-          <Select
-            {...register("skillLevel")}
-            defaultValue={String(initialData?.skillLevel ?? 1)}
-          >
-            {skillLevelOptions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <Label>Độ nặng</Label>
-          <Select
-            {...register("weightRange")}
-            defaultValue={String(initialData?.weightRange ?? 2)}
-          >
-            {weightOptions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label>Chất liệu bề mặt</Label>
-          <Select
-            {...register("surfaceType")}
-            defaultValue={String(initialData?.surfaceType ?? 1)}
-          >
-            {surfaceOptions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </Select>
-        </div>
-      </div>
-
-      <div>
-        <Label>Chất liệu thân</Label>
-        <Input {...register("material")} />
       </div>
 
       <div>
@@ -428,15 +358,30 @@ export function ProductForm({
           type="checkbox"
           id="isActive"
           className="h-4 w-4"
-          defaultChecked={initialData?.isActive ?? true}
+          checked={watch("isActive")}
           onChange={(e) => setValue("isActive", e.target.checked)}
         />
         <Label htmlFor="isActive">Kích hoạt sản phẩm</Label>
       </div>
 
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading || uploading}>
         {loading ? "Đang lưu..." : "Lưu sản phẩm"}
       </Button>
+      
+      {Object.keys(errors).length > 0 && (
+        <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+          <p className="text-sm font-semibold text-destructive mb-2">
+            Vui lòng sửa các lỗi sau:
+          </p>
+          <ul className="text-sm text-destructive space-y-1">
+            {Object.entries(errors).map(([key, error]) => (
+              <li key={key}>
+                {key}: {error?.message || "Lỗi không xác định"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </form>
   );
 }

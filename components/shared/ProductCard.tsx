@@ -71,10 +71,46 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   };
 
-  const imageUrl =
-    product.primaryImageUrl ??
-    (isProductDto(product) ? product.imageUrls?.[0] : undefined) ??
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EProduct Image%3C/text%3E%3C/svg%3E";
+  // Helper function to validate URL
+  const isValidUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+      return false;
+    }
+    // Check if it's a valid URL (http/https) or a relative path starting with /
+    try {
+      if (url.startsWith('/')) {
+        return true; // Relative path is valid
+      }
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        new URL(url);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  // Get image URL with validation
+  const getImageUrl = (): string => {
+    const primaryUrl = product.primaryImageUrl;
+    const firstImageUrl = isProductDto(product) ? product.imageUrls?.[0] : undefined;
+    
+    // Try primaryImageUrl first
+    if (isValidUrl(primaryUrl)) {
+      return primaryUrl!;
+    }
+    
+    // Try first image from imageUrls array
+    if (isValidUrl(firstImageUrl)) {
+      return firstImageUrl!;
+    }
+    
+    // Fallback to placeholder
+    return "/placeholder-product.jpg";
+  };
+
+  const imageUrl = getImageUrl();
 
   const price = product.price;
   const originalPrice = "originalPrice" in product ? product.originalPrice : null;
@@ -82,14 +118,20 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Link href={`/products/${product.id}`}>
       <Card className="group hover:shadow-lg transition-shadow h-full flex flex-col">
-        <div className="relative aspect-square overflow-hidden rounded-t-lg">
-          <Image
-            src={imageUrl || "/placeholder-product.jpg"}
-            alt={product.name || "Product"}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+        <div className="relative aspect-square overflow-hidden rounded-t-lg bg-gray-100">
+          {imageUrl !== "/placeholder-product.jpg" ? (
+            <Image
+              src={imageUrl}
+              alt={product.name || "Product"}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+              <span className="text-gray-400 text-sm">No Image</span>
+            </div>
+          )}
         </div>
         <CardContent className="p-4 flex-1">
           <h3 className="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-primary">
