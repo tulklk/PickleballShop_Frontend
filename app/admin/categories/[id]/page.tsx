@@ -17,10 +17,8 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 
 const categorySchema = z.object({
-  name: z.string().min(1, "Tên danh mục là bắt buộc"),
-  slug: z.string().min(1, "Slug là bắt buộc"),
-  description: z.string().optional(),
-  parentCategoryId: z.string().uuid().optional().nullable(),
+  name: z.string().trim().min(1, "Tên danh mục là bắt buộc"),
+  description: z.string().trim().optional(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -49,23 +47,24 @@ export default function CategoryFormPage() {
     if (category) {
       reset({
         name: category.name || "",
-        slug: category.slug || "",
         description: category.description || "",
-        parentCategoryId: category.parentCategoryId || null,
       });
     }
   }, [category, reset]);
 
   const onSubmit = async (data: CategoryFormData) => {
     try {
+      const trimmedName = data.name.trim();
+      const trimmedDescription = data.description?.trim() || "";
+
       await updateCategory.mutateAsync({
         id: categoryId,
         data: {
           id: categoryId,
-          name: data.name,
-          slug: data.slug,
-          description: data.description ?? null,
-          parentCategoryId: data.parentCategoryId ?? null,
+          name: trimmedName,
+          slug: category?.slug ?? null,
+          description: trimmedDescription,
+          parentCategoryId: category?.parentCategoryId ?? null,
         },
       });
       toast.success("Đã cập nhật danh mục thành công");
@@ -120,19 +119,6 @@ export default function CategoryFormPage() {
                   {errors.name.message}
                 </p>
               )}
-            </div>
-
-            <div>
-              <Label htmlFor="slug">Slug (đường dẫn)</Label>
-              <Input id="slug" {...register("slug")} placeholder="Ví dụ: vot-pickleball" />
-              {errors.slug && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.slug.message}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                Slug sẽ được dùng trong URL, nên viết thường và dùng dấu gạch ngang
-              </p>
             </div>
 
             <div>

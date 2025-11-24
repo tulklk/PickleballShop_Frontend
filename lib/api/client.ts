@@ -19,11 +19,14 @@ import type {
   OrderStatus,
   PaymentStatus,
   GoogleLoginRequest,
+  UserDto,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
 const getApiBaseUrl = () => {
-  const url = process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend-1.onrender.com";
+  const url =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://pickleballshop-backend.onrender.com";
   // Remove trailing slash if present
   return url.replace(/\/$/, "");
 };
@@ -82,6 +85,23 @@ class ApiClient {
         localStorage.removeItem("accessToken");
       }
     }
+  }
+
+  setRefreshToken(token: string | null) {
+    if (typeof window !== "undefined") {
+      if (token) {
+        localStorage.setItem("refreshToken", token);
+      } else {
+        localStorage.removeItem("refreshToken");
+      }
+    }
+  }
+
+  getRefreshToken(): string | null {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("refreshToken");
+    }
+    return null;
   }
 
   getAccessToken(): string | null {
@@ -196,6 +216,10 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  async getCurrentUser(): Promise<UserDto> {
+    return this.request<UserDto>("/api/Auth/me");
   }
 
   // Categories endpoints
@@ -351,9 +375,14 @@ class ApiClient {
   }
 
   async adminCreateCategory(data: ProductCategory): Promise<ProductCategory> {
+    const payload = {
+      name: (data.name ?? "").trim(),
+      description: data.description?.trim() || "",
+    };
+
     return this.request<ProductCategory>("/api/admin/AdminCategories", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -361,9 +390,14 @@ class ApiClient {
     id: string,
     data: ProductCategory
   ): Promise<void> {
+    const payload = {
+      name: (data.name ?? "").trim(),
+      description: data.description?.trim() || "",
+    };
+
     return this.request<void>(`/api/admin/AdminCategories/${id}`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -447,17 +481,128 @@ class ApiClient {
   }
 
   async adminCreateProduct(data: Product): Promise<Product> {
-    return this.request<Product>("/api/admin/AdminProducts", {
-      method: "POST",
-      body: JSON.stringify(data),
+    console.log("🔵 [adminCreateProduct] Input data:", JSON.stringify(data, null, 2));
+    
+    // Validate categoryId - must not be empty
+    const categoryIdValue = data.categoryId || "";
+    if (!categoryIdValue || categoryIdValue.trim() === "") {
+      console.error("❌ [adminCreateProduct] categoryId is empty!");
+      throw new Error("Category ID is required");
+    }
+    
+    // Ensure data format matches backend expectations
+    // Backend expects camelCase (not PascalCase) based on Swagger UI
+    const trimmedCategoryId = categoryIdValue.trim();
+    const payload: any = {
+      name: data.name || "",
+      description: data.description || null,
+      categoryId: trimmedCategoryId,
+      price: typeof data.price === "number" ? data.price : Number(data.price) || 0,
+      originalPrice: data.originalPrice !== undefined && data.originalPrice !== null
+        ? (typeof data.originalPrice === "number" ? data.originalPrice : Number(data.originalPrice))
+        : null,
+      stockQuantity: typeof data.stockQuantity === "number" ? data.stockQuantity : Number(data.stockQuantity) || 0,
+      sku: data.sku || null,
+      brand: data.brand || null,
+      isActive: Boolean(data.isActive),
+      // Ensure imageUrls is always an array of valid strings
+      imageUrls: Array.isArray((data as any).imageUrls) 
+        ? (data as any).imageUrls.filter((url: any): url is string => 
+            typeof url === "string" && url.trim().length > 0
+          )
+        : [],
+    };
+
+    console.log("🔵 [adminCreateProduct] Final payload:", JSON.stringify(payload, null, 2));
+    console.log("🔵 [adminCreateProduct] Payload types:", {
+      name: typeof payload.name,
+      categoryId: typeof payload.categoryId,
+      price: typeof payload.price,
+      stockQuantity: typeof payload.stockQuantity,
+      isActive: typeof payload.isActive,
+      imageUrls: typeof payload.imageUrls,
+      imageUrlsIsArray: Array.isArray(payload.imageUrls),
+      imageUrlsLength: payload.imageUrls ? payload.imageUrls.length : 0,
     });
+    console.log("🔵 [adminCreateProduct] Sending POST to /api/admin/AdminProducts");
+
+    try {
+      const result = await this.request<Product>("/api/admin/AdminProducts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      console.log("✅ [adminCreateProduct] Success:", result);
+      return result;
+    } catch (error: any) {
+      console.error("❌ [adminCreateProduct] Error:", error);
+      console.error("❌ [adminCreateProduct] Error status:", error?.status);
+      console.error("❌ [adminCreateProduct] Error data:", JSON.stringify(error?.data, null, 2));
+      throw error;
+    }
   }
 
   async adminUpdateProduct(id: string, data: Product): Promise<void> {
-    return this.request<void>(`/api/admin/AdminProducts/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
+    console.log("🟡 [adminUpdateProduct] Product ID:", id);
+    console.log("🟡 [adminUpdateProduct] Input data:", JSON.stringify(data, null, 2));
+    
+    // Validate categoryId - must not be empty
+    const categoryIdValue = data.categoryId || "";
+    if (!categoryIdValue || categoryIdValue.trim() === "") {
+      console.error("❌ [adminUpdateProduct] categoryId is empty!");
+      throw new Error("Category ID is required");
+    }
+    
+    // Ensure data format matches backend expectations
+    // Backend expects camelCase (not PascalCase) based on Swagger UI
+    const trimmedCategoryId = categoryIdValue.trim();
+    const payload: any = {
+      name: data.name || "",
+      description: data.description || null,
+      categoryId: trimmedCategoryId,
+      price: typeof data.price === "number" ? data.price : Number(data.price) || 0,
+      originalPrice: data.originalPrice !== undefined && data.originalPrice !== null
+        ? (typeof data.originalPrice === "number" ? data.originalPrice : Number(data.originalPrice))
+        : null,
+      stockQuantity: typeof data.stockQuantity === "number" ? data.stockQuantity : Number(data.stockQuantity) || 0,
+      sku: data.sku || null,
+      brand: data.brand || null,
+      isActive: Boolean(data.isActive),
+      // Ensure imageUrls is always an array of valid strings
+      imageUrls: Array.isArray((data as any).imageUrls) 
+        ? (data as any).imageUrls.filter((url: any): url is string => 
+            typeof url === "string" && url.trim().length > 0
+          )
+        : [],
+    };
+
+    console.log("🟡 [adminUpdateProduct] Final payload:", JSON.stringify(payload, null, 2));
+    console.log("🟡 [adminUpdateProduct] Payload types:", {
+      name: typeof payload.name,
+      categoryId: typeof payload.categoryId,
+      categoryIdValue: payload.categoryId,
+      categoryIdIsEmpty: !payload.categoryId || payload.categoryId === "",
+      price: typeof payload.price,
+      stockQuantity: typeof payload.stockQuantity,
+      isActive: typeof payload.isActive,
+      imageUrls: typeof payload.imageUrls,
+      imageUrlsIsArray: Array.isArray(payload.imageUrls),
+      imageUrlsLength: payload.imageUrls ? payload.imageUrls.length : 0,
     });
+    console.log("🟡 [adminUpdateProduct] Sending PUT to /api/admin/AdminProducts/" + id);
+
+    try {
+      const result = await this.request<void>(`/api/admin/AdminProducts/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      console.log("✅ [adminUpdateProduct] Success");
+      return result;
+    } catch (error: any) {
+      console.error("❌ [adminUpdateProduct] Error:", error);
+      console.error("❌ [adminUpdateProduct] Error status:", error?.status);
+      console.error("❌ [adminUpdateProduct] Error data:", JSON.stringify(error?.data, null, 2));
+      throw error;
+    }
   }
 
   async adminDeleteProduct(id: string): Promise<void> {

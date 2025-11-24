@@ -56,8 +56,15 @@ export function Navbar() {
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken");
     if (refreshToken) {
-      await logoutMutation.mutateAsync({ refreshToken });
+      try {
+        await logoutMutation.mutateAsync({ refreshToken });
+      } catch (error) {
+        // Even if logout API fails, clear local session
+        console.error("Logout error:", error);
+      }
     }
+    // Clear all tokens (useLogout hook already does this, but ensure it's done)
+    localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     router.push("/");
   };
@@ -99,7 +106,7 @@ export function Navbar() {
                   pathname === "/" ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                Home
+                Trang chủ
               </Link>
               <Link
                 href="/products"
@@ -109,7 +116,7 @@ export function Navbar() {
                     : "text-muted-foreground"
                 }`}
               >
-                Products
+                Sản phẩm
               </Link>
             </div>
           </div>
@@ -122,7 +129,7 @@ export function Navbar() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Tìm kiếm sản phẩm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -147,7 +154,7 @@ export function Navbar() {
                 {isAdmin && (
                   <Link href="/admin">
                     <Button variant="outline" size="sm">
-                      Admin
+                      Quản trị
                     </Button>
                   </Link>
                 )}
@@ -157,18 +164,18 @@ export function Navbar() {
                   </Button>
                 </Link>
                 <Button variant="outline" size="sm" onClick={handleLogout}>
-                  Logout
+                  Đăng xuất
                 </Button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link href="/login">
                   <Button variant="ghost" size="sm">
-                    Login
+                    Đăng nhập
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="sm">Sign Up</Button>
+                  <Button size="sm">Đăng ký</Button>
                 </Link>
               </div>
             )}

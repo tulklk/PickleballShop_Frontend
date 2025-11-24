@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "pickleballshop-backend-1.onrender.com",
+        hostname: "pickleballshop-backend.onrender.com",
       },
       {
         protocol: "https",

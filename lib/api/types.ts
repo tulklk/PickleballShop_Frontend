@@ -207,6 +207,7 @@ export interface OrderItemDto {
   id: string;
   productId: string;
   productName: string | null;
+  productImageUrl: string | null;
   unitPrice: number;
   quantity: number;
   lineTotal: number;

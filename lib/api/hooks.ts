@@ -13,6 +13,7 @@ import type {
   UpdateOrderStatusRequest,
   OrderStatus,
   PaymentStatus,
+  UserDto,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -63,7 +64,14 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginRequest) => apiClient.login(data),
     onSuccess: async (data) => {
-      apiClient.setAccessToken(data.accessToken);
+      // Save tokens to localStorage
+      if (data.accessToken) {
+        apiClient.setAccessToken(data.accessToken);
+      }
+      if (data.refreshToken) {
+        apiClient.setRefreshToken(data.refreshToken);
+      }
+      // Save user info to React Query cache
       queryClient.setQueryData(["user"], data.user);
       // Sync guest cart to server after login
       await syncGuestCart();
@@ -77,7 +85,14 @@ export function useRegister() {
   return useMutation({
     mutationFn: (data: RegisterRequest) => apiClient.register(data),
     onSuccess: async (data) => {
-      apiClient.setAccessToken(data.accessToken);
+      // Save tokens to localStorage
+      if (data.accessToken) {
+        apiClient.setAccessToken(data.accessToken);
+      }
+      if (data.refreshToken) {
+        apiClient.setRefreshToken(data.refreshToken);
+      }
+      // Save user info to React Query cache
       queryClient.setQueryData(["user"], data.user);
       // Sync guest cart to server after register
       await syncGuestCart();
@@ -87,10 +102,21 @@ export function useRegister() {
 }
 
 export function useRefreshToken() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: RefreshTokenRequest) => apiClient.refreshToken(data),
     onSuccess: (data) => {
-      apiClient.setAccessToken(data.accessToken);
+      // Save new tokens to localStorage
+      if (data.accessToken) {
+        apiClient.setAccessToken(data.accessToken);
+      }
+      if (data.refreshToken) {
+        apiClient.setRefreshToken(data.refreshToken);
+      }
+      // Update user info if provided
+      if (data.user) {
+        queryClient.setQueryData(["user"], data.user);
+      }
     },
   });
 }
@@ -100,7 +126,14 @@ export function useGoogleAuthLogin() {
   return useMutation({
     mutationFn: (idToken: string) => apiClient.loginWithGoogle(idToken),
     onSuccess: async (data) => {
-      apiClient.setAccessToken(data.accessToken);
+      // Save tokens to localStorage
+      if (data.accessToken) {
+        apiClient.setAccessToken(data.accessToken);
+      }
+      if (data.refreshToken) {
+        apiClient.setRefreshToken(data.refreshToken);
+      }
+      // Save user info to React Query cache
       queryClient.setQueryData(["user"], data.user);
       // Sync guest cart to server after Google login
       await syncGuestCart();
@@ -114,7 +147,10 @@ export function useLogout() {
   return useMutation({
     mutationFn: (data: RefreshTokenRequest) => apiClient.logout(data),
     onSuccess: () => {
+      // Clear all tokens from localStorage
       apiClient.setAccessToken(null);
+      apiClient.setRefreshToken(null);
+      // Clear React Query cache
       queryClient.clear();
     },
   });
@@ -362,8 +398,20 @@ export function useCreateOrder() {
   return useMutation({
     mutationFn: (data: CreateOrderRequest) => apiClient.createOrder(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      // Invalidate orders and cart, but preserve session
+      queryClient.invalidateQueries({ 
+        queryKey: ["orders"],
+        exact: false // Invalidate all order-related queries
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["cart"],
+        exact: false // Invalidate all cart-related queries
+      });
+      // Explicitly preserve user session data
+      const currentUser = queryClient.getQueryData<UserDto>(["user"]);
+      if (currentUser) {
+        queryClient.setQueryData(["user"], currentUser);
+      }
     },
   });
 }
@@ -529,6 +577,104 @@ export function useAdminDeleteProduct() {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
+  });
+}
+
+// Session management hook
+export function useSession() {
+  const queryClient = useQueryClient();
+
+  return useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      // Check if we have tokens in localStorage
+      const accessToken = apiClient.getAccessToken();
+      const refreshToken = apiClient.getRefreshToken();
+
+      // If we have accessToken, try to get current user
+      if (accessToken) {
+        try {
+          const user = await apiClient.getCurrentUser();
+          queryClient.setQueryData(["user"], user);
+          return { user, isAuthenticated: true };
+        } catch (error: any) {
+          // If accessToken is invalid/expired, try to refresh
+          if (error?.status === 401 && refreshToken) {
+            try {
+              const refreshResponse = await apiClient.refreshToken({
+                refreshToken,
+              });
+              // Save new tokens
+              if (refreshResponse.accessToken) {
+                apiClient.setAccessToken(refreshResponse.accessToken);
+              }
+              if (refreshResponse.refreshToken) {
+                apiClient.setRefreshToken(refreshResponse.refreshToken);
+              }
+              if (refreshResponse.user) {
+                queryClient.setQueryData(["user"], refreshResponse.user);
+                return { user: refreshResponse.user, isAuthenticated: true };
+              }
+            } catch (refreshError) {
+              // Refresh failed, clear session
+              apiClient.setAccessToken(null);
+              apiClient.setRefreshToken(null);
+              queryClient.setQueryData(["user"], null);
+              return { user: null, isAuthenticated: false };
+            }
+          }
+          // If error is not 401, don't clear session - might be network issue
+          // Only clear if it's definitely an auth error
+          if (error?.status === 401) {
+            apiClient.setAccessToken(null);
+            apiClient.setRefreshToken(null);
+            queryClient.setQueryData(["user"], null);
+            return { user: null, isAuthenticated: false };
+          }
+          // For other errors, return existing user data if available
+          const existingUser = queryClient.getQueryData<UserDto>(["user"]);
+          if (existingUser) {
+            return { user: existingUser, isAuthenticated: true };
+          }
+          return { user: null, isAuthenticated: false };
+        }
+      }
+
+      // If we have refreshToken but no accessToken, try to refresh
+      if (refreshToken && !accessToken) {
+        try {
+          const refreshResponse = await apiClient.refreshToken({
+            refreshToken,
+          });
+          // Save new tokens
+          if (refreshResponse.accessToken) {
+            apiClient.setAccessToken(refreshResponse.accessToken);
+          }
+          if (refreshResponse.refreshToken) {
+            apiClient.setRefreshToken(refreshResponse.refreshToken);
+          }
+          if (refreshResponse.user) {
+            queryClient.setQueryData(["user"], refreshResponse.user);
+            return { user: refreshResponse.user, isAuthenticated: true };
+          }
+        } catch (refreshError) {
+          // Refresh failed, clear session
+          apiClient.setRefreshToken(null);
+          queryClient.setQueryData(["user"], null);
+          return { user: null, isAuthenticated: false };
+        }
+      }
+
+      // No tokens, not authenticated
+      queryClient.setQueryData(["user"], null);
+      return { user: null, isAuthenticated: false };
+    },
+    enabled: typeof window !== "undefined", // Only run on client
+    retry: false, // Don't retry on failure
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if data is fresh
+    refetchOnReconnect: false, // Don't refetch on reconnect
   });
 }
 

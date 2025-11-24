@@ -7,7 +7,7 @@
 Khi deploy lên Vercel, bạn cần thêm các biến môi trường sau trong Vercel Dashboard:
 
 1. **NEXT_PUBLIC_API_BASE_URL**
-   - Value: `https://pickleballshop-backend-1.onrender.com`
+   - Value: `https://pickleballshop-backend.onrender.com`
    - Description: URL của backend API đã deploy trên Render
 
 2. **NEXT_PUBLIC_GOOGLE_CLIENT_ID** (Optional)
@@ -21,7 +21,7 @@ Khi deploy lên Vercel, bạn cần thêm các biến môi trường sau trong V
 3. Vào **Settings** → **Environment Variables**
 4. Thêm từng biến:
    - Key: `NEXT_PUBLIC_API_BASE_URL`
-   - Value: `https://pickleballshop-backend-1.onrender.com`
+   - Value: `https://pickleballshop-backend.onrender.com`
    - Environment: Chọn **Production**, **Preview**, và **Development**
 5. Click **Save**
 6. **Redeploy** project để áp dụng thay đổi
@@ -33,7 +33,7 @@ Sau khi deploy, kiểm tra:
 1. Mở Developer Console (F12)
 2. Vào tab **Network**
 3. Thử load trang products hoặc login
-4. Kiểm tra các request đến `pickleballshop-backend-1.onrender.com`
+4. Kiểm tra các request đến `pickleballshop-backend.onrender.com`
 5. Nếu thấy lỗi CORS, cần kiểm tra cấu hình CORS trên backend
 
 ### Troubleshooting
@@ -66,7 +66,7 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 
 1. Tạo file `.env.local`:
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend-1.onrender.com
+NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend.onrender.com
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
 ```
 

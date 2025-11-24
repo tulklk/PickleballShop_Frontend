@@ -13,8 +13,10 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
 import { RequireAuth } from "@/lib/auth/guards";
+import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentMethod } from "@/lib/api/types";
 import Image from "next/image";
+import { useEffect } from "react";
 import { 
   User, 
   Phone, 
@@ -53,12 +55,14 @@ function CheckoutContent() {
   const { data: cart } = useCart();
   const createOrder = useCreateOrder();
   const createPayment = useCreatePayment();
+  const { user } = useAuth();
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -68,6 +72,22 @@ function CheckoutContent() {
   });
 
   const paymentMethod = watch("paymentMethod");
+
+  // Auto-fill user information when user data is available
+  // Only fill if the fields are empty to avoid overwriting user input
+  useEffect(() => {
+    if (user) {
+      const currentFullName = getValues("fullName");
+      const currentPhoneNumber = getValues("phoneNumber");
+      
+      if (user.fullName && !currentFullName) {
+        setValue("fullName", user.fullName);
+      }
+      if (user.phoneNumber && !currentPhoneNumber) {
+        setValue("phoneNumber", user.phoneNumber);
+      }
+    }
+  }, [user, setValue, getValues]);
 
   const onSubmit = async (data: CheckoutFormData) => {
     try {

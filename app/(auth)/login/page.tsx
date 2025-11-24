@@ -52,14 +52,11 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const response = await loginMutation.mutateAsync(data);
-      if (response.refreshToken) {
-        localStorage.setItem("refreshToken", response.refreshToken);
-      }
-      toast.success("Login successful!");
+      await loginMutation.mutateAsync(data);
+      toast.success("Đăng nhập thành công!");
       router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
-      toast.error(error?.data?.message || "Login failed");
+      toast.error(error?.data?.message || "Đăng nhập thất bại");
     }
   };
 
@@ -70,16 +67,11 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await googleLoginMutation.mutateAsync(
-        credentialResponse.credential
-      );
-      if (response.refreshToken) {
-        localStorage.setItem("refreshToken", response.refreshToken);
-      }
+      await googleLoginMutation.mutateAsync(credentialResponse.credential);
       toast.success("Đăng nhập Google thành công!");
       router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
-      toast.error(error?.data?.message || "Google login failed");
+      toast.error(error?.data?.message || "Đăng nhập Google thất bại");
     }
   };
 
@@ -87,7 +79,7 @@ export default function LoginPage() {
     loginMutation.isPending || googleLoginMutation.isPending;
 
   const handleGoogleError = () => {
-    toast.error("Google login failed. Please try again.");
+    toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.");
   };
 
   return (
@@ -213,7 +205,7 @@ export default function LoginPage() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {loginMutation.isPending ? "Đang đăng nhập..." : "Login"}
+                {loginMutation.isPending ? "Đang đăng nhập..." : "Đăng nhập"}
               </Button>
             </form>
 

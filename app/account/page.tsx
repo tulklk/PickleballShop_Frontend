@@ -2,25 +2,19 @@
 
 import { useAuth } from "@/lib/auth/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RequireAuth } from "@/lib/auth/guards";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Mail, Phone, ShieldCheck } from "lucide-react";
 
 export default function AccountPage() {
-  return (
-    <RequireAuth>
-      <AccountContent />
-    </RequireAuth>
-  );
+  return <AccountContent />;
 }
 
 function AccountContent() {
   const { user } = useAuth();
 
   return (
-    <div className="bg-linear-to-b from-[#f5fff7] via-white to-[#eefbf1]">
-      <div className="container mx-auto px-4 py-10 space-y-6">
+    <div className="container mx-auto px-4 py-10 space-y-6">
         <div className="rounded-3xl border border-emerald-100 bg-white/80 p-8 shadow-[0_25px_80px_rgba(15,118,110,0.12)]">
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-500">
             Hồ sơ cá nhân
@@ -99,7 +93,6 @@ function AccountContent() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 }

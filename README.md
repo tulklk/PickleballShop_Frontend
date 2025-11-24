@@ -46,7 +46,7 @@ npm install
 
 2. Create a `.env.local` file in the root directory:
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend-1.onrender.com
+NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend.onrender.com
 ```
 
 3. Run the development server:
@@ -85,7 +85,7 @@ npm run dev
 
 ## API Integration
 
-The frontend integrates with the backend API at `https://pickleballshop-backend-1.onrender.com`.
+The frontend integrates with the backend API at `https://pickleballshop-backend.onrender.com`.
 
 ### Authentication
 
@@ -113,7 +113,7 @@ All API calls are wrapped in React Query hooks for:
 
 ## Environment Variables
 
-- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend-1.onrender.com)
+- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend.onrender.com)
 
 ## Building for Production
 
