@@ -71,6 +71,7 @@ export default function LoginPage() {
       toast.success("Đăng nhập Google thành công!");
       router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
+      console.error("Google login error:", error);
       toast.error(error?.data?.message || "Đăng nhập Google thất bại");
     }
   };
@@ -79,6 +80,7 @@ export default function LoginPage() {
     loginMutation.isPending || googleLoginMutation.isPending;
 
   const handleGoogleError = () => {
+    console.error("Google Sign-In error occurred");
     toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.");
   };
 
@@ -215,23 +217,32 @@ export default function LoginPage() {
               <span className="h-px flex-1 bg-border" />
             </div>
 
-            <div
-              className={`flex justify-center ${
-                googleLoginMutation.isPending
-                  ? "pointer-events-none opacity-70"
-                  : ""
-              }`}
-            >
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                theme="outline"
-                width="280"
-                text="signin_with"
-                shape="pill"
-                locale="vi"
-              />
-            </div>
+            {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
+              <div
+                className={`flex justify-center ${
+                  googleLoginMutation.isPending
+                    ? "pointer-events-none opacity-70"
+                    : ""
+                }`}
+              >
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="outline"
+                  width="280"
+                  text="signin_with"
+                  shape="pill"
+                  locale="vi"
+                  useOneTap={false}
+                />
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <p className="text-sm text-muted-foreground">
+                  Google Sign-In chưa được cấu hình. Vui lòng thêm NEXT_PUBLIC_GOOGLE_CLIENT_ID vào .env.local
+                </p>
+              </div>
+            )}
 
             <p className="text-center text-sm text-emerald-900/80">
               Chưa có tài khoản?{" "}

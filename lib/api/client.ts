@@ -191,7 +191,7 @@ class ApiClient {
 
   async loginWithGoogle(idToken: string): Promise<AuthResponse> {
     const payload: GoogleLoginRequest = { idToken };
-    return this.request<AuthResponse>("/api/Auth/google-login", {
+    return this.request<AuthResponse>("/api/Auth/login/google", {
       method: "POST",
       body: JSON.stringify(payload),
     });

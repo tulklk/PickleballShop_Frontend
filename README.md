@@ -57,7 +57,14 @@ npm install
 2. Create a `.env.local` file in the root directory:
 ```env
 NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend.onrender.com
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id-here
 ```
+
+**Note:** To enable Google Sign-In, you need to:
+- Create a Google OAuth 2.0 Client ID in the [Google Cloud Console](https://console.cloud.google.com/)
+- Add `http://localhost:3000` to authorized JavaScript origins
+- Add `http://localhost:3000/login` to authorized redirect URIs
+- Copy the Client ID to `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local`
 
 3. Run the development server:
 ```bash
@@ -124,6 +131,7 @@ All API calls are wrapped in React Query hooks for:
 ## Environment Variables
 
 - `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend.onrender.com)
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuth 2.0 Client ID for Google Sign-In (required for Google login feature)
 
 ## Building for Production
 

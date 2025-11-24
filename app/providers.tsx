@@ -37,9 +37,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
     []
   );
 
-  if (!googleClientId && process.env.NODE_ENV === "development") {
-    console.warn(
-      "Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID. Google login will not work."
+  if (!googleClientId) {
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        "❌ Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID. Google login will not work."
+      );
+      console.error(
+        "Please add NEXT_PUBLIC_GOOGLE_CLIENT_ID to your .env.local file"
+      );
+    }
+    // Render without GoogleOAuthProvider if clientId is missing
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          {children}
+        </ThemeProvider>
+      </QueryClientProvider>
     );
   }
 
