@@ -61,7 +61,10 @@ export default function AdminProductCreatePage() {
         stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
         sku: values.sku || null,
         brand: values.brand || null,
-        isActive: values.isActive === true || values.isActive === "true",
+        isActive:
+          typeof values.isActive === "string"
+            ? values.isActive === "true"
+            : Boolean(values.isActive),
         // Always include imageUrls as array of valid strings (even if empty)
         imageUrls: Array.isArray(values.imageUrls) 
           ? values.imageUrls.filter((url): url is string => 

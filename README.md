@@ -4,15 +4,25 @@ A modern, production-ready Next.js frontend for the PickleBall e-commerce websit
 
 ## Tech Stack
 
-- **Next.js 16** (App Router)
-- **React 19**
-- **TypeScript**
-- **Tailwind CSS**
-- **shadcn/ui** (UI components)
-- **TanStack Query** (React Query) for server state management
-- **react-hook-form** + **zod** for form handling and validation
-- **Sonner** for toast notifications
-- **next-themes** for dark/light mode support
+- **Next.js 16 (App Router)** – file-based routing, server components, and optimized bundles for a production-ready storefront.
+- **React 19** – hooks-first UI layer that keeps every screen responsive and interactive.
+- **TypeScript** – strict typing across API clients, hooks, and components to catch regressions before runtime.
+- **Tailwind CSS** – utility-first styling for rapid iteration while keeping the design system consistent.
+- **shadcn/ui** – accessible, themeable primitives for dashboards, forms, and navigation elements.
+- **TanStack Query (React Query)** – declarative data fetching, caching, and background refetch for every API call.
+- **react-hook-form + zod** – schema-driven forms with client-side validation and ergonomic error handling.
+- **Sonner** – lightweight toast notifications that surface success/error states in real time.
+- **next-themes** – maintains dark/light preferences across sessions without additional wiring.
+
+## How These Technologies Work Together
+
+- **Application architecture**: Next.js App Router structures pages under `app/` while server actions and route handlers talk to the backend Render API. React 19 components hydrate seamlessly on the client for rich interactions.
+- **Data layer**: `lib/api/client.ts` centralizes Axios/fetch logic, while `lib/api/hooks.ts` exposes TanStack Query hooks (pagination, infinite scroll, optimistic updates). Errors propagate through typed `ApiError` objects.
+- **Forms & validation**: Admin/product forms are powered by `react-hook-form` controllers with `zod` schemas, ensuring the same validation rules on both client and server. File uploads use `FormData` and Cloudinary helpers with timeout protection.
+- **Styling system**: Tailwind tokens define spacing, color, and typography; shadcn/ui components (Card, Badge, Button, Input, Select) inherit the same tokens so marketing and admin surfaces stay cohesive.
+- **Internationalization & UX**: Key flows (login, orders, navbar) are localized to Vietnamese, using shared constants to avoid duplicated strings. Sonner toasts present localized feedback for all mutations.
+- **Theming & accessibility**: `next-themes` persists the user’s preferred palette, while shadcn/ui primitives include focus states and ARIA attributes out of the box.
+- **Testing & deployment readiness**: Strict TypeScript plus linting keeps builds green for Vercel. Logs sprinkled through admin workflows give recruiters insight into the debugging story when integrating with .NET backend APIs.
 
 ## Features
 
