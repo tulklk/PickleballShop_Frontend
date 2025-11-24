@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/shared/ProductGrid";
 import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
-import { useFeaturedProducts, useCategories } from "@/lib/api/hooks";
+import { useProducts, useCategories } from "@/lib/api/hooks";
+import { ProductCard } from "@/components/shared/ProductCard";
 
 import logo from "@/app/img/logopickleball.png";
 import pick1 from "@/app/img/pickleball_img/pick1.jpg";
@@ -267,7 +269,61 @@ function BrandPromises() {
 }
 
 function FeaturedProducts() {
-  const { data: products, isLoading, isError } = useFeaturedProducts(8);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const { data: productsData, isLoading, isError } = useProducts({
+    Page: 1,
+    PageSize: 100, // Get more products to sort
+  });
+
+  // Sort products by reviewCount (most viewed) and take top products
+  const products = productsData?.items
+    ? [...productsData.items]
+        .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
+        .slice(0, 20) // Take top 20 most viewed products
+    : [];
+
+  const checkScrollButtons = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+    setCanScrollLeft(scrollLeft > 10);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+  };
+
+  useEffect(() => {
+    // Check scroll buttons after products load
+    const timer = setTimeout(() => {
+      checkScrollButtons();
+    }, 100);
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScrollButtons);
+      window.addEventListener("resize", checkScrollButtons);
+      return () => {
+        clearTimeout(timer);
+        container.removeEventListener("scroll", checkScrollButtons);
+        window.removeEventListener("resize", checkScrollButtons);
+      };
+    }
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products.length]);
+
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollContainerRef.current) return;
+    const scrollAmount = 400; // Scroll by 400px
+    const newScrollLeft =
+      scrollContainerRef.current.scrollLeft +
+      (direction === "left" ? -scrollAmount : scrollAmount);
+    
+    scrollContainerRef.current.scrollTo({
+      left: newScrollLeft,
+      behavior: "smooth",
+    });
+  };
 
   if (isLoading) {
     return <ProductGridSkeleton count={8} />;
@@ -281,7 +337,57 @@ function FeaturedProducts() {
     );
   }
 
-  return <ProductGrid products={products} />;
+  return (
+    <div className="relative">
+      {/* Left Arrow Button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg border-emerald-200 transition-opacity ${
+          canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => scroll("left")}
+        disabled={!canScrollLeft}
+      >
+        <ChevronLeft className="h-5 w-5 text-emerald-700" />
+      </Button>
+
+      {/* Scrollable Products Container */}
+      <div
+        ref={scrollContainerRef}
+        className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-2"
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+      >
+        {products.map((product) => (
+          <div key={product.id} className="shrink-0 w-[280px]">
+            <ProductCard product={product} />
+          </div>
+        ))}
+      </div>
+
+      {/* Right Arrow Button */}
+      <Button
+        variant="outline"
+        size="icon"
+        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg border-emerald-200 transition-opacity ${
+          canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => scroll("right")}
+        disabled={!canScrollRight}
+      >
+        <ChevronRight className="h-5 w-5 text-emerald-700" />
+      </Button>
+
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+    </div>
+  );
 }
 
 function CategoriesGrid() {

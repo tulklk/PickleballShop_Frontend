@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { User, ShoppingBag } from "lucide-react";
 
 const accountNavItems = [
-  { href: "/account", label: "Thông tin cá nhân", icon: User },
+  { href: "/account", label: "Tổng quan", icon: User },
+  { href: "/account/profile", label: "Thông tin cá nhân", icon: User },
   { href: "/account/orders", label: "Quản lý đơn hàng", icon: ShoppingBag },
 ];
 

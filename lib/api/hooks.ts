@@ -14,6 +14,8 @@ import type {
   OrderStatus,
   PaymentStatus,
   UserDto,
+  User,
+  UpdateUserRequest,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -576,6 +578,84 @@ export function useAdminDeleteProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+// User hooks
+export function useUserMe() {
+  return useQuery({
+    queryKey: ["user", "me"],
+    queryFn: () => apiClient.getUserMe(),
+  });
+}
+
+export function useUser(id: string) {
+  return useQuery({
+    queryKey: ["user", id],
+    queryFn: () => apiClient.getUser(id),
+    enabled: !!id,
+  });
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: () => apiClient.getUsers(),
+  });
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
+      apiClient.updateUser(id, data),
+    onSuccess: async (_, variables) => {
+      // Invalidate all user-related queries
+      queryClient.invalidateQueries({ queryKey: ["user", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["user", "me"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      queryClient.invalidateQueries({ queryKey: ["session"] });
+      
+      // Refetch current user data and update cache
+      try {
+        const updatedUser = await apiClient.getUserMe();
+        // Convert User to UserDto format for cache compatibility
+        let roleString: string | null = null;
+        if (updatedUser.role === 1) {
+          roleString = "Customer";
+        } else if (updatedUser.role === 2) {
+          roleString = "Admin";
+        } else if (updatedUser.role !== null && updatedUser.role !== undefined) {
+          roleString = String(updatedUser.role);
+        }
+        
+        const userDto: UserDto = {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          fullName: updatedUser.fullName,
+          phoneNumber: updatedUser.phoneNumber,
+          role: roleString,
+        };
+        // Update the main user cache that useAuth() reads from
+        queryClient.setQueryData(["user"], userDto);
+        // Also update the user/me cache
+        queryClient.setQueryData(["user", "me"], updatedUser);
+      } catch (error) {
+        console.warn("Failed to refetch user after update:", error);
+        // Even if refetch fails, still invalidate to force refetch on next access
+      }
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 }

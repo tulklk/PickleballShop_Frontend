@@ -105,7 +105,7 @@ function CartContent() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading cart...</div>
+        <div className="text-center">Đang tải giỏ hàng...</div>
       </div>
     );
   }
@@ -115,12 +115,12 @@ function CartContent() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-16">
           <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
+          <h2 className="text-2xl font-bold mb-2">Giỏ hàng của bạn trống</h2>
           <p className="text-muted-foreground mb-6">
-            Start shopping to add items to your cart
+            Bắt đầu mua sắm để thêm sản phẩm vào giỏ hàng
           </p>
           <Link href="/products">
-            <Button>Browse Products</Button>
+            <Button>Xem sản phẩm</Button>
           </Link>
         </div>
       </div>
@@ -130,9 +130,9 @@ function CartContent() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Shopping Cart</h1>
+        <h1 className="text-3xl font-bold">Giỏ hàng</h1>
         <Button variant="outline" onClick={handleClearCart}>
-          Clear Cart
+          Xóa giỏ hàng
         </Button>
       </div>
 
@@ -142,14 +142,74 @@ function CartContent() {
             <Card key={item.id}>
               <CardContent className="p-4">
                 <div className="flex gap-4">
-                  <div className="relative w-24 h-24 flex-shrink-0">
-                    <Image
-                      src={item.productImageUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect width='96' height='96' fill='%23e5e7eb'/%3E%3C/svg%3E"}
-                      alt={item.productName || "Product"}
-                      fill
-                      className="object-cover rounded"
-                      sizes="96px"
-                    />
+                  <div className="relative w-24 h-24 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                    {(() => {
+                      // Helper to validate URL
+                      const isValidUrl = (url: string | null | undefined): boolean => {
+                        if (!url || typeof url !== 'string' || url.trim() === '') {
+                          return false;
+                        }
+                        // Data URLs are valid
+                        if (url.startsWith('data:')) {
+                          return true;
+                        }
+                        // Check if it's a valid URL (http/https) or relative path
+                        try {
+                          if (url.startsWith('/')) {
+                            return true; // Relative path is valid
+                          }
+                          if (url.startsWith('http://') || url.startsWith('https://')) {
+                            new URL(url);
+                            return true;
+                          }
+                          return false;
+                        } catch {
+                          return false;
+                        }
+                      };
+
+                      const imageUrl = item.productImageUrl;
+                      const isValid = isValidUrl(imageUrl);
+                      const isDataUrl = imageUrl?.startsWith('data:');
+                      const isCloudinaryUrl = imageUrl?.includes('cloudinary.com') || imageUrl?.includes('res.cloudinary.com');
+                      
+                      // Use regular img tag for data URLs, Cloudinary URLs, or invalid URLs
+                      if (isDataUrl || isCloudinaryUrl || !isValid) {
+                        const fallbackUrl = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect width='96' height='96' fill='%23e5e7eb'/%3E%3C/svg%3E";
+                        return (
+                          <img
+                            src={isValid && imageUrl ? imageUrl : fallbackUrl}
+                            alt={item.productName || "Sản phẩm"}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = fallbackUrl;
+                            }}
+                          />
+                        );
+                      }
+                      
+                      // Use Next.js Image for valid HTTP/HTTPS URLs
+                      return (
+                        <Image
+                          src={imageUrl!}
+                          alt={item.productName || "Product"}
+                          fill
+                          className="object-cover"
+                          sizes="96px"
+                          unoptimized={isCloudinaryUrl}
+                          onError={(e) => {
+                            // Fallback to placeholder on error
+                            const img = e.target as HTMLImageElement;
+                            img.style.display = 'none';
+                            const parent = img.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect width='96' height='96' fill='%23e5e7eb'/%3E%3C/svg%3E" alt="${item.productName || 'Product'}" class="w-full h-full object-cover" />`;
+                            }
+                          }}
+                        />
+                      );
+                    })()}
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold mb-2">{item.productName}</h3>
@@ -182,7 +242,7 @@ function CartContent() {
                       </Button>
                     </div>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Subtotal: {formatCurrency(item.lineTotal)}
+                      Tạm tính: {formatCurrency(item.lineTotal)}
                     </p>
                   </div>
                 </div>
@@ -194,16 +254,16 @@ function CartContent() {
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle>Tóm tắt đơn hàng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between">
-                <span>Items ({cart.totalItems})</span>
+                <span>Sản phẩm ({cart.totalItems})</span>
                 <span>{formatCurrency(cart.subTotal)}</span>
               </div>
               <div className="border-t pt-4">
                 <div className="flex justify-between text-lg font-bold">
-                  <span>Total</span>
+                  <span>Tổng cộng</span>
                   <span>{formatCurrency(cart.subTotal)}</span>
                 </div>
               </div>

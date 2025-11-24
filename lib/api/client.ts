@@ -20,6 +20,8 @@ import type {
   PaymentStatus,
   GoogleLoginRequest,
   UserDto,
+  User,
+  UpdateUserRequest,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -607,6 +609,32 @@ class ApiClient {
 
   async adminDeleteProduct(id: string): Promise<void> {
     return this.request<void>(`/api/admin/AdminProducts/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  // User endpoints
+  async getUserMe(): Promise<User> {
+    return this.request<User>("/api/Users/me");
+  }
+
+  async getUser(id: string): Promise<User> {
+    return this.request<User>(`/api/Users/${id}`);
+  }
+
+  async getUsers(): Promise<User[]> {
+    return this.request<User[]>("/api/Users");
+  }
+
+  async updateUser(id: string, data: UpdateUserRequest): Promise<void> {
+    return this.request<void>(`/api/Users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    return this.request<void>(`/api/Users/${id}`, {
       method: "DELETE",
     });
   }

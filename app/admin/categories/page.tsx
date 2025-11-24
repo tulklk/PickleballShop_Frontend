@@ -98,7 +98,6 @@ export default function AdminCategoriesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tên</TableHead>
-                  <TableHead>Slug</TableHead>
                   <TableHead>Mô tả</TableHead>
                   <TableHead>Thao tác</TableHead>
                 </TableRow>
@@ -109,7 +108,6 @@ export default function AdminCategoriesPage() {
                     <TableCell className="font-medium">
                       {category.name || "Không có tên"}
                     </TableCell>
-                    <TableCell>{category.slug || "N/A"}</TableCell>
                     <TableCell className="max-w-md truncate">
                       {category.description || "Không có mô tả"}
                     </TableCell>

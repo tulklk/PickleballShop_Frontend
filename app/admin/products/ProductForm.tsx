@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectItem } from "@/components/ui/select";
 import type { Product, ProductCategory } from "@/lib/api/types";
 import { X, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -291,24 +292,31 @@ export function ProductForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <Label>Danh mục (Category ID) *</Label>
-          <Input 
-            {...register("categoryId")} 
-            placeholder="Nhập Category ID (UUID)"
-            type="text"
-          />
+          <Label>Danh mục *</Label>
+          <Select
+            value={categoryId || ""}
+            onValueChange={(value) => {
+              setValue("categoryId", value, { shouldValidate: true });
+            }}
+          >
+            <SelectItem value="" disabled>
+              Chọn danh mục
+            </SelectItem>
+            {categories && categories.length > 0 ? (
+              categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name || category.id}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="" disabled>
+                Không có danh mục nào
+              </SelectItem>
+            )}
+          </Select>
           {errors.categoryId && (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-destructive mt-1">
               {errors.categoryId.message}
-            </p>
-          )}
-          {categories && categories.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Gợi ý: {categories.map((cat, idx) => (
-                <span key={cat.id}>
-                  {cat.name} ({cat.id}){idx < categories.length - 1 ? ", " : ""}
-                </span>
-              ))}
             </p>
           )}
         </div>

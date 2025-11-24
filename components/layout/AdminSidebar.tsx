@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Package, FolderTree, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, ShoppingBag, Users } from "lucide-react";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/users", label: "Users", icon: Users },
 ];
 
 export function AdminSidebar() {

@@ -63,6 +63,24 @@ export interface UserDto {
   role: string | null;
 }
 
+export interface User {
+  id: string;
+  email: string | null;
+  fullName: string | null;
+  phoneNumber: string | null;
+  role: Role | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateUserRequest {
+  email?: string | null;
+  fullName?: string | null;
+  phoneNumber?: string | null;
+  isActive?: boolean;
+}
+
 export interface CategoryDto {
   id: string;
   name: string | null;

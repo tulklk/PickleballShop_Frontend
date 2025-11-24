@@ -24,10 +24,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { formatDate } from "@/lib/utils/formatDate";
 import { toast } from "sonner";
-import { PackagePlus, Trash2, Eye, Pencil } from "lucide-react";
-import type { Product, ProductListDto } from "@/lib/api/types";
+import { PackagePlus, Trash2, Eye, Pencil, Package } from "lucide-react";
+import type { Product, ProductListDto, ProductDto } from "@/lib/api/types";
+import Image from "next/image";
 import { useAuth } from "@/lib/auth/useAuth";
 import { DeleteConfirmationDialog } from "@/components/shared/DeleteConfirmationDialog";
 
@@ -45,14 +45,15 @@ export default function AdminProductsPage() {
     enabled: isAdmin,
   });
 
-  const { data: publicProducts, isLoading: isLoadingPublic } = useProducts({ Page: 1, PageSize: 100 });
+  const { data: publicProducts, isLoading: isLoadingPublic } = useProducts({ Page: 1, PageSize: 1000 });
   const deleteProduct = useAdminDeleteProduct();
 
-  // Use admin products if available, otherwise fallback to public products
-  const normalizedProducts = (Array.isArray(adminProducts) && adminProducts.length > 0
-    ? adminProducts
-    : Array.isArray(publicProducts?.items) && publicProducts.items.length > 0
+  // Prefer publicProducts (ProductListDto[]) because it has primaryImageUrl
+  // Only use adminProducts if publicProducts is not available
+  const normalizedProducts = (Array.isArray(publicProducts?.items) && publicProducts.items.length > 0
     ? publicProducts.items
+    : Array.isArray(adminProducts) && adminProducts.length > 0
+    ? adminProducts
     : []) as Array<Product | ProductListDto>;
   
   // Only show error if both admin and public products fail, and we're not still loading
@@ -109,7 +110,7 @@ export default function AdminProductsPage() {
         <CardHeader>
           <CardTitle>Tất cả sản phẩm</CardTitle>
             <CardDescription>
-              Theo dõi giá, tồn kho và ngày tạo gần nhất.
+              Theo dõi giá, tồn kho và thông tin sản phẩm.
             </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,11 +127,11 @@ export default function AdminProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-20">Hình ảnh</TableHead>
                     <TableHead>Tên</TableHead>
                     <TableHead>Giá bán</TableHead>
                     <TableHead>Tồn kho</TableHead>
                     <TableHead>Thương hiệu</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -140,20 +141,96 @@ export default function AdminProductsPage() {
                       "stockQuantity" in product
                         ? product.stockQuantity ?? "N/A"
                         : "N/A";
-                    const createdAt =
-                      "createdAt" in product ? product.createdAt : undefined;
+                    
+                    // Get image URL - handle both ProductListDto (has primaryImageUrl) and ProductDto (has imageUrls)
+                    // Helper to validate URL
+                    const isValidUrl = (url: string | null | undefined): boolean => {
+                      if (!url || typeof url !== 'string' || url.trim() === '') {
+                        return false;
+                      }
+                      try {
+                        if (url.startsWith('/')) {
+                          return true; // Relative path is valid
+                        }
+                        if (url.startsWith('http://') || url.startsWith('https://')) {
+                          new URL(url);
+                          return true;
+                        }
+                        return false;
+                      } catch {
+                        return false;
+                      }
+                    };
+                    
+                    // Get image URL with validation - same as ProductCard
+                    let imageUrl: string | null = null;
+                    
+                    // Check if product has primaryImageUrl (ProductListDto)
+                    if ("primaryImageUrl" in product && product.primaryImageUrl) {
+                      if (isValidUrl(product.primaryImageUrl)) {
+                        imageUrl = product.primaryImageUrl;
+                      }
+                    }
+                    
+                    // If no primaryImageUrl, check imageUrls (ProductDto)
+                    if (!imageUrl && "imageUrls" in product && Array.isArray(product.imageUrls) && product.imageUrls.length > 0) {
+                      const firstImage = product.imageUrls[0];
+                      if (isValidUrl(firstImage)) {
+                        imageUrl = firstImage;
+                      }
+                    }
+
+                    // Check if URL is Cloudinary URL
+                    const isCloudinaryUrl = imageUrl && (
+                      imageUrl.includes('res.cloudinary.com') || 
+                      imageUrl.includes('cloudinary.com')
+                    );
 
                     return (
                       <TableRow key={product.id}>
+                        <TableCell>
+                          {imageUrl ? (
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-emerald-100 bg-emerald-50">
+                              {isCloudinaryUrl ? (
+                                // Use regular img tag for Cloudinary URLs to avoid Next.js Image optimization issues
+                                <img
+                                  src={imageUrl}
+                                  alt={product.name || "Product image"}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    // Fallback to placeholder on error
+                                    (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23e5e7eb'/%3E%3C/svg%3E";
+                                  }}
+                                />
+                              ) : (
+                                // Use Next.js Image for other URLs
+                                <Image
+                                  src={imageUrl}
+                                  alt={product.name || "Product image"}
+                                  fill
+                                  className="object-cover"
+                                  sizes="64px"
+                                  unoptimized={imageUrl.startsWith('http')}
+                                  onError={(e) => {
+                                    // Hide image on error, will show placeholder
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 rounded-lg border border-gray-200 bg-gray-100 flex items-center justify-center">
+                              <Package className="h-6 w-6 text-gray-400" />
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-semibold">
                           {product.name}
                         </TableCell>
                         <TableCell>{formatCurrency(product.price)}</TableCell>
                         <TableCell>{stock}</TableCell>
                         <TableCell>{product.brand ?? "—"}</TableCell>
-                        <TableCell>
-                          {createdAt && typeof createdAt === 'string' ? formatDate(createdAt) : "—"}
-                        </TableCell>
                         <TableCell>
                         <div className="flex justify-end gap-2">
                             <Link
