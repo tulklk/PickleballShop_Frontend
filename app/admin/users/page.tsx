@@ -371,7 +371,7 @@ export default function AdminUsersPage() {
         onConfirm={handleDeleteConfirm}
         title="Xóa người dùng"
         description={`Bạn có chắc chắn muốn xóa người dùng "${selectedUser?.name}"? Hành động này không thể hoàn tác.`}
-        isDeleting={deleteUser.isPending}
+        isLoading={deleteUser.isPending}
       />
     </div>
   );
