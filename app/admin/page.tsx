@@ -194,7 +194,7 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>{order.paymentStatus ?? "-"}</TableCell>
                           <TableCell>
-                            <StatusBadge status={order.orderStatus ?? "N/A"} />
+                            <StatusBadge status={String(order.orderStatus ?? "N/A")} />
                           </TableCell>
                           <TableCell className="text-right font-semibold">
                             {formatCurrency(order.totalAmount ?? 0)}
