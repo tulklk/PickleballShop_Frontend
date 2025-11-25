@@ -104,9 +104,22 @@ function CheckoutContent() {
         paymentMethod: data.paymentMethod,
       });
 
+      // If payment method is COD, show success message and redirect
+      if (data.paymentMethod === PaymentMethod.COD) {
+        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+        router.push(`/account/orders/${order.id}`);
+        return;
+      }
+
       // If payment method is not COD, create payment
-      if (data.paymentMethod !== PaymentMethod.COD && order.id) {
+      if (order.id) {
         const paymentResponse = await createPayment.mutateAsync(order.id);
+        // Check if it's COD from response or if paymentUrl is null
+        if (paymentResponse.isCod || !paymentResponse.paymentUrl) {
+          toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+          router.push(`/account/orders/${order.id}`);
+          return;
+        }
         if (paymentResponse.paymentUrl) {
           window.location.href = paymentResponse.paymentUrl;
           return;

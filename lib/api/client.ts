@@ -14,8 +14,11 @@ import type {
   CartItemDto,
   CreateOrderRequest,
   OrderDto,
+  Order,
+  OrderItem,
   CreatePaymentResponse,
   UpdateOrderStatusRequest,
+  UpdatePaymentStatusRequest,
   OrderStatus,
   PaymentStatus,
   GoogleLoginRequest,
@@ -176,11 +179,34 @@ class ApiClient {
 
     // Handle empty responses
     const contentType = response.headers.get("content-type");
+    const text = await response.text();
+    
+    if (!text || text.trim() === "") {
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[API Response] Empty response for ${url}`);
+      }
+      return [] as T; // Return empty array for list endpoints
+    }
+    
     if (!contentType || !contentType.includes("application/json")) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[API Response] Non-JSON response for ${url}:`, contentType);
+      }
       return {} as T;
     }
 
-    return response.json();
+    try {
+      const json = JSON.parse(text);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[API Response] ${url}:`, json);
+      }
+      return json;
+    } catch (parseError) {
+      if (process.env.NODE_ENV === "development") {
+        console.error(`[API Response] Failed to parse JSON for ${url}:`, parseError, text);
+      }
+      throw new ApiError(500, "Invalid JSON response", { text, parseError });
+    }
   }
 
   // Auth endpoints
@@ -414,7 +440,7 @@ class ApiClient {
     paymentStatus?: PaymentStatus;
     startDate?: string;
     endDate?: string;
-  }): Promise<OrderDto[]> {
+  }): Promise<Order[]> {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -424,13 +450,87 @@ class ApiClient {
       });
     }
     const query = searchParams.toString();
-    return this.request<OrderDto[]>(
-      `/api/admin/AdminOrders${query ? `?${query}` : ""}`
-    );
+    const endpoint = `/api/admin/AdminOrders${query ? `?${query}` : ""}`;
+    
+    try {
+      const result = await this.request<Order[]>(endpoint);
+      if (process.env.NODE_ENV === "development") {
+        console.log("[adminGetOrders] Success:", result);
+      }
+      return result;
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[adminGetOrders] Error:", error);
+      }
+      throw error;
+    }
   }
 
-  async adminGetOrderById(id: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/admin/AdminOrders/${id}`);
+  async adminGetOrderById(id: string): Promise<Order> {
+    const endpoint = `/api/admin/AdminOrders/${id}`;
+    
+    try {
+      // Backend may return OrderDto format (with shippingAddress) or Order format (with individual fields)
+      // Accept any format and transform to Order
+      const result = await this.request<any>(endpoint);
+      
+      if (process.env.NODE_ENV === "development") {
+        console.log("[adminGetOrderById] Raw response:", result);
+      }
+      
+      // Check if it has shippingAddress (OrderDto format) or individual fields (Order format)
+      if (result.shippingAddress && typeof result.shippingAddress === "object") {
+        // It's OrderDto format or has shippingAddress object, transform to Order format
+        const order: Order = {
+          id: result.id,
+          createdAt: result.createdAt || result.createdAt,
+          updatedAt: result.updatedAt || result.updatedAt,
+          orderNumber: result.orderNumber,
+          userId: result.userId || result.user?.id || "",
+          totalAmount: result.totalAmount,
+          paymentStatus: result.paymentStatus as PaymentStatus | string,
+          orderStatus: result.orderStatus as OrderStatus | string,
+          paymentMethod: result.paymentMethod as PaymentMethod | string,
+          paymentTransactionId: result.paymentTransactionId || null,
+          shippingFullName: result.shippingAddress?.fullName || result.shippingFullName || null,
+          shippingPhoneNumber: result.shippingAddress?.phoneNumber || result.shippingPhoneNumber || null,
+          shippingAddressLine: result.shippingAddress?.addressLine || result.shippingAddressLine || null,
+          shippingWard: result.shippingAddress?.ward || result.shippingWard || null,
+          shippingDistrict: result.shippingAddress?.district || result.shippingDistrict || null,
+          shippingCity: result.shippingAddress?.city || result.shippingCity || null,
+          user: result.user || null,
+          shippingAddress: result.shippingAddress || null,
+          items: result.items?.map((item: any) => ({
+            id: item.id,
+            productId: item.productId,
+            productName: item.productName || item.productNameSnapshot || null,
+            productImageUrl: item.productImageUrl || null,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            lineTotal: item.lineTotal,
+          })) || null,
+        };
+        
+        if (process.env.NODE_ENV === "development") {
+          console.log("[adminGetOrderById] Transformed to Order:", order);
+        }
+        
+        return order;
+      }
+      
+      // It's already Order format (has individual shipping fields)
+      return result as Order;
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[adminGetOrderById] Error:", error);
+        console.error("[adminGetOrderById] Endpoint:", endpoint);
+        if (error instanceof ApiError) {
+          console.error("[adminGetOrderById] Error status:", error.status);
+          console.error("[adminGetOrderById] Error data:", error.data);
+        }
+      }
+      throw error;
+    }
   }
 
   async adminUpdateOrderStatus(
@@ -438,6 +538,16 @@ class ApiClient {
     data: UpdateOrderStatusRequest
   ): Promise<void> {
     return this.request<void>(`/api/admin/AdminOrders/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdatePaymentStatus(
+    id: string,
+    data: UpdatePaymentStatusRequest
+  ): Promise<void> {
+    return this.request<void>(`/api/admin/AdminOrders/${id}/payment-status`, {
       method: "PUT",
       body: JSON.stringify(data),
     });

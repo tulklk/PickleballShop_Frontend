@@ -11,6 +11,7 @@ import type {
   ProductCategory,
   Product,
   UpdateOrderStatusRequest,
+  UpdatePaymentStatusRequest,
   OrderStatus,
   PaymentStatus,
   UserDto,
@@ -526,6 +527,24 @@ export function useAdminUpdateOrderStatus() {
     }) => apiClient.adminUpdateOrderStatus(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+}
+
+export function useAdminUpdatePaymentStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdatePaymentStatusRequest;
+    }) => apiClient.adminUpdatePaymentStatus(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "order"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });

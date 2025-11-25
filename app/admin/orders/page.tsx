@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useAdminOrders } from "@/lib/api/hooks";
 import {
   Table,
@@ -14,68 +15,186 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { OrderStatus, PaymentStatus } from "@/lib/api/types";
+
+function getOrderStatusText(status: OrderStatus | string): string {
+  // Handle string values from backend
+  if (typeof status === "string") {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes("pending") || statusLower.includes("chờ")) {
+      return "Chờ xử lý";
+    }
+    if (statusLower.includes("processing") || statusLower.includes("xử lý")) {
+      return "Đang xử lý";
+    }
+    if (statusLower.includes("shipped") || statusLower.includes("giao")) {
+      return "Đang giao";
+    }
+    if (statusLower.includes("completed") || statusLower.includes("hoàn thành")) {
+      return "Hoàn thành";
+    }
+    if (statusLower.includes("confirmed") || statusLower.includes("xác nhận")) {
+      return "Đã xác nhận";
+    }
+    if (statusLower.includes("cancelled") || statusLower.includes("hủy")) {
+      return "Đã hủy";
+    }
+    return status; // Return original string if no match
+  }
+  
+  // Handle enum values
+  switch (status) {
+    case OrderStatus.Pending:
+      return "Chờ xử lý";
+    case OrderStatus.Processing:
+      return "Đang xử lý";
+    case OrderStatus.Shipped:
+      return "Đang giao";
+    case OrderStatus.Completed:
+      return "Hoàn thành";
+    case OrderStatus.Cancelled:
+      return "Đã hủy";
+    default:
+      return "Không xác định";
+  }
+}
+
+function getPaymentStatusText(status: PaymentStatus | string): string {
+  // Handle string values from backend
+  if (typeof status === "string") {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes("pending") || statusLower.includes("chờ")) {
+      return "Chờ thanh toán";
+    }
+    if (statusLower.includes("processing") || statusLower.includes("xử lý")) {
+      return "Đang xử lý";
+    }
+    if (statusLower.includes("completed") || statusLower.includes("hoàn thành") || statusLower.includes("paid")) {
+      return "Đã thanh toán";
+    }
+    if (statusLower.includes("failed") || statusLower.includes("thất bại")) {
+      return "Thanh toán thất bại";
+    }
+    return status; // Return original string if no match
+  }
+  
+  // Handle enum values
+  switch (status) {
+    case PaymentStatus.Pending:
+      return "Chờ thanh toán";
+    case PaymentStatus.Processing:
+      return "Đang xử lý";
+    case PaymentStatus.Completed:
+      return "Đã thanh toán";
+    case PaymentStatus.Failed:
+      return "Thanh toán thất bại";
+    default:
+      return "Không xác định";
+  }
+}
 
 export default function AdminOrdersPage() {
-  const { data: orders, isLoading } = useAdminOrders();
+  const { data: orders, isLoading, error } = useAdminOrders();
+
+  // Debug logging
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[AdminOrdersPage] orders:", orders);
+      console.log("[AdminOrdersPage] orders length:", orders?.length);
+      console.log("[AdminOrdersPage] isLoading:", isLoading);
+      console.log("[AdminOrdersPage] error:", error);
+    }
+  }, [orders, isLoading, error]);
 
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading orders...</div>
+        <div className="text-center">Đang tải đơn hàng...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error("[AdminOrdersPage] Error details:", error);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-red-600 font-semibold mb-2">Không thể tải danh sách đơn hàng</p>
+            <p className="text-sm text-red-500">
+              {error instanceof Error ? error.message : "Đã xảy ra lỗi không xác định"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Orders</h1>
+      <h1 className="text-3xl font-bold mb-6">Quản lý đơn hàng</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Orders</CardTitle>
-          <CardDescription>Manage customer orders</CardDescription>
+          <CardTitle>Tất cả đơn hàng</CardTitle>
+          <CardDescription>Quản lý đơn hàng của khách hàng</CardDescription>
         </CardHeader>
         <CardContent>
-          {orders && orders.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order Number</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Payment Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">
-                      {order.orderNumber}
-                    </TableCell>
-                    <TableCell>
-                      {order.shippingAddress.fullName}
-                    </TableCell>
-                    <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-                    <TableCell>{order.orderStatus}</TableCell>
-                    <TableCell>{order.paymentStatus}</TableCell>
-                    <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell>
-                      <Link href={`/admin/orders/${order.id}`}>
-                        <Button variant="outline" size="sm">
-                          View
-                        </Button>
-                      </Link>
-                    </TableCell>
+          {orders && Array.isArray(orders) && orders.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mã đơn hàng</TableHead>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Tổng tiền</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Thanh toán</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead>Thao tác</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">
+                        {order.orderNumber || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {order.user?.fullName || 
+                         order.shippingAddress?.fullName || 
+                         order.shippingFullName || 
+                         "N/A"}
+                      </TableCell>
+                      <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
+                      <TableCell>{getOrderStatusText(order.orderStatus)}</TableCell>
+                      <TableCell>{getPaymentStatusText(order.paymentStatus)}</TableCell>
+                      <TableCell>{formatDate(order.createdAt)}</TableCell>
+                      <TableCell>
+                        <Link href={`/admin/orders/${order.id}`}>
+                          <Button variant="outline" size="sm">
+                            Xem
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No orders found.
+              {orders && Array.isArray(orders) && orders.length === 0 ? (
+                <>
+                  <p className="mb-2">Không tìm thấy đơn hàng nào.</p>
+                  <p className="text-sm">Có thể chưa có đơn hàng nào được tạo.</p>
+                </>
+              ) : (
+                <>
+                  <p className="mb-2">Không thể tải danh sách đơn hàng.</p>
+                  <p className="text-sm">Vui lòng thử lại sau hoặc kiểm tra kết nối.</p>
+                </>
+              )}
             </div>
           )}
         </CardContent>

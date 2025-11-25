@@ -16,9 +16,9 @@ export enum PaymentStatus {
 }
 
 export enum PaymentMethod {
-  COD = 1,
-  MoMo = 2,
-  VNPay = 3,
+  COD = 0,
+  MoMo = 1,
+  VNPay = 2,
 }
 
 export type ProductType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -235,8 +235,51 @@ export interface CreatePaymentResponse {
   paymentUrl: string | null;
   orderId: string;
   orderNumber: string | null;
+  isCod?: boolean;
 }
 
 export interface UpdateOrderStatusRequest {
   orderStatus: OrderStatus;
+}
+
+// Admin Order type (different from OrderDto)
+export interface Order {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  orderNumber: string | null;
+  userId: string;
+  totalAmount: number;
+  paymentStatus: PaymentStatus | string; // Backend may return string like "Pending"
+  orderStatus: OrderStatus | string; // Backend may return string like "Confirmed"
+  paymentMethod: PaymentMethod | string; // Backend may return string like "COD"
+  paymentTransactionId: string | null;
+  shippingFullName: string | null;
+  shippingPhoneNumber: string | null;
+  shippingAddressLine: string | null;
+  shippingWard: string | null;
+  shippingDistrict: string | null;
+  shippingCity: string | null;
+  user?: {
+    id: string;
+    email: string | null;
+    fullName: string | null;
+    phoneNumber: string | null;
+  } | null;
+  shippingAddress?: ShippingAddressDto | null;
+  items?: OrderItem[] | null;
+}
+
+export interface OrderItem {
+  id: string;
+  productId: string;
+  productName: string | null;
+  productImageUrl: string | null;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface UpdatePaymentStatusRequest {
+  paymentStatus: PaymentStatus;
 }
