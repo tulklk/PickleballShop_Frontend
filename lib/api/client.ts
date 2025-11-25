@@ -21,6 +21,7 @@ import type {
   UpdatePaymentStatusRequest,
   OrderStatus,
   PaymentStatus,
+  PaymentMethod,
   GoogleLoginRequest,
   UserDto,
   User,
