@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { ProductListDto, ProductDto } from "@/lib/api/types";
 import { useAddCartItem } from "@/lib/api/hooks";
 import { toast } from "sonner";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Star } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
 import { useQueryClient } from "@tanstack/react-query";
@@ -140,21 +140,31 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.brand && (
             <p className="text-sm text-muted-foreground mb-2">{product.brand}</p>
           )}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl font-bold text-primary">
+          {/* Star Rating */}
+          {"averageRating" in product && (
+            <div className="flex items-center gap-0.5 mb-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-4 w-4 ${
+                    star <= (product.averageRating || 5)
+                      ? "fill-lime-400 text-lime-400"
+                      : "fill-gray-200 text-gray-200"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-lg font-bold text-red-600">
               {formatCurrency(price)}
             </span>
             {originalPrice && originalPrice > price && (
-              <span className="text-sm text-muted-foreground line-through">
+              <span className="text-sm text-gray-400 line-through">
                 {formatCurrency(originalPrice)}
               </span>
             )}
           </div>
-          {"averageRating" in product && product.averageRating && (
-            <div className="text-sm text-muted-foreground">
-              ⭐ {product.averageRating.toFixed(1)} ({product.reviewCount} reviews)
-            </div>
-          )}
         </CardContent>
         <CardFooter className="p-4 pt-0">
           <Button

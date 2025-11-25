@@ -2,233 +2,347 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight, Star, Clock, Truck, Phone, Mail } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ProductGrid } from "@/components/shared/ProductGrid";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
 import { useProducts, useCategories } from "@/lib/api/hooks";
 import { ProductCard } from "@/components/shared/ProductCard";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { toast } from "sonner";
 
-import logo from "@/app/img/logopickleball.png";
-import pick1 from "@/app/img/pickleball_img/pick1.jpg";
-import pic2 from "@/app/img/pickleball_img/pic2.jpg";
-import pic4 from "@/app/img/pickleball_img/pic4.jpg";
-import pic5 from "@/app/img/pickleball_img/pic5.jpg";
-
-const brandPromises = [
-  {
-    icon: ShieldCheck,
-    title: "Chính hãng 100%",
-    description: "Hợp tác trực tiếp cùng IKA Sport và các nhà phân phối lớn.",
-  },
-  {
-    icon: Sparkles,
-    title: "Chọn lọc tinh tế",
-    description: "Các combo paddle, giày, phụ kiện theo từng trình độ.",
-  },
-  {
-    icon: Zap,
-    title: "Giao nhanh nội thành",
-    description: "Nhận hàng trong 24h tại các thành phố lớn trên toàn quốc.",
-  },
-];
-
-const communityStats = [
-  { label: "Paddle đã giao", value: "12K+" },
-  { label: "CLB đồng hành", value: "180+" },
-  { label: "Khách hàng hài lòng", value: "4.9/5" },
-];
+// Import homepage images
+import banner1 from "@/app/img/homepage_img/1.jpg";
+import banner2 from "@/app/img/homepage_img/2.jpg";
+import banner3 from "@/app/img/homepage_img/3.jpg";
+import banner4 from "@/app/img/homepage_img/4.jpg";
+import banner5 from "@/app/img/homepage_img/5.jpg";
+import banner6 from "@/app/img/homepage_img/6.jpg";
+import banner7 from "@/app/img/homepage_img/7.jpg";
+import banner8 from "@/app/img/homepage_img/8.jpg";
+import banner9 from "@/app/img/homepage_img/9.jpg";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-linear-to-b from-[#f3fff5] via-white to-[#e4f6ea]">
-      <HeroSection />
+    <div className="min-h-screen bg-white">
+      {/* Hero Banner Slider */}
+      <HeroBannerSlider />
 
-      <div className="container mx-auto px-4 pb-20 space-y-16">
-        <BrandPromises />
+      {/* Promotion Banners */}
+      <PromotionBanners />
 
-        <section className="space-y-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-500">
-                Sản phẩm nổi bật
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-emerald-950">
-                Sẵn sàng ra sân ngay hôm nay
-              </h2>
-            </div>
-            <Link href="/products">
-              <Button
-                variant="outline"
-                className="border-emerald-300 text-emerald-700 hover:bg-emerald-400 hover:text-white"
-              >
-                Xem tất cả sản phẩm
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-          <div className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-[0_20px_60px_rgba(15,118,110,0.12)]">
-            <FeaturedProducts />
-          </div>
-        </section>
+      {/* Flash Sale Section */}
+      <FlashSaleSection />
 
-        <section className="space-y-8">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-500">
-                Danh mục
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold text-emerald-950">
-                Lên đồ theo phong cách Pickleball của bạn
-              </h2>
-            </div>
-          </div>
-          <CategoriesGrid />
-        </section>
-        
-        <CommunitySection />
-      </div>
+      {/* New Products Section */}
+      <NewProductsSection />
+
+      {/* Category Sections */}
+      <CategoryProductsSection />
+
+      {/* Trending & Popular Section */}
+      <TrendingSection />
+
+      {/* Category Links Grid */}
+      <CategoryLinksGrid />
+
+      {/* Newsletter & Contact */}
+      <NewsletterSection />
+
+      {/* Trust Badges */}
+      <TrustBadges />
     </div>
   );
 }
 
-function HeroSection() {
+function HeroBannerSlider() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const banners = [banner1, banner2, banner3, banner4];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [banners.length]);
+
   return (
-    <section className="relative isolate overflow-hidden px-4 pt-16 pb-24 md:pt-24 md:pb-32">
-      {/* Background with image overlay */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/90 via-white/80 to-emerald-100/90 z-0" />
-        <Image
-          src={pick1}
-          alt="Pickleball Court"
-          fill
-          className="object-cover opacity-20 mix-blend-overlay"
-          priority
-          quality={90}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(129,214,154,0.3),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(90,225,144,0.18),transparent_55%)] blur-3xl" />
-      </div>
-      
-      <div className="container relative mx-auto grid gap-12 md:grid-cols-2 md:items-center z-10">
-        <div className="text-emerald-950 space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold tracking-wide text-emerald-600 shadow-sm">
-            <Image
-              src={logo}
-              alt="IKA Sport Pickleball"
-              width={32}
-              height={32}
-              className="h-6 w-6 rounded-full bg-emerald-50 object-contain p-0.5"
-              priority
-            />
-            IKA Sport Pickleball
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight text-emerald-950">
-            Bùng nổ phong cách Pickleball với sắc trắng xanh IKA
-          </h1>
-          <p className="text-base text-emerald-900/80 max-w-xl">
-            Trang bị paddle, giày, thời trang và phụ kiện đồng bộ sắc trắng –
-            xanh mint tinh tế, nhẹ nhàng nhưng vẫn bùng nổ hiệu suất trên sân.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/products">
-              <Button className="bg-emerald-500 text-white hover:bg-emerald-400 text-base px-6 py-4 h-auto shadow-lg">
-                Mua ngay
-              </Button>
-            </Link>
-            <Link
-              href="/products?categoryId=paddles"
-              className="flex items-center text-emerald-700 font-semibold hover:text-emerald-900 text-sm"
+    <section className="relative">
+      <div className="flex">
+        {/* Main Banner */}
+        <div className="relative w-full lg:w-2/3 h-[300px] md:h-[450px] overflow-hidden">
+          {banners.map((banner, idx) => (
+            <div
+              key={idx}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                idx === currentSlide ? "opacity-100" : "opacity-0"
+              }`}
             >
-              Khám phá paddle cao cấp
-              <ArrowRight className="ml-2 h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-3 gap-4 pt-2 text-xs text-emerald-900/80">
-            {communityStats.map((stat) => (
-              <div key={stat.label}>
-                <p className="text-xl font-semibold text-emerald-600">
-                  {stat.value}
-                </p>
-                <p className="text-xs">{stat.label}</p>
-              </div>
+              <Image
+                src={banner}
+                alt={`Banner ${idx + 1}`}
+                fill
+                className="object-cover"
+                priority={idx === 0}
+              />
+            </div>
+          ))}
+          
+          {/* Navigation Arrows */}
+          <button
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+            onClick={() => setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length)}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+            onClick={() => setCurrentSlide((prev) => (prev + 1) % banners.length)}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+
+          {/* Dots */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  idx === currentSlide ? "bg-lime-400" : "bg-white/60"
+                }`}
+                onClick={() => setCurrentSlide(idx)}
+              />
             ))}
           </div>
         </div>
 
-        <div className="relative h-full">
-          {/* Image Gallery */}
-          <div className="relative rounded-2xl overflow-hidden border-2 border-white shadow-xl max-w-lg mx-auto">
-            <div className="grid grid-cols-2 gap-1.5">
-              <div className="relative aspect-square">
-                <Image
-                  src={pic2}
-                  alt="Pickleball Balls"
-                  fill
-                  className="object-cover"
-                  quality={90}
-                />
+        {/* Side Banners */}
+        <div className="hidden lg:flex flex-col w-1/3 gap-2 pl-2">
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group">
+            <Image
+              src={banner5}
+              alt="Side Banner 1"
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4">
+              <Button className="bg-lime-400 text-black hover:bg-lime-500">XEM NGAY</Button>
+            </div>
+          </Link>
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group">
+            <Image
+              src={banner6}
+              alt="Side Banner 2"
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PromotionBanners() {
+  return (
+    <section className="container mx-auto px-4 py-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Banner 1 - Trao đổi vợt cũ */}
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">TRAO ĐỔI VỢT CŨ</h3>
+            <p className="text-sm text-emerald-600 font-semibold">TIẾT KIỆM NHẤT</p>
+            <div className="flex gap-4 mt-2 text-xs text-gray-600">
+              <span>ĐỔI MỚI</span>
+              <span>KÍ GỬI</span>
+              <span>ĐỔI CÂY CŨ KHÁC</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">CHI PHÍ</p>
+            <p className="text-4xl font-bold text-gray-900">THẤP</p>
+          </div>
+        </div>
+
+        {/* Banner 2 - Thay đế giày */}
+        <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">THAY ĐẾ GIÀY PICKLEBALL</h3>
+            <p className="text-sm text-gray-600">GIỮ NGUYÊN CẤU TRÚC</p>
+            <div className="flex gap-3 mt-2 text-xs text-gray-600">
+              <span>ASICS</span>
+              <span>NIKE</span>
+              <span>ADIDAS...</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">CHUẨN</p>
+            <p className="text-4xl font-bold text-emerald-600">100%</p>
+          </div>
+        </div>
+
+        {/* Banner 3 - Sửa vợt */}
+        <div className="bg-gradient-to-r from-lime-50 to-lime-100 rounded-xl p-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">SỬA VỢT PICKLEBALL</h3>
+            <p className="text-sm text-gray-600">CHI PHÍ THẤP NHẤT</p>
+            <div className="flex gap-3 mt-2 text-xs text-gray-600">
+              <span>KHÔNG LỆCH</span>
+              <span>THẨM MỸ CAO</span>
+              <span>BẢO HÀNH</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">KHÔI PHỤC</p>
+            <p className="text-4xl font-bold text-lime-600">99%</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FlashSaleSection() {
+  const [timeLeft, setTimeLeft] = useState({ hours: 22, minutes: 37, seconds: 39 });
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { data: productsData, isLoading } = useProducts({ PageSize: 20 });
+
+  // Get products with discount
+  const saleProducts = productsData?.items?.filter(
+    (p) => p.originalPrice && p.originalPrice > p.price
+  ).slice(0, 10) || [];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return { hours: 23, minutes: 59, seconds: 59 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const scroll = (dir: "left" | "right") => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+    }
+  };
+
+  if (isLoading || saleProducts.length === 0) return null;
+
+  return (
+    <section className="container mx-auto px-4 py-6">
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Deal of the day */}
+        <div className="lg:w-1/3 bg-white rounded-xl border p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">CHỈ CÓ TRONG HÔM NAY</h3>
+          {saleProducts[0] && (
+            <>
+              <div className="relative aspect-square mb-4">
+                {saleProducts[0].primaryImageUrl?.includes("cloudinary") ? (
+                  <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                ) : (
+                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill className="object-contain" />
+                )}
+                {saleProducts[0].originalPrice && (
+                  <span className="absolute top-2 right-2 bg-lime-400 text-black text-sm font-bold px-2 py-1 rounded">
+                    -{Math.round((1 - saleProducts[0].price / saleProducts[0].originalPrice) * 100)}%
+                  </span>
+                )}
               </div>
-              <div className="relative aspect-square">
-                <Image
-                  src={pic4}
-                  alt="Pickleball Paddle and Ball"
-                  fill
-                  className="object-cover"
-                  quality={90}
-                />
+              <h4 className="font-medium text-gray-900 line-clamp-2 mb-2">{saleProducts[0].name}</h4>
+              <div className="flex items-center gap-1 mb-2">
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} className={`h-4 w-4 ${s <= (saleProducts[0].averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                ))}
               </div>
-              <div className="relative aspect-square col-span-2">
-                <Image
-                  src={pic5}
-                  alt="Pickleball Equipment"
-                  fill
-                  className="object-cover"
-                  quality={90}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/60 via-transparent to-transparent flex items-end p-3">
-                  <div className="text-white">
-                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">
-                      Phong độ sân đấu
-                    </p>
-                    <p className="text-lg font-semibold mt-0.5">
-                      Bộ sưu tập 2025
-                    </p>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl font-bold text-red-600">{formatCurrency(saleProducts[0].price)}</span>
+                {saleProducts[0].originalPrice && (
+                  <span className="text-sm text-gray-400 line-through">{formatCurrency(saleProducts[0].originalPrice)}</span>
+                )}
+              </div>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">Đặt mua ngay! Ưu đãi sẽ kết thúc sau:</p>
+                <div className="flex gap-2">
+                  <div className="bg-gray-100 rounded px-3 py-2 text-center">
+                    <span className="text-2xl font-bold">{String(timeLeft.hours).padStart(2, '0')}</span>
+                    <p className="text-xs text-gray-500">GIỜ</p>
+                  </div>
+                  <div className="bg-gray-100 rounded px-3 py-2 text-center">
+                    <span className="text-2xl font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                    <p className="text-xs text-gray-500">PHÚT</p>
+                  </div>
+                  <div className="bg-gray-100 rounded px-3 py-2 text-center">
+                    <span className="text-2xl font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                    <p className="text-xs text-gray-500">GIÂY</p>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          {/* Floating card */}
-          <div className="absolute -bottom-4 -left-4 right-4 md:right-auto md:w-64 rounded-xl border border-emerald-100 bg-white/95 backdrop-blur-sm p-4 shadow-[0_20px_60px_rgba(15,118,110,0.15)]">
-            <div className="space-y-2">
-              <HighlightBadge
-                title="Paddle Carbon Wave"
-                description="Cân bằng lực – kiểm soát spin vượt trội"
-              />
-              <HighlightBadge
-                title="Giày Court Sprint"
-                description="Êm ái, bám sân & phối màu trắng xanh"
-              />
-            </div>
-            <div className="mt-3 flex justify-between items-center rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2">
-              <div>
-                <p className="text-xs text-emerald-800/80">Phiên bản giới hạn</p>
-                <p className="text-base font-semibold text-emerald-900">
-                  IKA Daylight Set
-                </p>
-              </div>
-              <Link
-                href="/products"
-                className="inline-flex items-center text-emerald-700 hover:text-emerald-900 font-semibold text-xs"
-              >
-                Xem ngay
-                <ArrowRight className="ml-1 h-3 w-3" />
+              <Link href={`/products/${saleProducts[0].id}`}>
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">CHỌN MUA</Button>
               </Link>
+            </>
+          )}
+        </div>
+
+        {/* Flash Sale Products */}
+        <div className="lg:w-2/3 bg-gradient-to-r from-emerald-500 to-lime-400 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span className="text-yellow-300">⚡</span> FLASH SALE GIÁ SỐC
+            </h3>
+            <div className="flex gap-2">
+              <button onClick={() => scroll("left")} className="bg-white/20 hover:bg-white/30 rounded-full p-2">
+                <ChevronLeft className="h-5 w-5 text-white" />
+              </button>
+              <button onClick={() => scroll("right")} className="bg-white/20 hover:bg-white/30 rounded-full p-2">
+                <ChevronRight className="h-5 w-5 text-white" />
+              </button>
             </div>
+          </div>
+
+          <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
+            {saleProducts.slice(1).map((product) => (
+              <Link key={product.id} href={`/products/${product.id}`} className="shrink-0 w-[200px]">
+                <Card className="bg-white hover:shadow-lg transition-shadow">
+                  <CardContent className="p-3">
+                    <div className="relative aspect-square mb-2">
+                      {product.primaryImageUrl?.includes("cloudinary") ? (
+                        <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                      ) : product.primaryImageUrl ? (
+                        <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100" />
+                      )}
+                      {product.originalPrice && (
+                        <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                          -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">{product.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
+                    </div>
+                    {product.originalPrice && (
+                      <span className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>
+                    )}
+                    <div className="flex mt-1">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-lime-400 text-lime-400" : "text-gray-300"}`} />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -236,252 +350,464 @@ function HeroSection() {
   );
 }
 
-function HighlightBadge({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 shadow-inner">
-      <p className="text-base font-semibold text-emerald-900">{title}</p>
-      <p className="text-xs text-emerald-800/80">{description}</p>
-    </div>
-  );
-}
+function NewProductsSection() {
+  const { data: productsData, isLoading } = useProducts({ PageSize: 50 });
+  const products = productsData?.items?.slice(0, 8) || [];
 
-function BrandPromises() {
-  return (
-    <section className="grid gap-6 md:grid-cols-3">
-      {brandPromises.map((promise) => (
-        <div
-          key={promise.title}
-          className="rounded-3xl border border-emerald-100 bg-white p-6 text-emerald-900 shadow-[0_15px_30px_rgba(15,118,110,0.1)]"
-        >
-          <promise.icon className="h-10 w-10 text-emerald-500" />
-          <h3 className="mt-4 text-2xl font-semibold">{promise.title}</h3>
-          <p className="mt-2 text-emerald-900/80">{promise.description}</p>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function FeaturedProducts() {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-
-  const { data: productsData, isLoading, isError } = useProducts({
-    Page: 1,
-    PageSize: 100, // Get more products to sort
-  });
-
-  // Sort products by reviewCount (most viewed) and take top products
-  const products = productsData?.items
-    ? [...productsData.items]
-        .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
-        .slice(0, 20) // Take top 20 most viewed products
-    : [];
-
-  const checkScrollButtons = () => {
-    if (!scrollContainerRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-    setCanScrollLeft(scrollLeft > 10);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-  };
-
-  useEffect(() => {
-    // Check scroll buttons after products load
-    const timer = setTimeout(() => {
-      checkScrollButtons();
-    }, 100);
-
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener("scroll", checkScrollButtons);
-      window.addEventListener("resize", checkScrollButtons);
-      return () => {
-        clearTimeout(timer);
-        container.removeEventListener("scroll", checkScrollButtons);
-        window.removeEventListener("resize", checkScrollButtons);
-      };
-    }
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products.length]);
-
-  const scroll = (direction: "left" | "right") => {
-    if (!scrollContainerRef.current) return;
-    const scrollAmount = 400; // Scroll by 400px
-    const newScrollLeft =
-      scrollContainerRef.current.scrollLeft +
-      (direction === "left" ? -scrollAmount : scrollAmount);
-    
-    scrollContainerRef.current.scrollTo({
-      left: newScrollLeft,
-      behavior: "smooth",
-    });
-  };
-
-  if (isLoading) {
-    return <ProductGridSkeleton count={8} />;
-  }
-
-  if (isError || !products || products.length === 0) {
-    return (
-      <div className="text-center py-8 text-emerald-900/60">
-        Không có sản phẩm nổi bật.
-      </div>
-    );
-  }
+  if (isLoading) return <ProductGridSkeleton count={8} />;
+  if (products.length === 0) return null;
 
   return (
-    <div className="relative">
-      {/* Left Arrow Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg border-emerald-200 transition-opacity ${
-          canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={() => scroll("left")}
-        disabled={!canScrollLeft}
-      >
-        <ChevronLeft className="h-5 w-5 text-emerald-700" />
-      </Button>
-
-      {/* Scrollable Products Container */}
-      <div
-        ref={scrollContainerRef}
-        className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 px-2"
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-      >
-        {products.map((product) => (
-          <div key={product.id} className="shrink-0 w-[280px]">
-            <ProductCard product={product} />
-          </div>
-        ))}
-      </div>
-
-      {/* Right Arrow Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg border-emerald-200 transition-opacity ${
-          canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={() => scroll("right")}
-        disabled={!canScrollRight}
-      >
-        <ChevronRight className="h-5 w-5 text-emerald-700" />
-      </Button>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function CategoriesGrid() {
-  const { data: categories, isLoading, isError } = useCategories();
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-12 text-emerald-900/70">
-        Đang tải danh mục…
-      </div>
-    );
-  }
-
-  if (isError || !categories || categories.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-      {categories.map((category) => (
-        <Link
-          key={category.id}
-          href={`/products?categoryId=${category.id}`}
-          className="group"
-        >
-          <div className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-white p-6 transition duration-300 group-hover:-translate-y-1 group-hover:border-emerald-300 group-hover:shadow-[0_15px_30px_rgba(15,118,110,0.15)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(119,227,171,0.15),transparent_60%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-emerald-950">
-                  {category.name}
-                </h3>
-                <span className="rounded-full border border-emerald-200 px-3 py-1 text-xs uppercase tracking-[0.2em] text-emerald-600">
-                  Go
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-emerald-900/70">
-                {category.productCount} sản phẩm
-              </p>
-            </div>
-          </div>
+    <section className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">SẢN PHẨM MỚI</h2>
+        <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+          Xem tất cả <ArrowRight className="h-4 w-4" />
         </Link>
-      ))}
-    </div>
+      </div>
+
+      <div className="flex gap-4">
+        {/* Left Banner */}
+        <div className="hidden lg:block w-1/4">
+          <div className="relative h-full rounded-xl overflow-hidden">
+            <Image src={banner7} alt="New Products" fill className="object-cover" />
+          </div>
+        </div>
+
+        {/* Products Grid */}
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
-function CommunitySection() {
-  const highlights = [
-    {
-      title: "Huấn luyện viên đồng hành",
-      description: "Kết nối người chơi với network HLV Pickleball toàn quốc.",
+function CategoryProductsSection() {
+  const { data: categories } = useCategories();
+  const { data: productsData } = useProducts({ PageSize: 100 });
+
+  // Category configurations with banner images
+  const categoryConfigs = [
+    { 
+      name: "VỢT PICKLEBALL", 
+      searchKey: "vợt",
+      banner: banner7,
+      bannerText: { 
+        badge: "NEW ARRIVAL",
+        title: "SYPIK TRITON 5",
+        subtitle: "DESIGN BY VIETNAM"
+      }
     },
-    {
-      title: "Gói club tailor-made",
-      description:
-        "Thiết kế combo thiết bị riêng cho từng câu lạc bộ với bảng màu IKA.",
+    { 
+      name: "GIÀY PICKLEBALL", 
+      searchKey: "giày",
+      banner: banner8,
+      bannerText: {
+        badge: "15% OFF",
+        title: "PICKLEBALL SHOES",
+        subtitle: "PRE-ORDER NOW"
+      }
     },
-    {
-      title: "Workshop trải nghiệm",
-      description: "Demo paddle mới, test bóng & kỹ thuật ngay tại sân của bạn.",
-    },
+    { 
+      name: "PHỤ KIỆN PICKLEBALL", 
+      searchKey: "phụ kiện",
+      banner: banner9,
+      bannerText: {
+        badge: "NEW PRODUCT",
+        title: "TITANIUM EXCEED",
+        subtitle: "SALE NOW"
+      }
+    }
   ];
 
   return (
-    <section className="rounded-3xl border border-emerald-100 bg-linear-to-br from-white via-[#f0fff4] to-[#e6f6ec] p-8 text-emerald-900 shadow-[0_25px_60px_rgba(15,118,110,0.15)]">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    <>
+      {categoryConfigs.map((config, idx) => {
+        const category = categories?.find(c => 
+          c.name?.toLowerCase().includes(config.searchKey.toLowerCase())
+        );
+        // Filter by product name/type since ProductListDto doesn't have categoryId
+        const products = productsData?.items?.filter(p => 
+          p.name?.toLowerCase().includes(config.searchKey.toLowerCase()) ||
+          p.productType?.toLowerCase().includes(config.searchKey.toLowerCase())
+        ).slice(0, 8) || [];
+
+        // If no category products, show some products anyway
+        const displayProducts = products.length > 0 
+          ? products 
+          : productsData?.items?.slice(idx * 8, (idx + 1) * 8) || [];
+
+        if (displayProducts.length === 0) return null;
+
+        return (
+          <section key={config.name} className="container mx-auto px-4 py-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
+              <Link 
+                href={`/products${category ? `?categoryId=${category.id}` : ""}`} 
+                className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
+              >
+                Xem tất cả <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="flex gap-4">
+              {/* Side Banner - Dark themed like reference images */}
+              <div className="hidden lg:block w-1/4">
+                <div className="relative h-full min-h-[600px] rounded-xl overflow-hidden bg-gray-900">
+                  <Image 
+                    src={config.banner} 
+                    alt={config.name} 
+                    fill 
+                    className="object-cover" 
+                  />
+                  {/* Overlay content */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-6">
+                    <div>
+                      {config.bannerText.badge && (
+                        <span className="inline-block bg-lime-400 text-black text-xs font-bold px-3 py-1 rounded mb-4">
+                          {config.bannerText.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-white mb-2">{config.bannerText.title}</h3>
+                      <p className="text-lime-400 text-sm font-medium mb-4">{config.bannerText.subtitle}</p>
+                      <Link href={`/products${category ? `?categoryId=${category.id}` : ""}`}>
+                        <Button className="bg-lime-400 text-black hover:bg-lime-500 font-semibold">
+                          MUA NGAY
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Products Grid - 2 rows x 4 columns */}
+              <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {displayProducts.map((product) => (
+                  <Link key={product.id} href={`/products/${product.id}`} className="group">
+                    <Card className="bg-white hover:shadow-lg transition-all hover:-translate-y-1 h-full">
+                      <CardContent className="p-3">
+                        <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
+                          {product.primaryImageUrl?.includes("cloudinary") ? (
+                            <img 
+                              src={product.primaryImageUrl} 
+                              alt={product.name || ""} 
+                              className="w-full h-full object-contain group-hover:scale-105 transition-transform" 
+                            />
+                          ) : product.primaryImageUrl ? (
+                            <Image 
+                              src={product.primaryImageUrl} 
+                              alt={product.name || ""} 
+                              fill 
+                              className="object-contain group-hover:scale-105 transition-transform" 
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
+                              No image
+                            </div>
+                          )}
+                          {/* Discount Badge */}
+                          {product.originalPrice && product.originalPrice > product.price && (
+                            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                              -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                            </span>
+                          )}
+                          {/* Hover Button */}
+                          <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
+                              CHỌN
+                            </Button>
+                          </div>
+                        </div>
+                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors">
+                          {product.name}
+                        </h4>
+                        {/* Star Rating */}
+                        <div className="flex mb-2">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star 
+                              key={s} 
+                              className={`h-4 w-4 ${
+                                s <= (product.averageRating || 5) 
+                                  ? "fill-lime-400 text-lime-400" 
+                                  : "text-gray-300"
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                        {/* Price */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
+                          {product.originalPrice && product.originalPrice > product.price && (
+                            <span className="text-gray-400 text-sm line-through">
+                              {formatCurrency(product.originalPrice)}
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
+function TrendingSection() {
+  const { data: productsData } = useProducts({ PageSize: 50 });
+  
+  const trendingProducts = [...(productsData?.items || [])]
+    .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
+    .slice(0, 6);
+
+  const viewedProducts = [...(productsData?.items || [])]
+    .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+    .slice(0, 6);
+
+  const boughtProducts = [...(productsData?.items || [])]
+    .filter(p => p.originalPrice && p.originalPrice > p.price)
+    .slice(0, 6);
+
+  if (!productsData?.items?.length) return null;
+
+  return (
+    <section className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Trending */}
         <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-500">
-            Cộng đồng Pickleball
-          </p>
-          <h2 className="text-3xl font-bold mt-2 text-emerald-950">
-            IKA Sport đồng hành cùng từng trận đấu của bạn
-          </h2>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">ĐANG TRENDING</h3>
+          <div className="space-y-4">
+            {trendingProducts.map((product) => (
+              <Link key={product.id} href={`/products/${product.id}`} className="flex gap-3 group">
+                <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                  {product.primaryImageUrl?.includes("cloudinary") ? (
+                    <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : product.primaryImageUrl ? (
+                    <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
+                  ) : null}
+                  {product.originalPrice && product.originalPrice > product.price && (
+                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded">
+                      -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
+                  <div className="flex mt-1">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                    ))}
+                  </div>
+                  <p className="text-red-600 font-bold text-sm mt-1">{formatCurrency(product.price)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-        <Link href="/account/orders">
-          <Button className="bg-emerald-500 text-white hover:bg-emerald-400">
-            Theo dõi đơn hàng
-          </Button>
+
+        {/* Most Viewed */}
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG XEM</h3>
+          <div className="space-y-4">
+            {viewedProducts.map((product) => (
+              <Link key={product.id} href={`/products/${product.id}`} className="flex gap-3 group">
+                <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                  {product.primaryImageUrl?.includes("cloudinary") ? (
+                    <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : product.primaryImageUrl ? (
+                    <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
+                  ) : null}
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
+                  <div className="flex mt-1">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                    ))}
+                  </div>
+                  <p className="text-red-600 font-bold text-sm mt-1">{formatCurrency(product.price)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Most Bought */}
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG MUA</h3>
+          <div className="space-y-4">
+            {boughtProducts.map((product) => (
+              <Link key={product.id} href={`/products/${product.id}`} className="flex gap-3 group">
+                <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                  {product.primaryImageUrl?.includes("cloudinary") ? (
+                    <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : product.primaryImageUrl ? (
+                    <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
+                  ) : null}
+                  {product.originalPrice && (
+                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded">
+                      -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
+                  <div className="flex mt-1">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-red-600 font-bold text-sm">{formatCurrency(product.price)}</span>
+                    {product.originalPrice && (
+                      <span className="text-gray-400 text-xs line-through">{formatCurrency(product.originalPrice)}</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CategoryLinksGrid() {
+  const { data: categories } = useCategories();
+
+  const categoryIcons: { [key: string]: string } = {
+    "vợt": "🏸",
+    "giày": "👟",
+    "bóng": "⚽",
+    "trang phục": "👕",
+    "phụ kiện": "🎒",
+  };
+
+  const getIcon = (name: string) => {
+    const lowerName = name.toLowerCase();
+    for (const [key, icon] of Object.entries(categoryIcons)) {
+      if (lowerName.includes(key)) return icon;
+    }
+    return "📦";
+  };
+
+  if (!categories?.length) return null;
+
+  return (
+    <section className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {categories.slice(0, 5).map((category) => (
+          <Link
+            key={category.id}
+            href={`/products?categoryId=${category.id}`}
+            className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 transition-all group"
+          >
+            <div className="text-center">
+              <span className="text-4xl">{getIcon(category.name || "")}</span>
+              <h3 className="font-semibold text-gray-900 mt-2 group-hover:text-emerald-600">{category.name}</h3>
+              <p className="text-sm text-gray-500">{category.productCount || 0} sản phẩm</p>
+            </div>
+          </Link>
+        ))}
+        <Link
+          href="/products"
+          className="bg-gradient-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg transition-all"
+        >
+          <span className="text-white font-bold text-lg">Xem tất cả</span>
         </Link>
       </div>
-      <div className="mt-8 grid gap-6 md:grid-cols-3">
-        {highlights.map((item) => (
-          <div
-            key={item.title}
-            className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-[0_15px_40px_rgba(15,118,110,0.08)]"
-          >
-            <Trophy className="h-8 w-8 text-emerald-500" />
-            <h3 className="mt-4 text-xl font-semibold">{item.title}</h3>
-            <p className="mt-2 text-emerald-900/80">{item.description}</p>
+    </section>
+  );
+}
+
+function NewsletterSection() {
+  const [email, setEmail] = useState("");
+
+  return (
+    <section className="bg-gray-50 py-12">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+          {/* Contact Info */}
+          <div className="flex gap-8">
+            <div className="flex items-center gap-3">
+              <Phone className="h-8 w-8 text-emerald-600" />
+              <div>
+                <p className="font-semibold text-gray-900">Hotline</p>
+                <p className="text-emerald-600 font-bold">0824.01.01.88</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Mail className="h-8 w-8 text-emerald-600" />
+              <div>
+                <p className="font-semibold text-gray-900">Email</p>
+                <p className="text-emerald-600">support@ikasport.com</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Newsletter */}
+          <div className="flex-1 max-w-xl">
+            <h3 className="font-bold text-gray-900 mb-2">Đăng ký nhận thông tin</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Nhận các chương trình khuyến mãi, thông báo sản phẩm mới và các ưu đãi khác.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Nhập Email của bạn"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                className="bg-gray-900 hover:bg-gray-800 text-white px-6"
+                onClick={() => {
+                  if (email) {
+                    toast.success("Đăng ký thành công!");
+                    setEmail("");
+                  }
+                }}
+              >
+                ĐĂNG KÝ
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TrustBadges() {
+  const badges = [
+    { icon: ShieldCheck, title: "HOÀN TIỀN", desc: "Hoàn tiền 100% nếu phát hiện hàng giả" },
+    { icon: Truck, title: "GIAO HÀNG TOÀN QUỐC", desc: "Miễn phí với đơn hàng từ 1 triệu đồng" },
+    { icon: Clock, title: "TƯ VẤN 24/7", desc: "Đội ngũ tư vấn có chuyên môn và hiểu biết" },
+  ];
+
+  return (
+    <section className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {badges.map((badge) => (
+          <div key={badge.title} className="flex items-center gap-4 justify-center">
+            <badge.icon className="h-12 w-12 text-emerald-600" />
+            <div>
+              <h4 className="font-bold text-gray-900">{badge.title}</h4>
+              <p className="text-sm text-gray-600">{badge.desc}</p>
+            </div>
           </div>
         ))}
       </div>
     </section>
   );
 }
-

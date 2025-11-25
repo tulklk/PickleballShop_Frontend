@@ -32,6 +32,7 @@ function ProductsPageContent() {
   );
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   const { data, isLoading } = useProducts({
     Page: page,
@@ -41,6 +42,19 @@ function ProductsPageContent() {
     MinPrice: minPrice ? parseFloat(minPrice) : undefined,
     MaxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
   });
+
+  // Sort products on client side
+  const sortedProducts = data?.items ? [...data.items].sort((a, b) => {
+    switch (sortBy) {
+      case "price-asc":
+        return a.price - b.price;
+      case "price-desc":
+        return b.price - a.price;
+      case "newest":
+      default:
+        return 0; // Keep original order (newest first from API)
+    }
+  }) : [];
 
   const { data: categories } = useCategories();
 
@@ -175,6 +189,19 @@ function ProductsPageContent() {
               />
             </div>
 
+            <div>
+              <Label htmlFor="sortBy">Sắp xếp theo</Label>
+              <Select
+                id="sortBy"
+                value={sortBy}
+                onValueChange={(value) => setSortBy(value)}
+              >
+                <SelectItem value="newest">Mới nhất</SelectItem>
+                <SelectItem value="price-asc">Giá: Thấp đến cao</SelectItem>
+                <SelectItem value="price-desc">Giá: Cao đến thấp</SelectItem>
+              </Select>
+            </div>
+
             <Button 
               onClick={handleSearch} 
               className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
@@ -201,7 +228,7 @@ function ProductsPageContent() {
                   )}
                 </p>
               </div>
-              <ProductGrid products={data.items} />
+              <ProductGrid products={sortedProducts} />
               
               {/* Pagination - Luôn hiển thị nếu có data */}
               {data && (
