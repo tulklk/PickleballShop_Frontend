@@ -19,6 +19,7 @@ export enum PaymentMethod {
   COD = 0,
   MoMo = 1,
   VNPay = 2,
+  BankTransfer = 3,
 }
 
 export type ProductType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -231,11 +232,23 @@ export interface OrderItemDto {
   lineTotal: number;
 }
 
+export interface BankTransferInfo {
+  qrDataUrl: string;
+  qrCode: string;
+  bankName: string;
+  accountNo: string;
+  accountName: string;
+  amount: number;
+  transferContent: string;
+}
+
 export interface CreatePaymentResponse {
   paymentUrl: string | null;
   orderId: string;
   orderNumber: string | null;
   isCod?: boolean;
+  isBankTransfer?: boolean;
+  bankTransferInfo?: BankTransferInfo;
 }
 
 export interface UpdateOrderStatusRequest {
@@ -282,4 +295,10 @@ export interface OrderItem {
 
 export interface UpdatePaymentStatusRequest {
   paymentStatus: PaymentStatus;
+}
+
+// Response khi tạo đơn hàng (backend có thể trả về cấu trúc này)
+export interface CreateOrderResponse {
+  order: OrderDto;
+  payment?: CreatePaymentResponse;
 }

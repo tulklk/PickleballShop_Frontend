@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import momoIcon from "@/app/img/momo_icon.png";
 import vnpayLogo from "@/app/img/Logo-VNPAY-QR-350x65.png";
+import { Building2 } from "lucide-react";
 
 const checkoutSchema = z.object({
   fullName: z.string().min(2, "Vui lòng nhập họ tên"),
@@ -92,7 +93,7 @@ function CheckoutContent() {
   const onSubmit = async (data: CheckoutFormData) => {
     try {
       // Create order
-      const order = await createOrder.mutateAsync({
+      const orderResponse = await createOrder.mutateAsync({
         shippingAddress: {
           fullName: data.fullName,
           phoneNumber: data.phoneNumber,
@@ -104,32 +105,80 @@ function CheckoutContent() {
         paymentMethod: data.paymentMethod,
       });
 
-      // If payment method is COD, show success message and redirect
-      if (data.paymentMethod === PaymentMethod.COD) {
-        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
-        router.push(`/account/orders/${order.id}`);
+      // Log response for debugging
+      console.log("Create order response:", orderResponse);
+
+      // Handle different response structures from backend
+      // Backend might return { order: {...}, payment: {...} } or just OrderDto
+      const orderData = (orderResponse as any)?.order || orderResponse;
+      const paymentData = (orderResponse as any)?.payment;
+      const orderId = orderData?.id;
+
+      if (!orderId) {
+        console.error("Order ID is undefined. Response:", orderResponse);
+        toast.error("Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
         return;
       }
 
-      // If payment method is not COD, create payment
-      if (order.id) {
-        const paymentResponse = await createPayment.mutateAsync(order.id);
-        // Check if it's COD from response or if paymentUrl is null
-        if (paymentResponse.isCod || !paymentResponse.paymentUrl) {
-          toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
-          router.push(`/account/orders/${order.id}`);
-          return;
-        }
-        if (paymentResponse.paymentUrl) {
-          window.location.href = paymentResponse.paymentUrl;
-          return;
-        }
+      // If payment method is COD, show success message and redirect
+      if (data.paymentMethod === PaymentMethod.COD) {
+        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+        router.push(`/account/orders/${orderId}`);
+        return;
+      }
+
+      // If backend already returned payment info (Bank Transfer case)
+      if (paymentData?.isBankTransfer && paymentData?.bankTransferInfo) {
+        toast.success("Đặt hàng thành công! Vui lòng hoàn tất thanh toán.");
+        sessionStorage.setItem(
+          `bankTransfer_${orderId}`,
+          JSON.stringify({
+            bankTransferInfo: paymentData.bankTransferInfo,
+            orderNumber: paymentData.orderNumber || orderData.orderNumber,
+            orderId: orderId,
+          })
+        );
+        router.push(`/checkout/bank-transfer/${orderId}`);
+        return;
+      }
+
+      // If payment method is not COD and no payment data, create payment
+      const paymentResponse = await createPayment.mutateAsync(orderId);
+      console.log("Create payment response:", paymentResponse);
+      
+      // Check if it's COD from response
+      if (paymentResponse.isCod) {
+        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+        router.push(`/account/orders/${orderId}`);
+        return;
+      }
+      
+      // Check if it's Bank Transfer
+      if (paymentResponse.isBankTransfer && paymentResponse.bankTransferInfo) {
+        toast.success("Đặt hàng thành công! Vui lòng hoàn tất thanh toán.");
+        sessionStorage.setItem(
+          `bankTransfer_${orderId}`,
+          JSON.stringify({
+            bankTransferInfo: paymentResponse.bankTransferInfo,
+            orderNumber: paymentResponse.orderNumber || orderData.orderNumber,
+            orderId: orderId,
+          })
+        );
+        router.push(`/checkout/bank-transfer/${orderId}`);
+        return;
+      }
+      
+      // For MoMo, VNPay - redirect to payment URL
+      if (paymentResponse.paymentUrl) {
+        window.location.href = paymentResponse.paymentUrl;
+        return;
       }
 
       toast.success("Đặt hàng thành công!");
-      router.push(`/account/orders/${order.id}`);
+      router.push(`/account/orders/${orderId}`);
     } catch (error: any) {
-      toast.error(error?.data?.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
+      console.error("Checkout error:", error);
+      toast.error(error?.data?.message || error?.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
     }
   };
 
@@ -377,6 +426,36 @@ function CheckoutContent() {
                       </div>
                       {paymentMethod === PaymentMethod.VNPay && (
                         <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                      )}
+                    </button>
+
+                    {/* Bank Transfer Option */}
+                    <button
+                      type="button"
+                      onClick={() => setValue("paymentMethod", PaymentMethod.BankTransfer)}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        paymentMethod === PaymentMethod.BankTransfer
+                          ? "border-cyan-500 bg-cyan-50 shadow-md"
+                          : "border-emerald-200 bg-white hover:border-cyan-300 hover:bg-cyan-50/50"
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        paymentMethod === PaymentMethod.BankTransfer
+                          ? "bg-cyan-100"
+                          : "bg-cyan-50"
+                      }`}>
+                        <Building2 className={`h-6 w-6 ${
+                          paymentMethod === PaymentMethod.BankTransfer
+                            ? "text-cyan-600"
+                            : "text-cyan-400"
+                        }`} />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-cyan-900">Chuyển khoản ngân hàng</div>
+                        <div className="text-xs text-muted-foreground">Quét mã QR hoặc chuyển khoản thủ công</div>
+                      </div>
+                      {paymentMethod === PaymentMethod.BankTransfer && (
+                        <CheckCircle2 className="h-5 w-5 text-cyan-600" />
                       )}
                     </button>
                   </div>

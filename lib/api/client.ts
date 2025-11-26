@@ -13,6 +13,7 @@ import type {
   UpdateCartItemRequest,
   CartItemDto,
   CreateOrderRequest,
+  CreateOrderResponse,
   OrderDto,
   Order,
   OrderItem,
@@ -358,11 +359,13 @@ class ApiClient {
   }
 
   // Orders endpoints
-  async createOrder(data: CreateOrderRequest): Promise<OrderDto> {
-    return this.request<OrderDto>("/api/Orders", {
+  async createOrder(data: CreateOrderRequest): Promise<OrderDto | CreateOrderResponse> {
+    const response = await this.request<OrderDto | CreateOrderResponse>("/api/Orders", {
       method: "POST",
       body: JSON.stringify(data),
     });
+    console.log("API createOrder raw response:", response);
+    return response;
   }
 
   async getMyOrders(): Promise<OrderDto[]> {
