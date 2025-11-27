@@ -1,38 +1,108 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Home, Package } from "lucide-react";
+import { apiClient } from "@/lib/api/client";
+
+interface PayOSConfirmResponse {
+  success: boolean;
+  message: string;
+  orderId?: string;
+}
 
 function PayOSReturnContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success" | "failed" | "cancelled">("loading");
   const [orderCode, setOrderCode] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string>("");
+
+  const confirmPayment = useCallback(async (params: {
+    code: string;
+    id: string;
+    cancel: boolean;
+    status: string;
+    orderCode: number;
+    orderId?: string;
+  }) => {
+    try {
+      const token = apiClient.getAccessToken();
+      console.log("Calling PayOS confirm API with token:", token ? "Yes" : "No");
+      console.log("PayOS confirm request body:", params);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend.onrender.com"}/api/payments/payos/confirm`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && {
+              Authorization: `Bearer ${token}`,
+            }),
+          },
+          body: JSON.stringify(params),
+        }
+      );
+
+      const data: PayOSConfirmResponse = await response.json();
+      console.log("PayOS confirm response:", data);
+
+      if (data.orderId) {
+        setOrderId(data.orderId);
+      }
+      setMessage(data.message || "");
+
+      return data;
+    } catch (error) {
+      console.error("Error confirming PayOS payment:", error);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
-    // Đọc query params từ PayOS
-    const code = searchParams.get("code");
-    const id = searchParams.get("id");
-    const paymentStatus = searchParams.get("status");
-    const orderCodeParam = searchParams.get("orderCode");
-    const cancel = searchParams.get("cancel");
+    const processPayment = async () => {
+      // Đọc query params từ PayOS
+      const code = searchParams.get("code") || "";
+      const id = searchParams.get("id") || "";
+      const paymentStatus = searchParams.get("status") || "";
+      const orderCodeParam = searchParams.get("orderCode") || "";
+      const cancel = searchParams.get("cancel");
+      // Lấy orderId từ sessionStorage nếu có (được lưu khi tạo order)
+      const savedOrderId = sessionStorage.getItem("payos_orderId") || undefined;
 
-    console.log("PayOS return params:", { code, id, paymentStatus, orderCodeParam, cancel });
+      console.log("PayOS return params:", { code, id, paymentStatus, orderCodeParam, cancel, savedOrderId });
 
-    setOrderCode(orderCodeParam);
+      setOrderCode(orderCodeParam);
 
-    // Xác định trạng thái thanh toán
-    if (cancel === "true") {
-      setStatus("cancelled");
-    } else if (paymentStatus === "PAID" || code === "00") {
-      setStatus("success");
-    } else {
-      setStatus("failed");
-    }
-  }, [searchParams]);
+      // Gọi API confirm payment với orderId nếu có
+      const confirmResult = await confirmPayment({
+        code,
+        id,
+        cancel: cancel === "true",
+        status: paymentStatus,
+        orderCode: parseInt(orderCodeParam) || 0,
+        orderId: savedOrderId,
+      });
+      
+      // Xóa orderId khỏi sessionStorage sau khi confirm
+      sessionStorage.removeItem("payos_orderId");
+
+      // Xác định trạng thái thanh toán
+      if (cancel === "true") {
+        setStatus("cancelled");
+      } else if (paymentStatus === "PAID" || code === "00") {
+        setStatus("success");
+      } else {
+        setStatus("failed");
+      }
+    };
+
+    processPayment();
+  }, [searchParams, confirmPayment]);
 
   const renderContent = () => {
     switch (status) {
@@ -40,7 +110,7 @@ function PayOSReturnContent() {
         return (
           <div className="text-center py-12">
             <Loader2 className="h-16 w-16 mx-auto mb-4 text-emerald-500 animate-spin" />
-            <h2 className="text-2xl font-bold mb-2 text-emerald-900">Đang xử lý...</h2>
+            <h2 className="text-2xl font-bold mb-2 text-emerald-900">Đang xác nhận thanh toán...</h2>
             <p className="text-muted-foreground">Vui lòng đợi trong giây lát</p>
           </div>
         );
@@ -62,7 +132,7 @@ function PayOSReturnContent() {
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
               <Button
-                onClick={() => router.push("/account/orders")}
+                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
                 className="bg-emerald-600 hover:bg-emerald-700"
               >
                 <Package className="mr-2 h-4 w-4" />
@@ -97,7 +167,7 @@ function PayOSReturnContent() {
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
               <Button
-                onClick={() => router.push("/account/orders")}
+                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
                 className="bg-yellow-600 hover:bg-yellow-700"
               >
                 <Package className="mr-2 h-4 w-4" />
@@ -123,7 +193,7 @@ function PayOSReturnContent() {
             </div>
             <h2 className="text-3xl font-bold mb-2 text-red-900">Thanh toán thất bại</h2>
             <p className="text-muted-foreground mb-6">
-              Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ.
+              {message || "Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ."}
             </p>
             {orderCode && (
               <p className="text-sm text-red-600 font-medium mb-6">
@@ -132,7 +202,7 @@ function PayOSReturnContent() {
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
               <Button
-                onClick={() => router.push("/account/orders")}
+                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
                 className="bg-red-600 hover:bg-red-700"
               >
                 <Package className="mr-2 h-4 w-4" />
@@ -192,4 +262,3 @@ export default function PayOSReturnPage() {
     </Suspense>
   );
 }
-

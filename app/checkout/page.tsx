@@ -129,6 +129,8 @@ function CheckoutContent() {
 
       // If backend already returned payment info (PayOS case)
       if (paymentData?.success && paymentData?.paymentUrl) {
+        // Lưu orderId vào sessionStorage để dùng khi confirm payment
+        sessionStorage.setItem("payos_orderId", orderId);
         toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
         window.location.href = paymentData.paymentUrl;
         return;
@@ -147,6 +149,8 @@ function CheckoutContent() {
       
       // Check if it's PayOS (Bank Transfer)
       if (paymentResponse.success && paymentResponse.paymentUrl) {
+        // Lưu orderId vào sessionStorage để dùng khi confirm payment
+        sessionStorage.setItem("payos_orderId", orderId);
         toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
         window.location.href = paymentResponse.paymentUrl;
         return;
