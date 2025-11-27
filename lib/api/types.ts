@@ -242,6 +242,11 @@ export interface BankTransferInfo {
   transferContent: string;
 }
 
+export interface PayOSResponse {
+  checkoutUrl: string;
+  qrCode: string;
+}
+
 export interface CreatePaymentResponse {
   paymentUrl: string | null;
   orderId: string;
@@ -249,6 +254,9 @@ export interface CreatePaymentResponse {
   isCod?: boolean;
   isBankTransfer?: boolean;
   bankTransferInfo?: BankTransferInfo;
+  // PayOS response
+  success?: boolean;
+  payOSResponse?: PayOSResponse;
 }
 
 export interface UpdateOrderStatusRequest {

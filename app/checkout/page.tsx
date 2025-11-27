@@ -53,7 +53,7 @@ export default function CheckoutPage() {
 
 function CheckoutContent() {
   const router = useRouter();
-  const { data: cart } = useCart();
+  const { data: cart, isLoading: isCartLoading } = useCart();
   const createOrder = useCreateOrder();
   const createPayment = useCreatePayment();
   const { user } = useAuth();
@@ -127,18 +127,10 @@ function CheckoutContent() {
         return;
       }
 
-      // If backend already returned payment info (Bank Transfer case)
-      if (paymentData?.isBankTransfer && paymentData?.bankTransferInfo) {
-        toast.success("Đặt hàng thành công! Vui lòng hoàn tất thanh toán.");
-        sessionStorage.setItem(
-          `bankTransfer_${orderId}`,
-          JSON.stringify({
-            bankTransferInfo: paymentData.bankTransferInfo,
-            orderNumber: paymentData.orderNumber || orderData.orderNumber,
-            orderId: orderId,
-          })
-        );
-        router.push(`/checkout/bank-transfer/${orderId}`);
+      // If backend already returned payment info (PayOS case)
+      if (paymentData?.success && paymentData?.paymentUrl) {
+        toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
+        window.location.href = paymentData.paymentUrl;
         return;
       }
 
@@ -153,18 +145,10 @@ function CheckoutContent() {
         return;
       }
       
-      // Check if it's Bank Transfer
-      if (paymentResponse.isBankTransfer && paymentResponse.bankTransferInfo) {
-        toast.success("Đặt hàng thành công! Vui lòng hoàn tất thanh toán.");
-        sessionStorage.setItem(
-          `bankTransfer_${orderId}`,
-          JSON.stringify({
-            bankTransferInfo: paymentResponse.bankTransferInfo,
-            orderNumber: paymentResponse.orderNumber || orderData.orderNumber,
-            orderId: orderId,
-          })
-        );
-        router.push(`/checkout/bank-transfer/${orderId}`);
+      // Check if it's PayOS (Bank Transfer)
+      if (paymentResponse.success && paymentResponse.paymentUrl) {
+        toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
+        window.location.href = paymentResponse.paymentUrl;
         return;
       }
       
@@ -181,6 +165,21 @@ function CheckoutContent() {
       toast.error(error?.data?.message || error?.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
     }
   };
+
+  // Show loading state while cart is loading
+  if (isCartLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-16">
+          <Loader2 className="h-16 w-16 mx-auto mb-4 text-emerald-500 animate-spin" />
+          <h2 className="text-2xl font-bold mb-2 text-emerald-900">Đang tải giỏ hàng...</h2>
+          <p className="text-muted-foreground">
+            Vui lòng đợi trong giây lát
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
@@ -451,8 +450,8 @@ function CheckoutContent() {
                         }`} />
                       </div>
                       <div className="flex-1 text-left">
-                        <div className="font-semibold text-cyan-900">Chuyển khoản ngân hàng</div>
-                        <div className="text-xs text-muted-foreground">Quét mã QR hoặc chuyển khoản thủ công</div>
+                        <div className="font-semibold text-cyan-900">Thanh toán qua PayOS</div>
+                        <div className="text-xs text-muted-foreground">Quét mã QR hoặc chuyển khoản ngân hàng</div>
                       </div>
                       {paymentMethod === PaymentMethod.BankTransfer && (
                         <CheckCircle2 className="h-5 w-5 text-cyan-600" />
