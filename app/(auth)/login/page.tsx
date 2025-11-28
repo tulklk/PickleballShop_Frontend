@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
-import { useLogin, useGoogleAuthLogin } from "@/lib/api/hooks";
+import { useLogin, useGoogleAuthLogin, useResendVerificationEmail } from "@/lib/api/hooks";
 import { useAuth } from "@/lib/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Trophy } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Mail, X } from "lucide-react";
 import { useState } from "react";
 
 const loginSchema = z.object({
@@ -39,8 +39,10 @@ export default function LoginPage() {
   const router = useRouter();
   const loginMutation = useLogin();
   const googleLoginMutation = useGoogleAuthLogin();
+  const resendVerificationMutation = useResendVerificationEmail();
   const { isAdmin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const {
     register,
@@ -53,10 +55,38 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await loginMutation.mutateAsync(data);
+      setUnverifiedEmail(null); // Clear unverified email on success
       toast.success("Đăng nhập thành công!");
       router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
-      toast.error(error?.data?.message || "Đăng nhập thất bại");
+      const errorMessage = error?.data?.message || "Đăng nhập thất bại";
+      // Check if error is about email not verified
+      if (
+        errorMessage.toLowerCase().includes("xác thực") ||
+        errorMessage.toLowerCase().includes("verify") ||
+        errorMessage.toLowerCase().includes("email chưa") ||
+        errorMessage.toLowerCase().includes("email not verified") ||
+        errorMessage.toLowerCase().includes("chưa xác nhận")
+      ) {
+        setUnverifiedEmail(data.email); // Store email for resend verification
+        toast.error("Bạn phải xác nhận tài khoản trước khi đăng nhập. Vui lòng kiểm tra email để xác thực.");
+      } else {
+        setUnverifiedEmail(null);
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+
+    try {
+      await resendVerificationMutation.mutateAsync({ email: unverifiedEmail });
+      toast.success("Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn.");
+    } catch (error: any) {
+      toast.error(
+        error?.data?.message || "Gửi lại email xác thực thất bại. Vui lòng thử lại."
+      );
     }
   };
 
@@ -153,6 +183,45 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {unverifiedEmail && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-amber-900">
+                      Email chưa được xác thực
+                    </p>
+                    <p className="mt-1 text-sm text-amber-800">
+                      Tài khoản <span className="font-medium">{unverifiedEmail}</span> chưa được xác thực. 
+                      Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập.
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={resendVerificationMutation.isPending}
+                        size="sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        {resendVerificationMutation.isPending
+                          ? "Đang gửi..."
+                          : "Gửi lại email xác thực"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => setUnverifiedEmail(null)}
+                        variant="outline"
+                        size="sm"
+                        className="border-amber-300"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

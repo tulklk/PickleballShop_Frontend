@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRegister } from "@/lib/api/hooks";
+import { useRegister, useResendVerificationEmail } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,18 +17,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowRight, BadgeCheck, HeartHandshake } from "lucide-react";
+import { ArrowRight, BadgeCheck, HeartHandshake, Mail } from "lucide-react";
+import { useState } from "react";
 
 const registerSchema = z
   .object({
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    email: z.string().email("Email không hợp lệ"),
+    password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
     confirmPassword: z.string(),
-    fullName: z.string().min(2, "Full name is required"),
-    phoneNumber: z.string().min(10, "Phone number is required"),
+    fullName: z.string().min(2, "Họ và tên là bắt buộc"),
+    phoneNumber: z.string().min(10, "Số điện thoại phải có ít nhất 10 số"),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Mật khẩu không khớp",
     path: ["confirmPassword"],
   });
 
@@ -37,11 +38,14 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router = useRouter();
   const registerMutation = useRegister();
+  const resendVerificationMutation = useResendVerificationEmail();
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
@@ -52,10 +56,32 @@ export default function RegisterPage() {
       if (response.refreshToken) {
         localStorage.setItem("refreshToken", response.refreshToken);
       }
-      toast.success("Registration successful!");
-      router.push("/");
+      setRegisteredEmail(data.email); // Store email for resend verification
+      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+      // Don't redirect immediately, show message that email verification is required
+      // User should check their email
     } catch (error: any) {
-      toast.error(error?.data?.message || "Registration failed");
+      const errorMessage = error?.data?.message || "Đăng ký thất bại";
+      setRegisteredEmail(null);
+      // Check if error is about email already exists or other validation
+      if (errorMessage.toLowerCase().includes("email") || errorMessage.toLowerCase().includes("đã tồn tại")) {
+        toast.error(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!registeredEmail) return;
+
+    try {
+      await resendVerificationMutation.mutateAsync({ email: registeredEmail });
+      toast.success("Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn.");
+    } catch (error: any) {
+      toast.error(
+        error?.data?.message || "Gửi lại email xác thực thất bại. Vui lòng thử lại."
+      );
     }
   };
 
@@ -122,13 +148,44 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {registeredEmail && (
+              <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-emerald-900">
+                      Đăng ký thành công!
+                    </p>
+                    <p className="mt-1 text-sm text-emerald-800">
+                      Chúng tôi đã gửi email xác thực đến <span className="font-medium">{registeredEmail}</span>. 
+                      Vui lòng kiểm tra hộp thư và nhấp vào link để xác thực tài khoản.
+                    </p>
+                    <div className="mt-3">
+                      <Button
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={resendVerificationMutation.isPending}
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                      >
+                        {resendVerificationMutation.isPending
+                          ? "Đang gửi..."
+                          : "Gửi lại email xác thực"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">Họ và tên</Label>
                 <Input
                   id="fullName"
                   {...register("fullName")}
-                  placeholder="John Doe"
+                  placeholder="Nhập họ và tên"
                 />
                 {errors.fullName && (
                   <p className="text-sm text-destructive">
@@ -143,7 +200,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   {...register("email")}
-                  placeholder="your@email.com"
+                  placeholder="Nhập email"
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">
@@ -153,11 +210,11 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Label htmlFor="phoneNumber">Số điện thoại</Label>
                 <Input
                   id="phoneNumber"
                   {...register("phoneNumber")}
-                  placeholder="+84 123 456 789"
+                  placeholder="Nhập số điện thoại"
                 />
                 {errors.phoneNumber && (
                   <p className="text-sm text-destructive">
@@ -167,12 +224,12 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Mật khẩu</Label>
                 <Input
                   id="password"
                   type="password"
                   {...register("password")}
-                  placeholder="••••••••"
+                  placeholder="Nhập mật khẩu"
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">
@@ -182,12 +239,12 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   {...register("confirmPassword")}
-                  placeholder="••••••••"
+                  placeholder="Nhập lại mật khẩu"
                 />
                 {errors.confirmPassword && (
                   <p className="text-sm text-destructive">
@@ -202,8 +259,8 @@ export default function RegisterPage() {
                 disabled={registerMutation.isPending}
               >
                 {registerMutation.isPending
-                  ? "Creating account..."
-                  : "Register"}
+                  ? "Đang tạo tài khoản..."
+                  : "Đăng ký"}
               </Button>
             </form>
 

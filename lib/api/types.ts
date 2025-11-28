@@ -55,6 +55,15 @@ export interface ChangePasswordRequest {
   confirmNewPassword: string;
 }
 
+export interface VerifyEmailRequest {
+  token: string;
+  email: string;
+}
+
+export interface ResendVerificationEmailRequest {
+  email: string;
+}
+
 export interface AuthResponse {
   accessToken: string | null;
   refreshToken: string | null;

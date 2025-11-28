@@ -11,6 +11,8 @@ import type {
   ProductCategory,
   Product,
   ChangePasswordRequest,
+  VerifyEmailRequest,
+  ResendVerificationEmailRequest,
   UpdateOrderStatusRequest,
   UpdatePaymentStatusRequest,
   OrderStatus,
@@ -165,6 +167,18 @@ export function useLogout() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: (data: ChangePasswordRequest) => apiClient.changePassword(data),
+  });
+}
+
+export function useVerifyEmail() {
+  return useMutation({
+    mutationFn: (data: VerifyEmailRequest) => apiClient.verifyEmail(data),
+  });
+}
+
+export function useResendVerificationEmail() {
+  return useMutation({
+    mutationFn: (data: ResendVerificationEmailRequest) => apiClient.resendVerificationEmail(data),
   });
 }
 
