@@ -1,27 +1,31 @@
 "use client";
 
-import { useMyOrders } from "@/lib/api/hooks";
+import { useMemo, useState } from "react";
+import { useMyOrders, useProduct } from "@/lib/api/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { 
-  Package, 
-  Calendar, 
-  CreditCard, 
-  Truck, 
-  CheckCircle2, 
-  Clock, 
+import { Input } from "@/components/ui/input";
+import {
+  Package,
+  Calendar,
+  CreditCard,
+  Truck,
+  CheckCircle2,
+  Clock,
   XCircle,
   ShoppingBag,
   ArrowRight,
   Loader2,
-  Receipt
+  Receipt,
+  Filter,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Select, SelectItem } from "@/components/ui/select";
 import Image from "next/image";
-import { useProduct } from "@/lib/api/hooks";
 import type { OrderItemDto } from "@/lib/api/types";
 
 export default function OrdersPage() {
@@ -125,7 +129,30 @@ function getPaymentMethodLabel(method: string | null) {
 }
 
 function OrdersContent() {
-  const { data: orders, isLoading } = useMyOrders();
+  const { data: orders = [], isLoading } = useMyOrders();
+  const [orderCode, setOrderCode] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "processing" | "cancelled">("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesCode =
+        !orderCode ||
+        order.orderNumber?.toLowerCase().includes(orderCode.toLowerCase()) ||
+        order.id.toLowerCase().includes(orderCode.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (order.orderStatus || "").toLowerCase().includes(statusFilter === "completed" ? "completed" : statusFilter === "pending" ? "pending" : statusFilter === "processing" ? "processing" : "cancelled");
+
+      const orderDate = new Date(order.createdAt).getTime();
+      const matchesFrom = !fromDate || orderDate >= new Date(fromDate).getTime();
+      const matchesTo = !toDate || orderDate <= new Date(toDate).getTime();
+
+      return matchesCode && matchesStatus && matchesFrom && matchesTo;
+    });
+  }, [orders, orderCode, statusFilter, fromDate, toDate]);
 
   if (isLoading) {
     return (
@@ -136,7 +163,7 @@ function OrdersContent() {
     );
   }
 
-  if (!orders || orders.length === 0) {
+  if (orders.length === 0) {
     return (
       <div className="text-center py-16">
         <ShoppingBag className="h-20 w-20 mx-auto mb-6 text-emerald-500/50" />
@@ -159,126 +186,140 @@ function OrdersContent() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
-          Đơn hàng của tôi
+      <div className="mb-2">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
+          Lịch sử đơn hàng
         </h1>
-        <p className="text-muted-foreground">
-          Bạn có {orders.length} {orders.length === 1 ? "đơn hàng" : "đơn hàng"}
+        <p className="text-sm text-slate-600">
+          Hiển thị thông tin các sản phẩm bạn đã mua tại PickleBall Shop.
         </p>
       </div>
 
-      <div className="space-y-6">
-        {orders.map((order) => {
-          const totalItems = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-          
-          return (
-            <Card 
-              key={order.id} 
-              className="border-emerald-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+      <Card className="border-slate-200">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
+            <Filter className="h-4 w-4 text-emerald-600" />
+            Bộ lọc đơn hàng
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <Label>Mã đơn hàng</Label>
+              <Input
+                placeholder="Nhập mã đơn hàng"
+                value={orderCode}
+                onChange={(e) => setOrderCode(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Trạng thái</Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as "all" | "completed" | "pending" | "processing" | "cancelled")
+                }
+                className="h-10"
+              >
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="pending">Đang chờ</SelectItem>
+                <SelectItem value="processing">Đang xử lý</SelectItem>
+                <SelectItem value="completed">Hoàn thành</SelectItem>
+                <SelectItem value="cancelled">Đã hủy</SelectItem>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Từ ngày</Label>
+              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Đến ngày</Label>
+              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOrderCode("");
+                setStatusFilter("all");
+                setFromDate("");
+                setToDate("");
+              }}
             >
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                      <Receipt className="h-6 w-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg text-emerald-900">
-                        {order.orderNumber || `Đơn hàng #${order.id.slice(0, 8)}`}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {formatDate(order.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:items-end gap-2">
-                    <div className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
-                      {formatCurrency(order.totalAmount)}
-                    </div>
-                    {getStatusBadge(order.orderStatus)}
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="p-6">
-                {/* Order Items */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Package className="h-4 w-4 text-emerald-600" />
-                    <h3 className="font-semibold text-emerald-900">
-                      Sản phẩm ({totalItems} {totalItems === 1 ? "sản phẩm" : "sản phẩm"})
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    {order.items?.map((item) => (
-                      <OrderItemCard key={item.id} item={item} />
-                    ))}
-                  </div>
-                </div>
+              Xóa bộ lọc
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-                {/* Payment Info */}
-                <div className="border-t border-emerald-100 pt-4 mb-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Phương thức thanh toán</p>
-                        <p className="font-medium text-emerald-900">
-                          {getPaymentMethodLabel(order.paymentMethod)}
-                        </p>
-                      </div>
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <table className="min-w-full divide-y divide-slate-100">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Thời gian</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Mã đơn hàng</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Sản phẩm</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Tổng tiền</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Trạng thái</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500">Chi tiết</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+            {filteredOrders.map((order) => {
+              const firstItem = order.items?.[0];
+              const remaining = (order.items?.length || 0) - 1;
+              return (
+                <tr key={order.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 whitespace-nowrap">{formatDate(order.createdAt)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap font-medium">{order.orderNumber || order.id}</td>
+                  <td className="px-4 py-3">
+                    <OrderProductPreview item={firstItem} remaining={remaining} />
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-slate-900">{formatCurrency(order.totalAmount)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      {getStatusBadge(order.orderStatus)}
+                      {getPaymentStatusBadge(order.paymentStatus)}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                        <CheckCircle2 className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Trạng thái thanh toán</p>
-                        <div>
-                          {getPaymentStatusBadge(order.paymentStatus)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Button */}
-                <div className="flex justify-end">
-                  <Link href={`/account/orders/${order.id}`}>
-                    <Button 
-                      variant="outline" 
-                      className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300"
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/account/orders/${order.id}`}>
+                    <Button
+                      variant="outline"
+                      className="h-8 px-3 text-xs font-medium border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
                     >
-                      <Receipt className="mr-2 h-4 w-4" />
-                      Xem chi tiết
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                        Chi tiết
+                      </Button>
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {filteredOrders.length === 0 && (
+          <div className="py-8 text-center text-sm text-slate-500">
+            Không tìm thấy đơn hàng nào phù hợp với bộ lọc hiện tại.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Component to display order item with product image
-function OrderItemCard({ item }: { item: OrderItemDto }) {
-  const shouldFetchProduct = !item.productImageUrl && !!item.productId;
+function OrderProductPreview({ item, remaining }: { item?: OrderItemDto; remaining: number }) {
+  const shouldFetchProduct = !!item && !item.productImageUrl && !!item.productId;
   const { data: product } = useProduct(shouldFetchProduct ? item.productId : "");
 
-  const imageUrl = 
-    item.productImageUrl || 
-    product?.primaryImageUrl || 
-    product?.imageUrls?.[0] || 
+  if (!item) {
+    return <span>-</span>;
+  }
+
+  const imageUrl =
+    item.productImageUrl ||
+    product?.primaryImageUrl ||
+    (product?.imageUrls && product.imageUrls[0]) ||
     null;
 
   const isValidUrl = (url: string | null | undefined): boolean => {
@@ -292,39 +333,28 @@ function OrderItemCard({ item }: { item: OrderItemDto }) {
   };
 
   return (
-    <div className="flex gap-3 p-3 rounded-lg bg-emerald-50/50 border border-emerald-100">
-      {/* Product Image */}
-      <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-emerald-100">
+    <div className="flex items-center gap-2">
+      <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-slate-100 shrink-0">
         {imageUrl && isValidUrl(imageUrl) ? (
           <Image
             src={imageUrl}
             alt={item.productName || "Sản phẩm"}
             fill
             className="object-cover"
-            sizes="64px"
+            sizes="40px"
             unoptimized
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Package className="h-6 w-6 text-emerald-400" />
+          <div className="w-full h-full flex items-center justify-center text-slate-400">
+            <Package className="h-4 w-4" />
           </div>
         )}
       </div>
-
-      {/* Product Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-emerald-900 line-clamp-2">
-          {item.productName || "Sản phẩm"}
-        </p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Số lượng: {item.quantity} × {formatCurrency(item.unitPrice)}
-        </p>
-      </div>
-
-      {/* Price */}
-      <div className="text-right shrink-0">
-        <p className="font-semibold text-emerald-600">
-          {formatCurrency(item.lineTotal)}
+      <div>
+        <p className="font-medium text-slate-900">{item.productName || "Sản phẩm"}</p>
+        <p className="text-xs text-slate-500">
+          SL: {item.quantity}
+          {remaining > 0 && <span className="ml-2 text-blue-600">+{remaining} sản phẩm</span>}
         </p>
       </div>
     </div>

@@ -3,6 +3,7 @@ import type {
   RegisterRequest,
   RefreshTokenRequest,
   AuthResponse,
+  ChangePasswordRequest,
   CategoryDto,
   ProductListDtoPagedResultDto,
   ProductDto,
@@ -250,6 +251,13 @@ class ApiClient {
 
   async getCurrentUser(): Promise<UserDto> {
     return this.request<UserDto>("/api/Auth/me");
+  }
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    return this.request<void>("/api/Users/me/change-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   }
 
   // Categories endpoints

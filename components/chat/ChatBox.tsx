@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+import Image from "next/image";
+import logo from "@/app/img/logopickleball.png";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -109,17 +111,38 @@ export function ChatBox() {
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110",
-          isOpen ? "bg-red-500 hover:bg-red-600" : "bg-green-600 hover:bg-green-700"
+          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-xl transition-transform duration-300 group flex items-center justify-center",
+          isOpen
+            ? "bg-red-500 hover:bg-red-600 hover:shadow-2xl hover:scale-105"
+            : "bg-emerald-600 hover:bg-emerald-600 hover:shadow-2xl hover:scale-105"
         )}
         size="icon"
         aria-label={isOpen ? "Đóng chat" : "Mở chat"}
       >
-        {isOpen ? (
-          <X className="h-6 w-6 text-white" />
-        ) : (
-          <MessageCircle className="h-6 w-6 text-white" />
-        )}
+        <div className="relative h-10 w-10">
+          {/* Logo mặc định khi đóng, mờ dần khi hover */}
+          <Image
+            src={logo}
+            alt="IKA Sport"
+            fill
+            className={cn(
+              "object-contain transition-all duration-200",
+              isOpen
+                ? "opacity-0 scale-75"
+                : "opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75"
+            )}
+          />
+          {/* Icon tin nhắn khi hover (chỉ khi đang đóng) */}
+          {!isOpen && (
+            <MessageCircle
+              className="absolute inset-0 m-auto h-7 w-7 text-white opacity-0 scale-75 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100"
+            />
+          )}
+          {/* Icon X khi mở, có animation nhỏ */}
+          {isOpen && (
+            <X className="absolute inset-0 m-auto h-7 w-7 text-white transition-transform duration-200 rotate-0" />
+          )}
+        </div>
       </Button>
 
       {/* Chat Window */}

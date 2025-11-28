@@ -10,6 +10,7 @@ import type {
   CreateOrderRequest,
   ProductCategory,
   Product,
+  ChangePasswordRequest,
   UpdateOrderStatusRequest,
   UpdatePaymentStatusRequest,
   OrderStatus,
@@ -156,6 +157,12 @@ export function useLogout() {
       // Clear React Query cache
       queryClient.clear();
     },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) => apiClient.changePassword(data),
   });
 }
 
@@ -656,6 +663,7 @@ export function useUpdateUser() {
           fullName: updatedUser.fullName,
           phoneNumber: updatedUser.phoneNumber,
           role: roleString,
+          avatarUrl: updatedUser.avatarUrl || null,
         };
         // Update the main user cache that useAuth() reads from
         queryClient.setQueryData(["user"], userDto);

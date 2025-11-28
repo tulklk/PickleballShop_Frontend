@@ -49,6 +49,12 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
 export interface AuthResponse {
   accessToken: string | null;
   refreshToken: string | null;
@@ -62,6 +68,7 @@ export interface UserDto {
   fullName: string | null;
   phoneNumber: string | null;
   role: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface User {
@@ -71,6 +78,7 @@ export interface User {
   phoneNumber: string | null;
   role: Role | null;
   isActive: boolean;
+  avatarUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -80,6 +88,7 @@ export interface UpdateUserRequest {
   fullName?: string | null;
   phoneNumber?: string | null;
   isActive?: boolean;
+  avatarUrl?: string | null;
 }
 
 export interface CategoryDto {
