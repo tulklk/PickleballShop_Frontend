@@ -68,7 +68,7 @@ export default function LoginPage() {
 
     try {
       await googleLoginMutation.mutateAsync(credentialResponse.credential);
-      toast.success("Đăng nhập Google thành công!");
+      toast.success("Đăng nhập thành công!");
       router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
       console.error("Google login error:", error);

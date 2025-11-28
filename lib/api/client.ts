@@ -737,7 +737,12 @@ class ApiClient {
 
   // User endpoints
   async getUserMe(): Promise<User> {
-    return this.request<User>("/api/Users/me");
+    const response = await this.request<any>("/api/Users/me");
+    // Map 'avatar' field from backend to 'avatarUrl' for User interface
+    return {
+      ...response,
+      avatarUrl: response.avatar || response.avatarUrl || null,
+    } as User;
   }
 
   async getUser(id: string): Promise<User> {
@@ -749,6 +754,13 @@ class ApiClient {
   }
 
   async updateUser(id: string, data: UpdateUserRequest): Promise<void> {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[ApiClient] updateUser called:", {
+        id,
+        data,
+        stringified: JSON.stringify(data),
+      });
+    }
     return this.request<void>(`/api/Users/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),

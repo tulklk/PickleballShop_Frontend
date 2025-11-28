@@ -77,6 +77,8 @@ export function useLogin() {
       }
       // Save user info to React Query cache
       queryClient.setQueryData(["user"], data.user);
+      // Invalidate and refetch user/me to get full user data with avatarUrl
+      queryClient.invalidateQueries({ queryKey: ["user", "me"] });
       // Sync guest cart to server after login
       await syncGuestCart();
       queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -610,9 +612,12 @@ export function useAdminDeleteProduct() {
 
 // User hooks
 export function useUserMe() {
+  const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ["user", "me"],
     queryFn: () => apiClient.getUserMe(),
+    enabled: isAuthenticated, // Only fetch when authenticated
+    staleTime: 0, // Always consider stale to refetch when needed
   });
 }
 
@@ -663,7 +668,7 @@ export function useUpdateUser() {
           fullName: updatedUser.fullName,
           phoneNumber: updatedUser.phoneNumber,
           role: roleString,
-          avatarUrl: updatedUser.avatarUrl || null,
+          avatarUrl: updatedUser.avatarUrl || (updatedUser as any).avatar || null,
         };
         // Update the main user cache that useAuth() reads from
         queryClient.setQueryData(["user"], userDto);

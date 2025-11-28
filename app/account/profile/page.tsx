@@ -49,13 +49,24 @@ function ProfileContent() {
 
   const avatarUrl = watch("avatarUrl");
 
+  // Track the last uploaded avatar URL to prevent it from being overwritten
+  const [lastUploadedAvatar, setLastUploadedAvatar] = useState<string | null>(null);
+
   // Update form when user data loads
   useEffect(() => {
     if (user) {
+      const newAvatarUrl = user.avatarUrl || "";
+      
+      // If we just uploaded an avatar and it matches the user data, clear the tracking
+      if (lastUploadedAvatar && newAvatarUrl === lastUploadedAvatar) {
+        setLastUploadedAvatar(null);
+      }
+      
+      // Only reset avatarUrl if we don't have a pending upload
       reset({
         fullName: user.fullName || "",
         phoneNumber: user.phoneNumber || "",
-        avatarUrl: user.avatarUrl || "",
+        avatarUrl: lastUploadedAvatar || newAvatarUrl,
       });
     }
   }, [user, reset]);
@@ -69,7 +80,7 @@ function ProfileContent() {
         data: {
           fullName: data.fullName || null,
           phoneNumber: data.phoneNumber || null,
-          avatarUrl: data.avatarUrl || null,
+          avatar: data.avatarUrl || null,
         },
       });
       toast.success("Cập nhật thông tin thành công");
@@ -89,34 +100,86 @@ function ProfileContent() {
       return;
     }
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
-    if (!cloudName || !uploadPreset) {
-      toast.error("Chưa cấu hình Cloudinary. Vui lòng bổ sung biến môi trường.");
-      event.target.value = "";
-      return;
-    }
-
     try {
       setUploadingAvatar(true);
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", uploadPreset);
+      formData.append("folder", "pickleball-shop/avatars");
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error?.message || "Upload thất bại");
+      try {
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Upload thất bại");
+        }
+
+        const data = await response.json();
+        const avatarUrl = data.url;
+        
+        console.log("[Avatar Upload] Cloudinary upload successful:", avatarUrl);
+        
+        // Store the uploaded avatar URL to prevent it from being overwritten
+        setLastUploadedAvatar(avatarUrl);
+        
+        // Update form state immediately for instant UI feedback
+        setValue("avatarUrl", avatarUrl, { shouldDirty: true });
+        
+        // Automatically save to backend
+        if (user) {
+          try {
+            // Get current form values to preserve any unsaved changes
+            const currentFormValues = watch();
+            const updatePayload = {
+              fullName: currentFormValues.fullName || null,
+              phoneNumber: currentFormValues.phoneNumber || null,
+              avatar: avatarUrl,
+            };
+            
+            console.log("[Avatar Upload] Updating user with payload:", {
+              userId: user.id,
+              payload: updatePayload,
+            });
+            
+            await updateUser.mutateAsync({
+              id: user.id,
+              data: updatePayload,
+            });
+            
+            console.log("[Avatar Upload] User update successful");
+            toast.success("Tải ảnh đại diện thành công");
+          } catch (updateError: any) {
+            console.error("[Avatar Upload] Update error:", updateError);
+            console.error("[Avatar Upload] Error details:", {
+              message: updateError?.message,
+              status: updateError?.status,
+              data: updateError?.data,
+            });
+            toast.error(updateError?.data?.message || updateError?.message || "Lưu ảnh đại diện thất bại");
+            // Clear lastUploadedAvatar on error
+            setLastUploadedAvatar(null);
+          }
+        } else {
+          console.warn("[Avatar Upload] User data not available");
+          toast.success("Tải ảnh đại diện thành công");
+        }
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === "AbortError") {
+          throw new Error("Upload timeout - ảnh quá lớn hoặc kết nối chậm");
+        }
+        throw error;
       }
-
-      const data = await res.json();
-      setValue("avatarUrl", data.secure_url, { shouldDirty: true });
-      toast.success("Tải ảnh đại diện thành công");
     } catch (err: any) {
       toast.error(err?.message || "Không thể tải ảnh đại diện");
     } finally {
@@ -171,9 +234,12 @@ function ProfileContent() {
       : user.role === 1
         ? "Member"
         : "Member";
+  // Priority: lastUploadedAvatar > user.avatarUrl from API > avatarUrl from form > fallback
+  // Note: user.avatarUrl should be prioritized over form avatarUrl since it's the source of truth from backend
   const displayAvatar =
-    avatarUrl ||
+    lastUploadedAvatar ||
     user.avatarUrl ||
+    avatarUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
       user.fullName || loginName
     )}&background=10b981&color=ffffff`;

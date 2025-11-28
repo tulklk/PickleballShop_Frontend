@@ -88,7 +88,7 @@ export interface UpdateUserRequest {
   fullName?: string | null;
   phoneNumber?: string | null;
   isActive?: boolean;
-  avatarUrl?: string | null;
+  avatar?: string | null;
 }
 
 export interface CategoryDto {

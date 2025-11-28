@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const folder = (formData.get("folder") as string) || "pickleball-shop/products";
 
     if (!file) {
       return NextResponse.json(
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Upload] Starting upload for file: ${file.name}, size: ${file.size} bytes`);
+    console.log(`[Upload] Starting upload for file: ${file.name}, size: ${file.size} bytes, folder: ${folder}`);
 
     // Convert File to buffer
     const bytes = await file.arrayBuffer();
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: "pickleball-shop/products",
+          folder: folder,
           resource_type: "auto",
           timeout: 60000, // 60 seconds
         },

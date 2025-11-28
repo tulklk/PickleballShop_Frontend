@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Search, ChevronDown } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
-import { useCart, useCategories } from "@/lib/api/hooks";
-import { useLogout } from "@/lib/api/hooks";
+import { useCart, useCategories, useUserMe, useLogout } from "@/lib/api/hooks";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { getGuestCartItemCount } from "@/lib/utils/guestCart";
 import { Poppins } from "next/font/google";
@@ -28,14 +28,31 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+  // Get full user data with avatarUrl, enabled only when authenticated
+  const { data: userMe } = useUserMe();
   const { data: cart } = useCart();
   const { data: categories } = useCategories();
   const logoutMutation = useLogout();
+  
+  // Refetch userMe when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Small delay to ensure token is set, then invalidate to trigger refetch
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["user", "me"] });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, queryClient]);
   const [searchQuery, setSearchQuery] = useState("");
   const [guestCartCount, setGuestCartCount] = useState(0);
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const productDropdownRef = useRef<HTMLDivElement>(null);
   const productTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update guest cart count when not authenticated
   useEffect(() => {
@@ -110,6 +127,19 @@ export function Navbar() {
   const handleProductMouseLeave = () => {
     productTimeoutRef.current = setTimeout(() => {
       setShowProductDropdown(false);
+    }, 200);
+  };
+
+  const handleUserMouseEnter = () => {
+    if (userTimeoutRef.current) {
+      clearTimeout(userTimeoutRef.current);
+    }
+    setShowUserDropdown(true);
+  };
+
+  const handleUserMouseLeave = () => {
+    userTimeoutRef.current = setTimeout(() => {
+      setShowUserDropdown(false);
     }, 200);
   };
 
@@ -320,14 +350,79 @@ export function Navbar() {
                     </Button>
                   </Link>
                 )}
-                <Link href="/account">
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  Đăng xuất
-                </Button>
+                
+                {/* User Avatar & Dropdown */}
+                <div
+                  ref={userDropdownRef}
+                  className="relative"
+                  onMouseEnter={handleUserMouseEnter}
+                  onMouseLeave={handleUserMouseLeave}
+                >
+                  <div className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-md hover:bg-emerald-50 transition-colors">
+                    {/* Avatar */}
+                    <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-200 bg-emerald-50 flex-shrink-0">
+                      {userMe?.avatarUrl ? (
+                        <img
+                          src={userMe.avatarUrl}
+                          alt={userMe.fullName || "User"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-emerald-100">
+                          <span className="text-xs font-semibold text-emerald-700">
+                            {(userMe?.fullName || user?.fullName || user?.email || "U")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* User Name */}
+                    <span className="text-sm font-medium text-gray-700 hidden md:block max-w-[120px] truncate">
+                      {userMe?.fullName || user?.fullName || user?.email?.split("@")[0] || "User"}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform hidden md:block ${showUserDropdown ? "rotate-180" : ""}`} />
+                  </div>
+
+                  {/* User Dropdown Menu */}
+                  {showUserDropdown && (
+                    <div
+                      className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200"
+                      onMouseEnter={handleUserMouseEnter}
+                      onMouseLeave={handleUserMouseLeave}
+                    >
+                      <div className="py-2">
+                        <Link
+                          href="/account/profile"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <Settings className="h-4 w-4 text-emerald-600" />
+                          <span>Quản lý tài khoản</span>
+                        </Link>
+                        <Link
+                          href="/account/orders"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <Package className="h-4 w-4 text-emerald-600" />
+                          <span>Lịch sử đơn hàng</span>
+                        </Link>
+                        <div className="border-t border-gray-100 my-1"></div>
+                        <button
+                          onClick={() => {
+                            setShowUserDropdown(false);
+                            handleLogout();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Đăng xuất</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
