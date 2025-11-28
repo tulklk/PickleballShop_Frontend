@@ -166,11 +166,11 @@ function ProfileContent() {
   const loginName = user.email ? user.email.split("@")[0] : user.fullName || "Người dùng";
   const joinDate = user.createdAt ? formatDate(user.createdAt) : "—";
   const roleLabel =
-    user.role === "Admin" || user.role === 2
+    user.role === 2
       ? "Admin"
-      : user.role === "Customer" || user.role === 1
+      : user.role === 1
         ? "Member"
-        : user.role || "Member";
+        : "Member";
   const displayAvatar =
     avatarUrl ||
     user.avatarUrl ||
