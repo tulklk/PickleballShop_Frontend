@@ -35,7 +35,7 @@ function PayOSReturnContent() {
       console.log("PayOS confirm request body:", params);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend.onrender.com"}/api/payments/payos/confirm`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend.fly.dev"}/api/payments/payos/confirm`,
         {
           method: "POST",
           headers: {

@@ -573,18 +573,6 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Description Preview */}
-          {product.description && (
-            <Card className="mb-4">
-              <CardContent className="p-4">
-                <h3 className="font-semibold mb-2">Mô tả sản phẩm</h3>
-                <p className="text-gray-600 text-sm line-clamp-4 whitespace-pre-line">
-                  {product.description}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Quantity Selector */}
           <div className="flex items-center gap-4 mb-4">
             <label className="text-sm font-medium text-gray-700">Số lượng:</label>
@@ -641,7 +629,13 @@ export default function ProductDetailPage() {
               className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50"
               onClick={() => window.open("https://zalo.me", "_blank")}
             >
-              <span className="mr-2">💬</span>
+              <Image
+                src="/img/zalo_icon.png"
+                alt="Zalo"
+                width={20}
+                height={20}
+                className="mr-2"
+              />
               Tư vấn qua Zalo
             </Button>
             <Button
@@ -649,7 +643,13 @@ export default function ProductDetailPage() {
               className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
               onClick={() => window.open("https://facebook.com", "_blank")}
             >
-              <span className="mr-2">📘</span>
+              <Image
+                src="/img/fb_icon.png"
+                alt="Facebook"
+                width={20}
+                height={20}
+                className="mr-2"
+              />
               Tư vấn qua Facebook
             </Button>
           </div>
@@ -711,27 +711,106 @@ export default function ProductDetailPage() {
                 <h2 className="text-xl font-bold mb-4">{product.name}</h2>
                 {product.description ? (
                   <div className="prose max-w-none">
-                    <p className="text-gray-700 whitespace-pre-line leading-relaxed">
-                      {product.description}
-                    </p>
+                    {(() => {
+                      // Parse description into sections based on numbered headings (1., 2., 3., etc.)
+                      const sections: Array<{ title: string; content: string; index: number }> = [];
+                      const lines = product.description.split('\n');
+                      let currentSection: { title: string; content: string; index: number } | null = null;
+                      
+                      lines.forEach((line) => {
+                        // Check if line starts with a number followed by a dot (e.g., "1.", "2.", "3.")
+                        const headingMatch = line.match(/^(\d+)\.\s*(.+)$/);
+                        if (headingMatch) {
+                          // Save previous section if exists
+                          if (currentSection) {
+                            sections.push(currentSection);
+                          }
+                          // Start new section
+                          currentSection = {
+                            title: headingMatch[2].trim(),
+                            content: '',
+                            index: parseInt(headingMatch[1], 10)
+                          };
+                        } else if (currentSection) {
+                          // Add line to current section content
+                          currentSection.content += (currentSection.content ? '\n' : '') + line;
+                        } else {
+                          // If no section started yet, create a default one
+                          if (sections.length === 0) {
+                            currentSection = {
+                              title: '',
+                              content: line,
+                              index: 0
+                            };
+                          } else {
+                            // Add to last section
+                            if (sections.length > 0) {
+                              sections[sections.length - 1].content += '\n' + line;
+                            }
+                          }
+                        }
+                      });
+                      
+                      // Add last section
+                      if (currentSection) {
+                        sections.push(currentSection);
+                      }
+                      
+                      // If no sections found, treat entire description as one section
+                      if (sections.length === 0) {
+                        sections.push({
+                          title: '',
+                          content: product.description,
+                          index: 0
+                        });
+                      }
+                      
+                      return sections.map((section, sectionIdx) => {
+                        // Get image for this section (cycle through available images)
+                        const imageIndex = sectionIdx % allImages.length;
+                        const sectionImage = allImages[imageIndex];
+                        
+                        return (
+                          <div key={sectionIdx} className="mb-8 last:mb-0">
+                            {/* Section Title */}
+                            {section.title && (
+                              <h3 className="text-lg font-semibold text-emerald-900 mb-3">
+                                {section.index > 0 ? `${section.index}. ` : ''}{section.title}
+                              </h3>
+                            )}
+                            
+                            {/* Section Content */}
+                            <div className="text-gray-700 whitespace-pre-line leading-relaxed mb-4">
+                              {section.content.trim()}
+                            </div>
+                            
+                            {/* Product Image after each section */}
+                            {sectionImage && (
+                              <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100 mb-6">
+                                {sectionImage.includes("cloudinary.com") || sectionImage.startsWith("data:") ? (
+                                  <img 
+                                    src={sectionImage} 
+                                    alt={section.title || product.name} 
+                                    className="w-full h-full object-contain" 
+                                  />
+                                ) : (
+                                  <Image 
+                                    src={sectionImage} 
+                                    alt={section.title || product.name} 
+                                    fill 
+                                    className="object-contain" 
+                                    sizes="100vw" 
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <p className="text-gray-500 italic">Chưa có mô tả chi tiết cho sản phẩm này.</p>
-                )}
-                
-                {/* Product Images in Description */}
-                {allImages.length > 1 && (
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {allImages.slice(1, 5).map((img, idx) => (
-                      <div key={idx} className="relative aspect-video rounded-lg overflow-hidden">
-                        {img.includes("cloudinary.com") || img.startsWith("data:") ? (
-                          <img src={img} alt="" className="w-full h-full object-contain" />
-                        ) : (
-                          <Image src={img} alt="" fill className="object-contain" sizes="50vw" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 )}
               </CardContent>
             </Card>

@@ -36,7 +36,7 @@ import type {
 const getApiBaseUrl = () => {
   const url =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
-    "https://pickleballshop-backend.onrender.com";
+    "https://pickleballshop-backend.fly.dev";
   // Remove trailing slash if present
   return url.replace(/\/$/, "");
 };

@@ -56,7 +56,7 @@ npm install
 
 2. Create a `.env.local` file in the root directory:
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend.onrender.com
+NEXT_PUBLIC_API_BASE_URL=https://pickleballshop-backend.fly.dev
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id-here
 ```
 
@@ -102,7 +102,7 @@ npm run dev
 
 ## API Integration
 
-The frontend integrates with the backend API at `https://pickleballshop-backend.onrender.com`.
+The frontend integrates with the backend API at `https://pickleballshop-backend.fly.dev`.
 
 ### Authentication
 
@@ -130,7 +130,7 @@ All API calls are wrapped in React Query hooks for:
 
 ## Environment Variables
 
-- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend.onrender.com)
+- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend.fly.dev)
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuth 2.0 Client ID for Google Sign-In (required for Google login feature)
 
 ## Building for Production
