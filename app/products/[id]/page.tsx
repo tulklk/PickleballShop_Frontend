@@ -790,13 +790,13 @@ export default function ProductDetailPage() {
                                 {sectionImage.includes("cloudinary.com") || sectionImage.startsWith("data:") ? (
                                   <img 
                                     src={sectionImage} 
-                                    alt={section.title || product.name} 
+                                    alt={section.title || product.name || "Product image"} 
                                     className="w-full h-full object-contain" 
                                   />
                                 ) : (
                                   <Image 
                                     src={sectionImage} 
-                                    alt={section.title || product.name} 
+                                    alt={section.title || product.name || "Product image"} 
                                     fill 
                                     className="object-contain" 
                                     sizes="100vw" 
