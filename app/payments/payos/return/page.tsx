@@ -60,7 +60,8 @@ function PayOSReturnContent() {
         return {
           success: false,
           message: errorData.message || "Lỗi xác nhận thanh toán",
-        };
+          orderId: undefined,
+        } as PayOSConfirmResponse;
       }
 
       const data: PayOSConfirmResponse = await response.json();
@@ -77,7 +78,8 @@ function PayOSReturnContent() {
       return {
         success: false,
         message: "Lỗi kết nối đến server. Vui lòng thử lại sau.",
-      };
+        orderId: undefined,
+      } as PayOSConfirmResponse;
     }
   }, []);
 
@@ -263,7 +265,7 @@ function PayOSReturnContent() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <Card className="border-emerald-100 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+        <CardHeader className="bg-linear-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
           <CardTitle className="text-center text-emerald-900">
             Kết quả thanh toán PayOS
           </CardTitle>
@@ -280,7 +282,7 @@ export default function PayOSReturnPage() {
       fallback={
         <div className="container mx-auto px-4 py-8 max-w-2xl">
           <Card className="border-emerald-100 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+            <CardHeader className="bg-linear-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
               <CardTitle className="text-center text-emerald-900">
                 Kết quả thanh toán PayOS
               </CardTitle>
