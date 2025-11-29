@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCart, useCreateOrder, useCreatePayment } from "@/lib/api/hooks";
+import { useCart, useCreateOrder, useCreatePayment, useUserMe } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,7 @@ function CheckoutContent() {
   const createOrder = useCreateOrder();
   const createPayment = useCreatePayment();
   const { user } = useAuth();
+  const { data: userMe } = useUserMe();
 
   const {
     register,
@@ -122,7 +123,11 @@ function CheckoutContent() {
 
       // If payment method is COD, show success message and redirect
       if (data.paymentMethod === PaymentMethod.COD) {
-        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+        const userEmail = userMe?.email || user?.email || "";
+        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.", {
+          description: userEmail ? `Email xác nhận đã được gửi đến ${userEmail}. Vui lòng kiểm tra hộp thư đến và spam folder.` : "Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư đến và spam folder.",
+          duration: 5000,
+        });
         router.push(`/account/orders/${orderId}`);
         return;
       }

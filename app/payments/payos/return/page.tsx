@@ -4,8 +4,9 @@ import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Loader2, Home, Package } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Home, Package, Mail } from "lucide-react";
 import { apiClient } from "@/lib/api/client";
+import { useUserMe } from "@/lib/api/hooks";
 
 interface PayOSConfirmResponse {
   success: boolean;
@@ -16,6 +17,7 @@ interface PayOSConfirmResponse {
 function PayOSReturnContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: userMe } = useUserMe();
   const [status, setStatus] = useState<"loading" | "success" | "failed" | "cancelled">("loading");
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -156,6 +158,7 @@ function PayOSReturnContent() {
         );
 
       case "success":
+        const userEmail = userMe?.email || "";
         return (
           <div className="text-center py-12">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -165,6 +168,27 @@ function PayOSReturnContent() {
             <p className="text-muted-foreground mb-2">
               Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đang được xử lý.
             </p>
+            
+            {/* Email confirmation notification */}
+            <div className="mx-auto max-w-md mt-4 mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                <div className="text-left flex-1">
+                  <p className="text-sm font-medium text-emerald-900 mb-1">
+                    Email xác nhận đã được gửi
+                  </p>
+                  {userEmail && (
+                    <p className="text-xs text-emerald-700 mb-2">
+                      Đến: <span className="font-medium">{userEmail}</span>
+                    </p>
+                  )}
+                  <p className="text-xs text-emerald-600">
+                    💡 Lưu ý: Nếu không thấy email trong hộp thư đến, vui lòng kiểm tra thư mục Spam/Junk.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {orderCode && (
               <p className="text-sm text-emerald-600 font-medium mb-6">
                 Mã đơn hàng: {orderCode}
