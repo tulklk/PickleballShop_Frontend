@@ -48,6 +48,21 @@ function PayOSReturnContent() {
         }
       );
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText || "Lỗi xác nhận thanh toán" };
+        }
+        console.error("PayOS confirm error:", errorData);
+        return {
+          success: false,
+          message: errorData.message || "Lỗi xác nhận thanh toán",
+        };
+      }
+
       const data: PayOSConfirmResponse = await response.json();
       console.log("PayOS confirm response:", data);
 
@@ -59,7 +74,10 @@ function PayOSReturnContent() {
       return data;
     } catch (error) {
       console.error("Error confirming PayOS payment:", error);
-      return null;
+      return {
+        success: false,
+        message: "Lỗi kết nối đến server. Vui lòng thử lại sau.",
+      };
     }
   }, []);
 
@@ -72,13 +90,22 @@ function PayOSReturnContent() {
       const orderCodeParam = searchParams.get("orderCode") || "";
       const cancel = searchParams.get("cancel");
       // Lấy orderId từ sessionStorage nếu có (được lưu khi tạo order)
-      const savedOrderId = sessionStorage.getItem("payos_orderId") || undefined;
+      let savedOrderId = sessionStorage.getItem("payos_orderId");
+      if (savedOrderId) {
+        savedOrderId = savedOrderId.trim();
+        if (savedOrderId === "" || savedOrderId === "null" || savedOrderId === "undefined") {
+          savedOrderId = undefined;
+        }
+      } else {
+        savedOrderId = undefined;
+      }
 
       console.log("PayOS return params:", { code, id, paymentStatus, orderCodeParam, cancel, savedOrderId });
 
       setOrderCode(orderCodeParam);
 
       // Gọi API confirm payment với orderId nếu có
+      // Backend có thể tìm order dựa trên orderCode nếu không có orderId
       const confirmResult = await confirmPayment({
         code,
         id,
@@ -91,13 +118,26 @@ function PayOSReturnContent() {
       // Xóa orderId khỏi sessionStorage sau khi confirm
       sessionStorage.removeItem("payos_orderId");
 
-      // Xác định trạng thái thanh toán
+      // Xác định trạng thái thanh toán dựa trên cả PayOS params và backend response
       if (cancel === "true") {
         setStatus("cancelled");
       } else if (paymentStatus === "PAID" || code === "00") {
-        setStatus("success");
+        // Chỉ hiển thị success nếu backend confirm thành công
+        if (confirmResult?.success === true) {
+          setStatus("success");
+          if (confirmResult.orderId) {
+            setOrderId(confirmResult.orderId);
+          }
+        } else {
+          // PayOS thành công nhưng backend confirm thất bại
+          setStatus("failed");
+          setMessage(confirmResult?.message || "Thanh toán thành công nhưng xác nhận đơn hàng thất bại. Vui lòng liên hệ hỗ trợ.");
+        }
       } else {
         setStatus("failed");
+        if (confirmResult?.message) {
+          setMessage(confirmResult.message);
+        }
       }
     };
 
