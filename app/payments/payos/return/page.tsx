@@ -90,14 +90,12 @@ function PayOSReturnContent() {
       const orderCodeParam = searchParams.get("orderCode") || "";
       const cancel = searchParams.get("cancel");
       // Lấy orderId từ sessionStorage nếu có (được lưu khi tạo order)
-      let savedOrderId = sessionStorage.getItem("payos_orderId");
+      let savedOrderId: string | undefined = sessionStorage.getItem("payos_orderId") || undefined;
       if (savedOrderId) {
         savedOrderId = savedOrderId.trim();
         if (savedOrderId === "" || savedOrderId === "null" || savedOrderId === "undefined") {
           savedOrderId = undefined;
         }
-      } else {
-        savedOrderId = undefined;
       }
 
       console.log("PayOS return params:", { code, id, paymentStatus, orderCodeParam, cancel, savedOrderId });
