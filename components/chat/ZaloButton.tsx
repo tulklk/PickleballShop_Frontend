@@ -22,8 +22,7 @@ export function ZaloButton() {
         alt="Zalo"
         width={28}
         height={28}
-        className="md:w-8 md:h-8"
-        className="object-contain"
+        className="object-contain md:w-8 md:h-8"
       />
     </Button>
   );
