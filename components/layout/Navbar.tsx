@@ -514,8 +514,8 @@ export function Navbar() {
                 </div>
               </div>
 
-              {/* Mobile Auth Buttons */}
-              {!isAuthenticated && (
+              {/* Mobile Auth Buttons - Hidden */}
+              {/* {!isAuthenticated && (
                 <div className="pt-4 border-t border-gray-100 space-y-2">
                   <Link href="/login" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full">
@@ -526,7 +526,7 @@ export function Navbar() {
                     <Button className="w-full">Đăng ký</Button>
                   </Link>
                 </div>
-              )}
+              )} */}
 
               {/* Mobile User Menu */}
               {isAuthenticated && (
