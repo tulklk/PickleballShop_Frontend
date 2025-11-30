@@ -148,8 +148,8 @@ function HeroBannerSlider() {
 
 function PromotionBanners() {
   return (
-    <section className="container mx-auto px-4 py-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
         {/* Banner 1 - Trao đổi vợt cũ */}
         <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-6 flex items-center justify-between">
           <div>
@@ -237,10 +237,10 @@ function FlashSaleSection() {
   if (isLoading || saleProducts.length === 0) return null;
 
   return (
-    <section className="container mx-auto px-4 py-6">
-      <div className="flex flex-col lg:flex-row gap-4">
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
+      <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
         {/* Deal of the day */}
-        <div className="lg:w-1/3 bg-white rounded-xl border p-6">
+        <div className="lg:w-1/3 bg-white rounded-xl border p-4 md:p-6">
           <h3 className="text-xl font-bold text-gray-900 mb-2">CHỈ CÓ TRONG HÔM NAY</h3>
           {saleProducts[0] && (
             <>
@@ -293,9 +293,9 @@ function FlashSaleSection() {
         </div>
 
         {/* Flash Sale Products */}
-        <div className="lg:w-2/3 bg-gradient-to-r from-emerald-500 to-lime-400 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+        <div className="lg:w-2/3 bg-gradient-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h3 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
               <span className="text-yellow-300">⚡</span> FLASH SALE GIÁ SỐC
             </h3>
             <div className="flex gap-2">
@@ -358,9 +358,9 @@ function NewProductsSection() {
   if (products.length === 0) return null;
 
   return (
-    <section className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">SẢN PHẨM MỚI</h2>
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900">SẢN PHẨM MỚI</h2>
         <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
           Xem tất cả <ArrowRight className="h-4 w-4" />
         </Link>
@@ -375,7 +375,7 @@ function NewProductsSection() {
         </div>
 
         {/* Products Grid */}
-        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -443,7 +443,7 @@ function CategoryProductsSection() {
         if (displayProducts.length === 0) return null;
 
         return (
-          <section key={config.name} className="container mx-auto px-4 py-8">
+          <section key={config.name} className="container mx-auto px-3 md:px-4 py-4 md:py-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
               <Link 
@@ -580,8 +580,8 @@ function TrendingSection() {
   if (!productsData?.items?.length) return null;
 
   return (
-    <section className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
         {/* Trending */}
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">ĐANG TRENDING</h3>
@@ -705,7 +705,7 @@ function CategoryLinksGrid() {
 
   return (
     <section className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         {categories.slice(0, 5).map((category) => (
           <Link
             key={category.id}
@@ -735,7 +735,7 @@ function NewsletterSection() {
 
   return (
     <section className="bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-3 md:px-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Contact Info */}
           <div className="flex gap-8">
@@ -796,8 +796,8 @@ function TrustBadges() {
   ];
 
   return (
-    <section className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {badges.map((badge) => (
           <div key={badge.title} className="flex items-center gap-4 justify-center">
             <badge.icon className="h-12 w-12 text-emerald-600" />

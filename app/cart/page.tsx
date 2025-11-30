@@ -104,7 +104,7 @@ function CartContent() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         <div className="text-center">Đang tải giỏ hàng...</div>
       </div>
     );
@@ -112,10 +112,10 @@ function CartContent() {
 
   if (!cart || !cart.items || cart.items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-16">
-          <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Giỏ hàng của bạn trống</h2>
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="text-center py-8 md:py-16">
+          <ShoppingBag className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-xl md:text-2xl font-bold mb-2">Giỏ hàng của bạn trống</h2>
           <p className="text-muted-foreground mb-6">
             Bắt đầu mua sắm để thêm sản phẩm vào giỏ hàng
           </p>
@@ -128,21 +128,21 @@ function CartContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Giỏ hàng</h1>
-        <Button variant="outline" onClick={handleClearCart}>
+    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Giỏ hàng</h1>
+        <Button variant="outline" onClick={handleClearCart} size="sm" className="text-xs md:text-sm">
           Xóa giỏ hàng
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-2 space-y-3 md:space-y-4">
           {cart.items.map((item) => (
             <Card key={item.id}>
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  <div className="relative w-24 h-24 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+              <CardContent className="p-3 md:p-4">
+                <div className="flex gap-3 md:gap-4">
+                  <div className="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 rounded overflow-hidden bg-gray-100">
                     {(() => {
                       // Helper to validate URL
                       const isValidUrl = (url: string | null | undefined): boolean => {
@@ -211,12 +211,12 @@ function CartContent() {
                       );
                     })()}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">{item.productName}</h3>
-                    <p className="text-primary font-bold mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{item.productName}</h3>
+                    <p className="text-primary font-bold mb-2 text-sm md:text-base">
                       {formatCurrency(item.unitPrice)}
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                       <Button
                         variant="outline"
                         size="icon"

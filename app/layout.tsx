@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ChatBox } from "@/components/chat/ChatBox";
 import { ZaloButton } from "@/components/chat/ZaloButton";
+import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -31,6 +32,7 @@ export default function RootLayout({
           </div>
           <ChatBox />
           <ZaloButton />
+          <ScrollToTop />
           <Toaster position="top-right" />
         </Providers>
       </body>

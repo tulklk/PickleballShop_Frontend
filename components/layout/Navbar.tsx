@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -53,6 +53,7 @@ export function Navbar() {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Update guest cart count when not authenticated
   useEffect(() => {
@@ -165,9 +166,19 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-emerald-100 bg-white/90 backdrop-blur supports-backdrop-filter:bg-white/80">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 p-1.5">
+          <div className="flex items-center gap-3 md:gap-6">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+            
+            <Link href="/" className="flex items-center gap-2 md:gap-3">
+              <span className="relative inline-flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 p-1.5">
                 <Image
                   src={logo}
                   alt="IKA Sport Pickleball"
@@ -176,8 +187,8 @@ export function Navbar() {
                   sizes="48px"
                 />
               </span>
-              <div className="leading-tight">
-                <p className={`text-xl font-semibold text-emerald-950 tracking-tight ${poppins.className}`}>
+              <div className="leading-tight hidden sm:block">
+                <p className={`text-lg md:text-xl font-semibold text-emerald-950 tracking-tight ${poppins.className}`}>
                   IKA Sport
                 </p>
               </div>
@@ -218,10 +229,10 @@ export function Navbar() {
                     onMouseEnter={handleProductMouseEnter}
                     onMouseLeave={handleProductMouseLeave}
                   >
-                    <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 min-w-[800px] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 md:p-6 min-w-[300px] md:min-w-[800px] animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="flex gap-8">
                         {/* Categories Grid */}
-                        <div className="flex-1 grid grid-cols-3 gap-x-8 gap-y-4">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-x-4 md:gap-x-8 gap-y-4">
                           {/* Column 1 */}
                           <div className="space-y-3">
                             <Link href="/products?search=vợt" className="block text-sm font-semibold text-gray-900 hover:text-emerald-600">
@@ -278,7 +289,7 @@ export function Navbar() {
                         </div>
 
                         {/* Banner Image */}
-                        <div className="w-[250px] h-[180px] relative rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="hidden lg:block w-[250px] h-[180px] relative rounded-lg overflow-hidden flex-shrink-0">
                           <Image
                             src={bannerDropdown}
                             alt="Pickleball Products"
@@ -294,6 +305,7 @@ export function Navbar() {
             </div>
           </div>
 
+          {/* Search - Desktop */}
           <form
             onSubmit={handleSearch}
             className="hidden md:flex flex-1 max-w-md mx-4"
@@ -309,6 +321,13 @@ export function Navbar() {
               />
             </div>
           </form>
+
+          {/* Mobile Search Button - Hidden */}
+          {/* <Link href="/products" className="md:hidden">
+            <Button variant="ghost" size="icon">
+              <Search className="h-5 w-5" />
+            </Button>
+          </Link> */}
 
           <div className="flex items-center gap-2">
             {/* Cart with Preview Dropdown */}
@@ -425,19 +444,134 @@ export function Navbar() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" className="text-xs md:text-sm">
                     Đăng nhập
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="sm">Đăng ký</Button>
+                  <Button size="sm" className="text-xs md:text-sm px-2 md:px-4">Đăng ký</Button>
                 </Link>
               </div>
             )}
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-emerald-100 bg-white">
+            <div className="px-4 py-4 space-y-4">
+              {/* Mobile Search */}
+              <form onSubmit={handleSearch} className="w-full">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    type="text"
+                    placeholder="Tìm kiếm sản phẩm..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </form>
+
+              {/* Mobile Navigation Links */}
+              <div className="space-y-2">
+                <Link
+                  href="/"
+                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname === "/" ? "bg-emerald-50 text-emerald-600" : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Trang chủ
+                </Link>
+                <Link
+                  href="/products"
+                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname?.startsWith("/products")
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sản phẩm
+                </Link>
+                
+                {/* Mobile Categories */}
+                <div className="pl-4 space-y-1 border-l-2 border-emerald-100">
+                  {menuCategories.map((category) => (
+                    <Link
+                      key={category.key}
+                      href={category.href}
+                      className="block px-4 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-50 hover:text-emerald-600"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {category.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile Auth Buttons */}
+              {!isAuthenticated && (
+                <div className="pt-4 border-t border-gray-100 space-y-2">
+                  <Link href="/login" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full">
+                      Đăng nhập
+                    </Button>
+                  </Link>
+                  <Link href="/register" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full">Đăng ký</Button>
+                  </Link>
+                </div>
+              )}
+
+              {/* Mobile User Menu */}
+              {isAuthenticated && (
+                <div className="pt-4 border-t border-gray-100 space-y-2">
+                  <Link
+                    href="/account/profile"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Settings className="h-4 w-4 text-emerald-600" />
+                    <span>Quản lý tài khoản</span>
+                  </Link>
+                  <Link
+                    href="/account/orders"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Package className="h-4 w-4 text-emerald-600" />
+                    <span>Lịch sử đơn hàng</span>
+                  </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Settings className="h-4 w-4 text-emerald-600" />
+                      <span>Quản trị</span>
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

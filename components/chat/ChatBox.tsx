@@ -111,7 +111,7 @@ export function ChatBox() {
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-xl transition-transform duration-300 group flex items-center justify-center",
+          "fixed bottom-20 md:bottom-24 right-3 md:right-6 z-50 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-xl transition-transform duration-300 group flex items-center justify-center",
           isOpen
             ? "bg-red-500 hover:bg-red-600 hover:shadow-2xl hover:scale-105"
             : "bg-emerald-600 hover:bg-emerald-600 hover:shadow-2xl hover:scale-105"
@@ -147,7 +147,7 @@ export function ChatBox() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-24 right-6 z-40 h-[600px] w-[400px] flex flex-col shadow-2xl border-2 border-green-200">
+        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[400px] md:h-[500px] w-[calc(100vw-1.5rem)] md:w-[400px] max-w-[400px] max-h-[calc(100vh-8rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

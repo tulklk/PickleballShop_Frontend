@@ -126,13 +126,13 @@ function ProductsPageContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6 text-emerald-950">Sản phẩm</h1>
+    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-emerald-950">Sản phẩm</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Filters Sidebar */}
         <aside className="lg:col-span-1">
-          <div className="space-y-4 border border-emerald-100 rounded-lg p-4 bg-white/95 shadow-sm">
+          <div className="space-y-4 border border-emerald-100 rounded-lg p-3 md:p-4 bg-white/95 shadow-sm">
             <h2 className="font-semibold text-lg text-emerald-950">Bộ lọc</h2>
 
             <div>
