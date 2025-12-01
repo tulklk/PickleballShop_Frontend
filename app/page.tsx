@@ -20,7 +20,8 @@ import banner2 from "@/app/img/homepage_img/2.jpg";
 import banner3 from "@/app/img/homepage_img/3.jpg";
 import banner4 from "@/app/img/homepage_img/4.jpg";
 import banner5 from "@/app/img/homepage_img/5.jpg";
-import banner6 from "@/app/img/homepage_img/6.jpg";
+import banner11 from "@/app/img/homepage_img/11.jpg";
+import banner6 from "@/app/img/homepage_img/6.png";
 import banner7 from "@/app/img/homepage_img/7.jpg";
 import banner8 from "@/app/img/homepage_img/8.jpg";
 import banner9 from "@/app/img/homepage_img/9.jpg";
@@ -30,6 +31,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       {/* Hero Banner Slider */}
       <HeroBannerSlider />
+
+      {/* Feature Banners under hero (image-based like reference) */}
+      <FeatureBanners />
 
       {/* Promotion Banners */}
       <PromotionBanners />
@@ -128,19 +132,94 @@ function HeroBannerSlider() {
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4">
+            <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent flex items-end p-4">
               <Button className="bg-lime-400 text-black hover:bg-lime-500">XEM NGAY</Button>
             </div>
           </Link>
-          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group">
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group bg-white">
             <Image
-              src={banner6}
-              alt="Side Banner 2"
+              src={banner11}
+              alt="JOOLA Pro IV New Colorway Vietnam Edition"
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
+            <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent" />
+            <div className="absolute bottom-6 left-6 z-10">
+              <Button className="bg-lime-400 text-black hover:bg-lime-500 shadow-xl px-8 py-2.5 text-sm font-bold tracking-wide transition-all duration-300 hover:scale-105">
+                XEM NGAY
+              </Button>
+            </div>
           </Link>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function FeatureBanners() {
+  return (
+    <section className="container mx-auto px-3 md:px-4 pt-2 pb-4 md:py-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+        {/* Big left banner - Sản phẩm mới */}
+        <Link
+          href="/products"
+          className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black"
+        >
+          <Image
+            src={banner7}
+            alt="Sản phẩm mới Pickleball"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+          />
+          <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-between p-6 md:p-8">
+            <div className="space-y-2">
+              <p className="text-xs md:text-sm font-semibold tracking-[0.2em] text-white/70">
+                SẢN PHẨM MỚI
+              </p>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white">
+                JOOLA 3S DUAL
+              </h2>
+              <p className="text-sm md:text-base text-white/80">ĐÃ CÓ MẶT TẠI IKA SPORT</p>
+            </div>
+            <div className="mt-4">
+              <Button className="bg-white text-black hover:bg-emerald-500 hover:text-white px-6 font-semibold">
+                XEM NGAY
+              </Button>
+            </div>
+          </div>
+        </Link>
+
+        {/* Right banner - Tiêu điểm tháng */}
+        <Link
+          href="/products"
+          className="relative overflow-hidden rounded-2xl group bg-black"
+        >
+          <Image
+            src={banner9}
+            alt="Tiêu điểm tháng - sản phẩm nổi bật"
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+          />
+          <div className="absolute inset-0 bg-black/70 flex flex-col justify-between p-6">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold tracking-[0.2em] text-lime-400">
+                TIÊU ĐIỂM
+              </p>
+              <h3 className="text-lg md:text-xl font-bold text-white">THÁNG NÀY</h3>
+              <p className="text-sm text-white/80">
+                Bộ sưu tập vợt nổi bật được nhiều vận động viên lựa chọn.
+              </p>
+            </div>
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                className="border-white text-white hover:bg-white hover:text-black px-4 text-sm font-semibold"
+              >
+                XEM NGAY
+              </Button>
+            </div>
+          </div>
+        </Link>
       </div>
     </section>
   );
@@ -149,55 +228,55 @@ function HeroBannerSlider() {
 function PromotionBanners() {
   return (
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Banner 1 - Trao đổi vợt cũ */}
-        <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-6 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">TRAO ĐỔI VỢT CŨ</h3>
-            <p className="text-sm text-emerald-600 font-semibold">TIẾT KIỆM NHẤT</p>
-            <div className="flex gap-4 mt-2 text-xs text-gray-600">
-              <span>ĐỔI MỚI</span>
-              <span>KÍ GỬI</span>
-              <span>ĐỔI CÂY CŨ KHÁC</span>
+        <div className="bg-linear-to-r from-amber-50 to-amber-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-amber-200/50">
+          <div className="flex-1">
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">TRAO ĐỔI VỢT CŨ</h3>
+            <p className="text-sm font-semibold text-emerald-600 mb-3">TIẾT KIỆM NHẤT</p>
+            <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-600">
+              <span className="px-2 py-1 bg-white/50 rounded">ĐỔI MỚI</span>
+              <span className="px-2 py-1 bg-white/50 rounded">KÍ GỬI</span>
+              <span className="px-2 py-1 bg-white/50 rounded">ĐỔI CÂY CŨ KHÁC</span>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">CHI PHÍ</p>
-            <p className="text-4xl font-bold text-gray-900">THẤP</p>
+          <div className="text-right ml-4 shrink-0">
+            <p className="text-xs text-gray-500 mb-1">CHI PHÍ</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-none">THẤP</p>
           </div>
         </div>
 
         {/* Banner 2 - Thay đế giày */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">THAY ĐẾ GIÀY PICKLEBALL</h3>
-            <p className="text-sm text-gray-600">GIỮ NGUYÊN CẤU TRÚC</p>
-            <div className="flex gap-3 mt-2 text-xs text-gray-600">
-              <span>ASICS</span>
-              <span>NIKE</span>
-              <span>ADIDAS...</span>
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-orange-200/50">
+          <div className="flex-1">
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">THAY ĐẾ GIÀY PICKLEBALL</h3>
+            <p className="text-sm text-gray-700 mb-3">GIỮ NGUYÊN CẤU TRÚC</p>
+            <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-600">
+              <span className="px-2 py-1 bg-white/50 rounded">ASICS</span>
+              <span className="px-2 py-1 bg-white/50 rounded">NIKE</span>
+              <span className="px-2 py-1 bg-white/50 rounded">ADIDAS...</span>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">CHUẨN</p>
-            <p className="text-4xl font-bold text-emerald-600">100%</p>
+          <div className="text-right ml-4 shrink-0">
+            <p className="text-xs text-gray-500 mb-1">CHUẨN</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none">100%</p>
           </div>
         </div>
 
         {/* Banner 3 - Sửa vợt */}
-        <div className="bg-gradient-to-r from-lime-50 to-lime-100 rounded-xl p-6 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">SỬA VỢT PICKLEBALL</h3>
-            <p className="text-sm text-gray-600">CHI PHÍ THẤP NHẤT</p>
-            <div className="flex gap-3 mt-2 text-xs text-gray-600">
-              <span>KHÔNG LỆCH</span>
-              <span>THẨM MỸ CAO</span>
-              <span>BẢO HÀNH</span>
+        <div className="bg-linear-to-r from-lime-50 to-lime-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-lime-200/50">
+          <div className="flex-1">
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">SỬA VỢT PICKLEBALL</h3>
+            <p className="text-sm text-gray-700 mb-3">CHI PHÍ THẤP NHẤT</p>
+            <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-600">
+              <span className="px-2 py-1 bg-white/50 rounded">KHÔNG LỆCH</span>
+              <span className="px-2 py-1 bg-white/50 rounded">THẨM MỸ CAO</span>
+              <span className="px-2 py-1 bg-white/50 rounded">BẢO HÀNH</span>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500">KHÔI PHỤC</p>
-            <p className="text-4xl font-bold text-lime-600">99%</p>
+          <div className="text-right ml-4 shrink-0">
+            <p className="text-xs text-gray-500 mb-1">KHÔI PHỤC</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-lime-600 leading-none">99%</p>
           </div>
         </div>
       </div>
@@ -293,7 +372,7 @@ function FlashSaleSection() {
         </div>
 
         {/* Flash Sale Products */}
-        <div className="lg:w-2/3 bg-gradient-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
+        <div className="lg:w-2/3 bg-linear-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h3 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
               <span className="text-yellow-300">⚡</span> FLASH SALE GIÁ SỐC
@@ -465,7 +544,7 @@ function CategoryProductsSection() {
                     className="object-cover" 
                   />
                   {/* Overlay content */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-6">
+                  <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-6">
                     <div>
                       {config.bannerText.badge && (
                         <span className="inline-block bg-lime-400 text-black text-xs font-bold px-3 py-1 rounded mb-4">
@@ -721,7 +800,7 @@ function CategoryLinksGrid() {
         ))}
         <Link
           href="/products"
-          className="bg-gradient-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg transition-all"
+          className="bg-linear-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg transition-all"
         >
           <span className="text-white font-bold text-lg">Xem tất cả</span>
         </Link>

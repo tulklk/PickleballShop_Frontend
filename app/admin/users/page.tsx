@@ -32,6 +32,46 @@ import { z } from "zod";
 import { Switch } from "@/components/ui/switch";
 import { formatDate } from "@/lib/utils/formatDate";
 
+// Helper function to get role display text
+function getRoleDisplayText(role: number | string | null | undefined): string {
+  if (!role) return "N/A";
+  
+  // Handle string values
+  if (typeof role === "string") {
+    const roleLower = role.toLowerCase();
+    if (roleLower === "admin" || roleLower === "2" || roleLower === "administrator") {
+      return "Admin";
+    }
+    if (roleLower === "customer" || roleLower === "1" || roleLower === "khách hàng") {
+      return "Khách hàng";
+    }
+    return role; // Return original if unknown
+  }
+  
+  // Handle number values
+  if (typeof role === "number") {
+    return role === 2 ? "Admin" : role === 1 ? "Khách hàng" : "N/A";
+  }
+  
+  return "N/A";
+}
+
+// Helper function to check if user is admin
+function isAdminRole(role: number | string | null | undefined): boolean {
+  if (!role) return false;
+  
+  if (typeof role === "string") {
+    const roleLower = role.toLowerCase();
+    return roleLower === "admin" || roleLower === "2" || roleLower === "administrator";
+  }
+  
+  if (typeof role === "number") {
+    return role === 2;
+  }
+  
+  return false;
+}
+
 const updateUserSchema = z.object({
   email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   fullName: z.string().min(1, "Họ tên không được để trống").optional().or(z.literal("")),
@@ -246,8 +286,8 @@ export default function AdminUsersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={user.role === 2 ? "default" : "secondary"}>
-                          {user.role === 1 ? "Khách hàng" : user.role === 2 ? "Admin" : "N/A"}
+                        <Badge variant={isAdminRole(user.role) ? "default" : "secondary"}>
+                          {getRoleDisplayText(user.role)}
                         </Badge>
                       </TableCell>
                       <TableCell>

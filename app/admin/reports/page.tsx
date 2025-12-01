@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useAdminOrders, useAdminProducts } from "@/lib/api/hooks";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { Order, Product } from "@/lib/api/types";
+import { Loader2 } from "lucide-react";
 
 interface ChartPoint {
   label: string;
@@ -15,28 +16,88 @@ interface ChartPoint {
 }
 
 export default function AdminReportsPage() {
-  const { data: orders } = useAdminOrders();
-  const { data: products } = useAdminProducts();
+  const { data: orders, isLoading: ordersLoading, error: ordersError } = useAdminOrders();
+  const { data: products, isLoading: productsLoading } = useAdminProducts();
 
-  const [startDate, setStartDate] = useState("2025-01-01");
-  const [endDate, setEndDate] = useState("2025-01-12");
+  // Initialize dates from orders data or use defaults
+  const getDefaultDates = (orderList: Order[]) => {
+    if (!orderList || orderList.length === 0) {
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      return {
+        start: oneYearAgo.toISOString().split('T')[0],
+        end: today.toISOString().split('T')[0]
+      };
+    }
+
+    const dates = orderList
+      .map(order => order.createdAt ? new Date(order.createdAt) : null)
+      .filter((date): date is Date => date !== null)
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (dates.length === 0) {
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+      return {
+        start: oneYearAgo.toISOString().split('T')[0],
+        end: today.toISOString().split('T')[0]
+      };
+    }
+
+    return {
+      start: dates[0].toISOString().split('T')[0],
+      end: dates[dates.length - 1].toISOString().split('T')[0]
+    };
+  };
+
+  const orderList: Order[] = Array.isArray(orders) ? orders : [];
+  const defaultDates = useMemo(() => getDefaultDates(orderList), [orders]);
+
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [datesInitialized, setDatesInitialized] = useState(false);
+
+  // Initialize dates when orders data is loaded
+  useEffect(() => {
+    if (!ordersLoading && orders && !datesInitialized) {
+      const dates = getDefaultDates(orderList);
+      setStartDate(dates.start);
+      setEndDate(dates.end);
+      setDatesInitialized(true);
+    }
+  }, [orders, ordersLoading, datesInitialized, orderList]);
 
   const filteredOrders = useMemo(() => {
-    const orderList: Order[] = Array.isArray(orders) ? orders : [];
+    if (!orderList || orderList.length === 0) return [];
+    
+    // If no dates selected, show all orders
+    if (!startDate && !endDate) return orderList;
+    
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
+    
     return orderList.filter((order) => {
       const created = order.createdAt ? new Date(order.createdAt) : null;
       if (!created) return false;
-      if (start && created < start) return false;
-      if (end) {
-        const endClone = new Date(end);
-        endClone.setHours(23, 59, 59, 999);
-        if (created > endClone) return false;
+      
+      // Set time to start of day for comparison
+      if (start) {
+        const startDay = new Date(start);
+        startDay.setHours(0, 0, 0, 0);
+        if (created < startDay) return false;
       }
+      
+      if (end) {
+        const endDay = new Date(end);
+        endDay.setHours(23, 59, 59, 999);
+        if (created > endDay) return false;
+      }
+      
       return true;
     });
-  }, [orders, startDate, endDate]);
+  }, [orderList, startDate, endDate]);
 
   const stats = useMemo(() => {
     const orderList = filteredOrders;
@@ -118,6 +179,31 @@ export default function AdminReportsPage() {
       .slice(0, 8);
   }, [filteredOrders]);
 
+  if (ordersLoading || productsLoading) {
+    return (
+      <div className="bg-slate-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
+          <p className="text-emerald-600">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (ordersError) {
+    return (
+      <div className="bg-slate-50 min-h-screen">
+        <div className="container mx-auto px-6 py-10">
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <p className="text-red-600">Không thể tải dữ liệu báo cáo. Vui lòng thử lại sau.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-slate-50 min-h-screen">
       <div className="container mx-auto px-6 py-10 space-y-8">
@@ -147,15 +233,21 @@ export default function AdminReportsPage() {
               />
             </div>
             <div className="flex items-end gap-3 md:col-span-2 lg:col-span-3">
-              <Button className="flex-1 rounded-xl bg-emerald-500 text-white hover:bg-emerald-400">
+              <Button 
+                className="flex-1 rounded-xl bg-emerald-500 text-white hover:bg-emerald-400"
+                onClick={() => {
+                  // Apply filter - dates are already set, just refresh view
+                }}
+              >
                 Áp dụng
               </Button>
               <Button
                 variant="outline"
                 className="flex-1 rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                 onClick={() => {
-                  setStartDate("2025-01-01");
-                  setEndDate("2025-01-12");
+                  const dates = defaultDates;
+                  setStartDate(dates.start);
+                  setEndDate(dates.end);
                 }}
               >
                 Đặt lại
@@ -164,28 +256,6 @@ export default function AdminReportsPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="rounded-full border border-emerald-500 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-600 shadow-sm"
-          >
-            Tổng hợp hệ thống
-          </button>
-        </div>
-
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {stats.map((stat) => (
-            <Card
-              key={stat.title}
-              className="border-emerald-100 shadow-[0_10px_30px_rgba(16,185,129,0.08)]"
-            >
-              <CardContent className="py-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-500">{stat.title}</p>
-                <p className="mt-3 text-2xl font-semibold text-emerald-900">{stat.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
 
         <section className="grid gap-6 lg:grid-cols-2">
           <Card className="border-emerald-100 shadow-sm">
@@ -214,12 +284,18 @@ export default function AdminReportsPage() {
 }
 
 function SimpleLineChart({ data }: { data: ChartPoint[] }) {
+  if (!data || data.length === 0) {
+    return <p className="text-sm text-muted-foreground">Chưa có dữ liệu.</p>;
+  }
+
   const maxValue = Math.max(...data.map((d) => d.value), 0);
   const minValue = Math.min(...data.map((d) => d.value), 0);
 
   if (maxValue === 0) {
     return <p className="text-sm text-muted-foreground">Chưa có dữ liệu.</p>;
   }
+
+  const dataLength = data.length > 1 ? data.length - 1 : 1;
 
   return (
     <svg viewBox="0 0 400 200" className="w-full rounded-xl border border-emerald-100 bg-white">
@@ -229,7 +305,7 @@ function SimpleLineChart({ data }: { data: ChartPoint[] }) {
         strokeWidth="3"
         points={data
           .map((point, index) => {
-            const x = (index / (data.length - 1)) * 400;
+            const x = (index / dataLength) * 400;
             const normalized = (point.value - minValue) / (maxValue - minValue || 1);
             const y = 200 - normalized * 160 - 20;
             return `${x},${y}`;
@@ -237,11 +313,11 @@ function SimpleLineChart({ data }: { data: ChartPoint[] }) {
           .join(" ")}
       />
       {data.map((point, index) => {
-        const x = (index / (data.length - 1)) * 400;
+        const x = (index / dataLength) * 400;
         const normalized = (point.value - minValue) / (maxValue - minValue || 1);
         const y = 200 - normalized * 160 - 20;
         return (
-          <g key={point.label}>
+          <g key={`${point.label}-${index}`}>
             <circle cx={x} cy={y} r={4} fill="#059669" />
             <text x={x} y={190} textAnchor="middle" fontSize="10" fill="#0f172a">
               {point.label}
@@ -254,6 +330,10 @@ function SimpleLineChart({ data }: { data: ChartPoint[] }) {
 }
 
 function SimpleBarChart({ data }: { data: ChartPoint[] }) {
+  if (!data || data.length === 0) {
+    return <p className="text-sm text-muted-foreground">Chưa có dữ liệu.</p>;
+  }
+
   const maxValue = Math.max(...data.map((d) => d.value), 0);
 
   if (maxValue === 0) {
