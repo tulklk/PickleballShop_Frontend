@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -97,6 +97,76 @@ export default function AdminDashboard() {
         .slice(0, 5)
     : [];
 
+  // Revenue chart state
+  const [revenueView, setRevenueView] = useState<"day" | "week" | "quarter" | "year">("day");
+
+  const revenueData = useMemo(() => {
+    const orderList: Order[] = Array.isArray(orders) ? orders : [];
+
+    // Helper to safely parse date
+    const parseDate = (value: string | undefined | null) => {
+      if (!value) return null;
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    // Group by key
+    const groups: Record<string, number> = {};
+
+    for (const order of orderList) {
+      const createdAt = parseDate(order.createdAt as string | undefined);
+      if (!createdAt) continue;
+      const amount = order.totalAmount || 0;
+
+      let key = "";
+
+      const year = createdAt.getFullYear();
+      const month = createdAt.getMonth(); // 0-11
+      const day = createdAt.getDate();
+
+      switch (revenueView) {
+        case "day": {
+          key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          break;
+        }
+        case "week": {
+          // ISO week number
+          const tmp = new Date(createdAt.getTime());
+          tmp.setHours(0, 0, 0, 0);
+          // Thursday in current week decides the year.
+          tmp.setDate(tmp.getDate() + 3 - ((tmp.getDay() + 6) % 7));
+          const weekYear = tmp.getFullYear();
+          const week1 = new Date(weekYear, 0, 4);
+          const weekNumber =
+            1 +
+            Math.round(
+              ((tmp.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+            );
+          key = `${weekYear}-W${String(weekNumber).padStart(2, "0")}`;
+          break;
+        }
+        case "quarter": {
+          const quarter = Math.floor(month / 3) + 1;
+          key = `${year}-Q${quarter}`;
+          break;
+        }
+        case "year": {
+          key = `${year}`;
+          break;
+        }
+      }
+
+      if (!groups[key]) groups[key] = 0;
+      groups[key] += amount;
+    }
+
+    const entries = Object.entries(groups)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => (a.label > b.label ? 1 : -1));
+
+    return entries;
+  }, [orders, revenueView]);
+
   return (
     <div className="bg-linear-to-b from-[#f0fff5] via-white to-[#f7fffa]">
       <div className="container mx-auto px-4 py-10 space-y-10">
@@ -149,6 +219,50 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           ))}
+        </section>
+
+        {/* Revenue chart section */}
+        <section>
+          <Card className="border-emerald-100 bg-white/90 shadow-[0_20px_60px_rgba(15,118,110,0.12)]">
+            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>Biểu đồ doanh thu</CardTitle>
+                <CardDescription>
+                  Xem xu hướng doanh thu theo ngày, tuần, quý hoặc năm.
+                </CardDescription>
+              </div>
+              <div className="inline-flex rounded-full border border-emerald-100 bg-emerald-50 p-1 text-xs">
+                {([
+                  { key: "day", label: "Ngày" },
+                  { key: "week", label: "Tuần" },
+                  { key: "quarter", label: "Quý" },
+                  { key: "year", label: "Năm" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setRevenueView(opt.key)}
+                    className={`px-3 py-1 rounded-full transition-colors ${
+                      revenueView === opt.key
+                        ? "bg-white text-emerald-700 shadow-sm"
+                        : "text-emerald-700/70 hover:bg-emerald-100"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {revenueData.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Chưa có dữ liệu doanh thu để hiển thị biểu đồ.
+                </p>
+              ) : (
+                <RevenueBarChart data={revenueData} />
+              )}
+            </CardContent>
+          </Card>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -305,6 +419,78 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </section>
+      </div>
+    </div>
+  );
+}
+
+interface RevenuePoint {
+  label: string;
+  value: number;
+}
+
+function RevenueBarChart({ data }: { data: RevenuePoint[] }) {
+  const maxValue = Math.max(...data.map((d) => d.value), 0);
+
+  if (maxValue === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Chưa có doanh thu trong khoảng thời gian đã chọn.
+      </p>
+    );
+  }
+
+  const ticks = Array.from({ length: 4 }).map((_, index) => {
+    const value = maxValue - (maxValue / 3) * index;
+    return value <= 0 ? null : value;
+  }).filter(Boolean) as number[];
+
+  const totalRevenue = data.reduce((sum, point) => sum + point.value, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between text-sm text-emerald-900/70 font-medium">
+        <span>Tổng doanh thu</span>
+        <span className="text-lg font-semibold text-emerald-700">
+          {formatCurrency(totalRevenue)}
+        </span>
+      </div>
+      <div className="relative mt-2 rounded-2xl border border-emerald-50 bg-emerald-50/40 p-4">
+        {/* Horizontal grid */}
+        <div className="absolute inset-4 flex flex-col justify-between pointer-events-none">
+          {ticks.map((value) => (
+            <div key={value} className="flex items-center gap-2 text-xs text-emerald-900/40">
+              <div className="w-12 text-right">{formatCurrency(value)}</div>
+              <div className="flex-1 border-t border-emerald-100/60"></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="relative mt-8 flex items-end gap-4 overflow-x-auto pb-4">
+          {data.map((point) => {
+            const heightPercent = Math.max((point.value / maxValue) * 100, 6);
+            return (
+              <div key={point.label} className="flex flex-col items-center min-w-[60px]">
+                <div className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-12 md:w-14 rounded-t-xl bg-linear-to-t from-emerald-500 via-emerald-400 to-lime-300 shadow-[0_10px_25px_rgba(16,185,129,0.35)]"
+                    style={{
+                      height: `${heightPercent}%`,
+                      minHeight: 36,
+                      transition: "height 0.3s ease",
+                    }}
+                  ></div>
+                  <div className="text-xs font-semibold text-emerald-900/80">
+                    {formatCurrency(point.value)}
+                  </div>
+                </div>
+                <span className="mt-2 text-[11px] uppercase tracking-wide text-emerald-900/60 text-center leading-tight">
+                  {point.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

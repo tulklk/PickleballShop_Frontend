@@ -646,7 +646,8 @@ export function useUser(id: string) {
 export function useUsers() {
   return useQuery({
     queryKey: ["users"],
-    queryFn: () => apiClient.getUsers(),
+    // Use admin endpoint for user management in admin panel
+    queryFn: () => apiClient.adminGetUsers(),
   });
 }
 
@@ -692,6 +693,19 @@ export function useUpdateUser() {
         console.warn("Failed to refetch user after update:", error);
         // Even if refetch fails, still invalidate to force refetch on next access
       }
+    },
+  });
+}
+
+// Admin: update only user status (isActive) via dedicated endpoint
+export function useAdminUpdateUserStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      apiClient.adminUpdateUserStatus(id, isActive),
+    onSuccess: () => {
+      // Refresh user list after status change
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });
 }

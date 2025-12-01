@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   useAdminProducts,
@@ -30,6 +30,8 @@ import type { Product, ProductListDto, ProductDto } from "@/lib/api/types";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth/useAuth";
 import { DeleteConfirmationDialog } from "@/components/shared/DeleteConfirmationDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function AdminProductsPage() {
   const { isAdmin } = useAuth();
@@ -55,6 +57,30 @@ export default function AdminProductsPage() {
     : Array.isArray(adminProducts) && adminProducts.length > 0
     ? adminProducts
     : []) as Array<Product | ProductListDto>;
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return normalizedProducts;
+    const term = searchTerm.trim().toLowerCase();
+
+    return normalizedProducts.filter((product) => {
+      const name = (product.name || "").toLowerCase();
+      const brand = ("brand" in product && product.brand ? product.brand : "N/A").toLowerCase();
+      const priceValue =
+        "price" in product
+          ? typeof product.price === "number"
+            ? product.price.toString()
+            : String(product.price || "")
+          : "0";
+
+      return (
+        name.includes(term) ||
+        brand.includes(term) ||
+        priceValue.includes(term)
+      );
+    });
+  }, [normalizedProducts, searchTerm]);
   
   // Only show error if both admin and public products fail, and we're not still loading
   const showError = isAdminErrorQuery && !isLoadingAdmin && !isLoadingPublic && normalizedProducts.length === 0;
@@ -108,10 +134,21 @@ export default function AdminProductsPage() {
 
       <Card className="border-emerald-100 bg-white/95 shadow-[0_20px_60px_rgba(15,118,110,0.1)]">
         <CardHeader>
-          <CardTitle>Tất cả sản phẩm</CardTitle>
-            <CardDescription>
-              Theo dõi giá, tồn kho và thông tin sản phẩm.
-            </CardDescription>
+          <div className="mt-4 w-full md:w-80">
+            <Label
+              htmlFor="product-search"
+              className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500"
+            >
+              Tìm kiếm sản phẩm
+            </Label>
+            <Input
+              id="product-search"
+              placeholder="Tìm theo tên, giá bán hoặc thương hiệu..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mt-1"
+            />
+          </div>
         </CardHeader>
         <CardContent>
             {showError ? (
@@ -122,7 +159,7 @@ export default function AdminProductsPage() {
             <div className="py-12 text-center text-muted-foreground">
               Đang tải sản phẩm...
             </div>
-          ) : normalizedProducts.length > 0 ? (
+          ) : filteredProducts.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -136,7 +173,7 @@ export default function AdminProductsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {normalizedProducts.map((product) => {
+                  {filteredProducts.map((product) => {
                     const stock =
                       "stockQuantity" in product
                         ? product.stockQuantity ?? "N/A"

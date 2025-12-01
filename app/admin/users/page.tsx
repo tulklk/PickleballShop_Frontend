@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useUsers, useUpdateUser, useDeleteUser } from "@/lib/api/hooks";
+import { useMemo, useState } from "react";
+import { useUsers, useUpdateUser, useDeleteUser, useAdminUpdateUserStatus } from "@/lib/api/hooks";
 import {
   Table,
   TableBody,
@@ -44,11 +44,13 @@ type UpdateUserFormData = z.infer<typeof updateUserSchema>;
 export default function AdminUsersPage() {
   const { data: users, isLoading, error } = useUsers();
   const updateUser = useUpdateUser();
+  const updateUserStatus = useAdminUpdateUserStatus();
   const deleteUser = useDeleteUser();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
   const [userToEdit, setUserToEdit] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const {
     register,
@@ -82,16 +84,27 @@ export default function AdminUsersPage() {
   const handleEditSubmit = async (data: UpdateUserFormData) => {
     if (!userToEdit) return;
 
+    const statusChanged = data.isActive !== userToEdit.isActive;
+
     try {
+      // Update basic user info (email, fullName, phoneNumber)
       await updateUser.mutateAsync({
         id: userToEdit.id,
         data: {
           email: data.email || null,
           fullName: data.fullName || null,
           phoneNumber: data.phoneNumber || null,
-          isActive: data.isActive,
         },
       });
+
+      // Update status via dedicated admin endpoint if it changed
+      if (statusChanged) {
+        await updateUserStatus.mutateAsync({
+          id: userToEdit.id,
+          isActive: data.isActive,
+        });
+      }
+
       toast.success("Cập nhật thông tin người dùng thành công");
       setEditDialogOpen(false);
       setUserToEdit(null);
@@ -117,11 +130,9 @@ export default function AdminUsersPage() {
 
   const handleToggleStatus = async (user: any) => {
     try {
-      await updateUser.mutateAsync({
+      await updateUserStatus.mutateAsync({
         id: user.id,
-        data: {
-          isActive: !user.isActive,
-        },
+        isActive: !user.isActive,
       });
       toast.success(
         user.isActive ? "Đã vô hiệu hóa người dùng" : "Đã kích hoạt người dùng"
@@ -131,6 +142,23 @@ export default function AdminUsersPage() {
       toast.error(error?.data?.message || "Có lỗi xảy ra khi thay đổi trạng thái");
     }
   };
+
+  const userList = useMemo(() => {
+    const rawList = Array.isArray(users) ? users : [];
+    if (!searchTerm.trim()) return rawList;
+
+    const term = searchTerm.trim().toLowerCase();
+    return rawList.filter((user: any) => {
+      const email = (user.email || "").toLowerCase();
+      const fullName = (user.fullName || "").toLowerCase();
+      const phone = (user.phoneNumber || "").toLowerCase();
+      return (
+        email.includes(term) ||
+        fullName.includes(term) ||
+        phone.includes(term)
+      );
+    });
+  }, [users, searchTerm]);
 
   if (isLoading) {
     return (
@@ -154,15 +182,25 @@ export default function AdminUsersPage() {
     );
   }
 
-  const userList = Array.isArray(users) ? users : [];
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Quản lý người dùng</h1>
-        <p className="text-muted-foreground">
-          Quản lý thông tin, trạng thái và quyền truy cập của người dùng
-        </p>
+        <h1 className="text-3xl font-bold mb-4">Quản lý người dùng</h1>
+        <div className="w-full md:w-80">
+          <Label
+            htmlFor="user-search"
+            className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500"
+          >
+            Tìm kiếm người dùng
+          </Label>
+          <Input
+            id="user-search"
+            placeholder="Tìm theo email, họ tên hoặc số điện thoại..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mt-1"
+          />
+        </div>
       </div>
 
       <Card>

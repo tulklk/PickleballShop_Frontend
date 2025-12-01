@@ -788,6 +788,21 @@ class ApiClient {
       method: "DELETE",
     });
   }
+
+  // Admin user management endpoints
+  async adminGetUsers(): Promise<User[]> {
+    // Use admin-specific endpoint for listing users in admin panel
+    return this.request<User[]>(`/api/admin/AdminUsers`);
+  }
+
+  async adminUpdateUserStatus(id: string, isActive: boolean): Promise<void> {
+    // Dedicated endpoint for updating user's active status
+    const payload = { isActive: Boolean(isActive) };
+    return this.request<void>(`/api/admin/AdminUsers/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

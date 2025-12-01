@@ -60,13 +60,30 @@ export default function LoginPage() {
       router.push(isAdmin ? "/admin" : "/");
     } catch (error: any) {
       const errorMessage = error?.data?.message || "Đăng nhập thất bại";
+      const lowerMessage = errorMessage.toLowerCase();
+
+      // Check if account is locked / inactive
+      if (
+        lowerMessage.includes("inactive") ||
+        lowerMessage.includes("deactivated") ||
+        lowerMessage.includes("bị khóa") ||
+        lowerMessage.includes("locked") ||
+        lowerMessage.includes("isactive")
+      ) {
+        setUnverifiedEmail(null);
+        toast.error(
+          "Tài khoản của bạn đã bị khóa, vui lòng liên hệ Admin để được hỗ trợ."
+        );
+        return;
+      }
+
       // Check if error is about email not verified
       if (
-        errorMessage.toLowerCase().includes("xác thực") ||
-        errorMessage.toLowerCase().includes("verify") ||
-        errorMessage.toLowerCase().includes("email chưa") ||
-        errorMessage.toLowerCase().includes("email not verified") ||
-        errorMessage.toLowerCase().includes("chưa xác nhận")
+        lowerMessage.includes("xác thực") ||
+        lowerMessage.includes("verify") ||
+        lowerMessage.includes("email chưa") ||
+        lowerMessage.includes("email not verified") ||
+        lowerMessage.includes("chưa xác nhận")
       ) {
         setUnverifiedEmail(data.email); // Store email for resend verification
         toast.error("Bạn phải xác nhận tài khoản trước khi đăng nhập. Vui lòng kiểm tra email để xác thực.");

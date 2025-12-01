@@ -16,6 +16,8 @@ import { formatDate } from "@/lib/utils/formatDate";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OrderStatus, PaymentStatus } from "@/lib/api/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function getOrderStatusText(status: OrderStatus | string): string {
   // Handle string values from backend
@@ -95,6 +97,30 @@ function getPaymentStatusText(status: PaymentStatus | string): string {
 
 export default function AdminOrdersPage() {
   const { data: orders, isLoading, error } = useAdminOrders();
+  const [searchTerm, setSearchTerm] = React.useState("");
+
+  const filteredOrders = React.useMemo(() => {
+    const rawList = Array.isArray(orders) ? orders : [];
+    if (!searchTerm.trim()) return rawList;
+
+    const term = searchTerm.trim().toLowerCase();
+    return rawList.filter((order: any) => {
+      const orderNumber = (order.orderNumber || "").toLowerCase();
+      const customerName = (
+        order.user?.fullName ||
+        order.shippingAddress?.fullName ||
+        order.shippingFullName ||
+        ""
+      ).toLowerCase();
+      const total = String(order.totalAmount ?? "").toLowerCase();
+
+      return (
+        orderNumber.includes(term) ||
+        customerName.includes(term) ||
+        total.includes(term)
+      );
+    });
+  }, [orders, searchTerm]);
 
   // Debug logging
   React.useEffect(() => {
@@ -136,11 +162,24 @@ export default function AdminOrdersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tất cả đơn hàng</CardTitle>
-          <CardDescription>Quản lý đơn hàng của khách hàng</CardDescription>
+          <div className="mt-4 w-full md:w-80">
+            <Label
+              htmlFor="order-search"
+              className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500"
+            >
+              Tìm kiếm đơn hàng
+            </Label>
+            <Input
+              id="order-search"
+              placeholder="Tìm theo mã đơn, khách hàng hoặc tổng tiền..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mt-1"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          {orders && Array.isArray(orders) && orders.length > 0 ? (
+          {filteredOrders && Array.isArray(filteredOrders) && filteredOrders.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -155,7 +194,7 @@ export default function AdminOrdersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => (
+                  {filteredOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">
                         {order.orderNumber || "N/A"}
