@@ -216,7 +216,7 @@ function CartContent() {
                     {/* Variant Info */}
                     {"variantInfo" in item && item.variantInfo && (
                       <p className="text-xs md:text-sm text-gray-500 mb-1">
-                        📦 {item.variantInfo}
+                        {item.variantInfo}
                       </p>
                     )}
                     <p className="text-primary font-bold mb-2 text-sm md:text-base">

@@ -16,7 +16,7 @@ import { RequireAuth } from "@/lib/auth/guards";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentMethod } from "@/lib/api/types";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   User, 
   Phone, 
@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   Loader2
 } from "lucide-react";
+import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from "@/lib/utils/provinces";
 import momoIcon from "@/app/img/momo_icon.png";
 import vnpayLogo from "@/app/img/Logo-VNPAY-QR-350x65.png";
 import { Building2 } from "lucide-react";
@@ -74,6 +75,152 @@ function CheckoutContent() {
   });
 
   const paymentMethod = watch("paymentMethod");
+  const selectedCity = watch("city");
+  const selectedDistrict = watch("district");
+  const selectedWard = watch("ward");
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<number | null>(null);
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState<number | null>(null);
+
+  // States for provinces API
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(true);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [isLoadingWards, setIsLoadingWards] = useState(false);
+
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        setIsLoadingProvinces(true);
+        const data = await getProvinces();
+        setProvinces(data);
+      } catch (error) {
+        console.error("Failed to load provinces:", error);
+        toast.error("Không thể tải danh sách tỉnh thành. Vui lòng thử lại.");
+      } finally {
+        setIsLoadingProvinces(false);
+      }
+    };
+
+    loadProvinces();
+  }, []);
+
+  // Load districts when province is selected
+  useEffect(() => {
+    const loadDistrictsForProvince = async () => {
+      if (!selectedCity) {
+        setDistricts([]);
+        setWards([]);
+        setValue("district", "");
+        setValue("ward", "");
+        return;
+      }
+
+      if (provinces.length === 0) {
+        return; // Wait for provinces to load
+      }
+
+      // Use selectedProvinceCode if available, otherwise try to find by name
+      let provinceCode = selectedProvinceCode;
+      
+      if (!provinceCode) {
+        // Fallback: find province by name
+        const normalizedSelectedCity = selectedCity.trim();
+        const province = provinces.find((p) => {
+          const normalizedProvinceName = (p.name || "").trim();
+          return normalizedProvinceName === normalizedSelectedCity || 
+                 normalizedProvinceName.toLowerCase() === normalizedSelectedCity.toLowerCase();
+        });
+        if (province) {
+          provinceCode = province.code;
+        }
+      }
+
+      if (!provinceCode) {
+        console.warn("Province code not found for:", selectedCity);
+        return;
+      }
+
+      try {
+        setIsLoadingDistricts(true);
+        setWards([]);
+        setValue("district", "");
+        setValue("ward", "");
+
+        // Try to get districts from already loaded province first
+        const province = provinces.find((p) => p.code === provinceCode);
+        if (province && province.districts && province.districts.length > 0) {
+          console.log("Using districts from loaded province:", province.name, province.districts.length);
+          setDistricts(province.districts);
+        } else {
+          // Always fetch districts from API to ensure we have them
+          console.log("Fetching districts from API for province code:", provinceCode);
+          const fetchedDistricts = await getDistricts(provinceCode);
+          console.log("Fetched districts:", fetchedDistricts.length);
+          if (fetchedDistricts.length > 0) {
+            setDistricts(fetchedDistricts);
+          } else {
+            console.warn("No districts found for province code:", provinceCode);
+            setDistricts([]);
+            toast.error("Tỉnh/thành phố này không có quận/huyện nào.");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load districts:", error);
+        toast.error("Không thể tải danh sách quận/huyện. Vui lòng thử lại.");
+        setDistricts([]);
+      } finally {
+        setIsLoadingDistricts(false);
+      }
+    };
+
+    loadDistrictsForProvince();
+  }, [selectedCity, selectedProvinceCode, provinces, setValue]);
+
+  // Load wards when district is selected
+  useEffect(() => {
+    const loadWardsForDistrict = async () => {
+      if (!selectedDistrict || !selectedDistrictCode) {
+        setWards([]);
+        setValue("ward", "");
+        return;
+      }
+
+      try {
+        setIsLoadingWards(true);
+        setValue("ward", "");
+
+        // Try to get wards from already loaded district first
+        const district = districts.find((d) => d.code === selectedDistrictCode);
+        if (district && district.wards && district.wards.length > 0) {
+          console.log("Using wards from loaded district:", district.name, district.wards.length);
+          setWards(district.wards);
+        } else {
+          // Always fetch wards from API to ensure we have the latest data
+          console.log("Fetching wards from API for district code:", selectedDistrictCode);
+          const fetchedWards = await getWards(selectedDistrictCode);
+          console.log("Fetched wards:", fetchedWards.length);
+          if (fetchedWards.length > 0) {
+            setWards(fetchedWards);
+          } else {
+            console.warn("No wards found for district code:", selectedDistrictCode);
+            setWards([]);
+            toast.error("Quận/huyện này không có phường/xã nào.");
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load wards:", error);
+        toast.error("Không thể tải danh sách phường/xã. Vui lòng thử lại.");
+        setWards([]);
+      } finally {
+        setIsLoadingWards(false);
+      }
+    };
+
+    loadWardsForDistrict();
+  }, [selectedDistrict, selectedDistrictCode, districts, setValue]);
 
   // Auto-fill user information when user data is available
   // Only fill if the fields are empty to avoid overwriting user input
@@ -289,47 +436,134 @@ function CheckoutContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   <div className="space-y-2">
-                    <Label htmlFor="ward" className="text-emerald-900">Phường/Xã</Label>
-                    <Input 
-                      id="ward" 
-                      {...register("ward")} 
-                      placeholder="Phường 1"
+                    <Label htmlFor="city" className="text-emerald-900">Tỉnh/Thành phố</Label>
+                    <Select
+                      id="city"
+                      value={
+                        selectedCity
+                          ? provinces.find((p) => p.name === selectedCity)
+                            ? `${provinces.find((p) => p.name === selectedCity)?.code}|${selectedCity}`
+                            : ""
+                          : ""
+                      }
+                      onValueChange={(value) => {
+                        if (!value) {
+                          setValue("city", "");
+                          setValue("district", "");
+                          setValue("ward", "");
+                          setDistricts([]);
+                          setWards([]);
+                          setSelectedProvinceCode(null);
+                          return;
+                        }
+                        const parts = value.split("|");
+                        const provinceCode = parseInt(parts[0]);
+                        const provinceName = parts[1] || value;
+                        console.log("Selected province:", provinceName, "Code:", provinceCode);
+                        setSelectedProvinceCode(provinceCode);
+                        setValue("city", provinceName);
+                        setValue("district", "");
+                        setValue("ward", "");
+                        // Districts will be loaded in useEffect
+                      }}
+                      disabled={isLoadingProvinces}
                       className="border-emerald-200 focus:border-emerald-500"
-                    />
-                    {errors.ward && (
+                    >
+                      <SelectItem value="">Chọn tỉnh/thành phố</SelectItem>
+                      {provinces.map((province) => (
+                        <SelectItem key={province.code} value={`${province.code}|${province.name}`}>
+                          {province.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    {errors.city && (
                       <p className="text-sm text-red-600 mt-1">
-                        {errors.ward.message}
+                        {errors.city.message}
                       </p>
+                    )}
+                    {isLoadingProvinces && (
+                      <p className="text-xs text-muted-foreground">Đang tải...</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="district" className="text-emerald-900">Quận/Huyện</Label>
-                    <Input 
-                      id="district" 
-                      {...register("district")} 
-                      placeholder="Quận 1"
+                    <Select
+                      id="district"
+                      value={
+                        selectedDistrict
+                          ? districts.find((d) => d.name === selectedDistrict)
+                            ? `${districts.find((d) => d.name === selectedDistrict)?.code}|${selectedDistrict}`
+                            : ""
+                          : ""
+                      }
+                      onValueChange={(value) => {
+                        if (!value) {
+                          setValue("district", "");
+                          setValue("ward", "");
+                          setSelectedDistrictCode(null);
+                          setWards([]);
+                          return;
+                        }
+                        const parts = value.split("|");
+                        const districtCode = parseInt(parts[0]);
+                        const districtName = parts[1] || value;
+                        console.log("Selected district:", districtName, "Code:", districtCode);
+                        setSelectedDistrictCode(districtCode);
+                        setValue("district", districtName);
+                        setValue("ward", "");
+                      }}
+                      disabled={!selectedCity || isLoadingDistricts || districts.length === 0}
                       className="border-emerald-200 focus:border-emerald-500"
-                    />
+                    >
+                      <SelectItem value="">Chọn quận/huyện</SelectItem>
+                      {districts.map((district) => (
+                        <SelectItem key={district.code} value={`${district.code}|${district.name}`}>
+                          {district.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
                     {errors.district && (
                       <p className="text-sm text-red-600 mt-1">
                         {errors.district.message}
                       </p>
                     )}
+                    {isLoadingDistricts && (
+                      <p className="text-xs text-muted-foreground">Đang tải...</p>
+                    )}
+                    {!selectedCity && (
+                      <p className="text-xs text-muted-foreground">Vui lòng chọn tỉnh/thành phố trước</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="text-emerald-900">Thành phố</Label>
-                    <Input 
-                      id="city" 
-                      {...register("city")} 
-                      placeholder="TP. Hồ Chí Minh"
+                    <Label htmlFor="ward" className="text-emerald-900">Phường/Xã</Label>
+                    <Select
+                      id="ward"
+                      value={selectedWard || ""}
+                      onValueChange={(value) => {
+                        setValue("ward", value);
+                      }}
+                      disabled={!selectedDistrict || isLoadingWards || wards.length === 0}
                       className="border-emerald-200 focus:border-emerald-500"
-                    />
-                    {errors.city && (
+                    >
+                      <SelectItem value="">Chọn phường/xã</SelectItem>
+                      {wards.map((ward) => (
+                        <SelectItem key={ward.code} value={ward.name}>
+                          {ward.name}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                    {errors.ward && (
                       <p className="text-sm text-red-600 mt-1">
-                        {errors.city.message}
+                        {errors.ward.message}
                       </p>
+                    )}
+                    {isLoadingWards && (
+                      <p className="text-xs text-muted-foreground">Đang tải...</p>
+                    )}
+                    {!selectedDistrict && (
+                      <p className="text-xs text-muted-foreground">Vui lòng chọn quận/huyện trước</p>
                     )}
                   </div>
                 </div>
@@ -522,6 +756,12 @@ function CheckoutContent() {
                       <h4 className="font-medium text-sm text-emerald-900 line-clamp-2">
                         {item.productName || "Sản phẩm"}
                       </h4>
+                      {/* Variant Info */}
+                      {"variantInfo" in item && item.variantInfo && (
+                        <p className="text-xs text-emerald-600 mt-1">
+                          {item.variantInfo}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
                         Số lượng: {item.quantity}
                       </p>

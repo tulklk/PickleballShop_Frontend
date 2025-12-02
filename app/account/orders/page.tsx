@@ -186,7 +186,7 @@ function OrdersContent() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-2">
+      <div className="mb-2 mt-6 ml-6">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
           Lịch sử đơn hàng
         </h1>
@@ -280,7 +280,6 @@ function OrdersContent() {
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
                       {getStatusBadge(order.orderStatus)}
-                      {getPaymentStatusBadge(order.paymentStatus)}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -355,11 +354,11 @@ function OrderProductPreview({ item, remaining }: { item?: OrderItemDto; remaini
         {/* Variant Info */}
         {item.variantInfo && (
           <p className="text-xs text-slate-500">
-            📦 {item.variantInfo}
+            {item.variantInfo}
           </p>
         )}
         <p className="text-xs text-slate-500">
-          SL: {item.quantity}
+          Số lượng : {item.quantity}
           {remaining > 0 && <span className="ml-2 text-blue-600">+{remaining} sản phẩm</span>}
         </p>
       </div>

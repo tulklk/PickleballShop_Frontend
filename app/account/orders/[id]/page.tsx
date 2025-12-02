@@ -114,13 +114,12 @@ function OrderDetailContent() {
   }
 
   const statusConfig = getStatusConfig(order.orderStatus);
-  const paymentConfig = getPaymentStatusConfig(order.paymentStatus);
   const StatusIcon = statusConfig.icon;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 mt-6">
         <Button
           variant="ghost"
           size="icon"
@@ -178,30 +177,11 @@ function OrderDetailContent() {
                   </Badge>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Trạng thái thanh toán</p>
-                  <Badge 
-                    className={`${
-                      paymentConfig.color === "emerald" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" :
-                      paymentConfig.color === "amber" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" :
-                      paymentConfig.color === "red" ? "bg-red-100 text-red-700 hover:bg-red-100" :
-                      "bg-gray-100 text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    {paymentConfig.label}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <CreditCard className="h-3 w-3" />
                     Phương thức thanh toán
                   </p>
                   <p className="font-medium text-emerald-900">{getPaymentMethodLabel(order.paymentMethod)}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Tổng tiền</p>
-                  <p className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
-                    {formatCurrency(order.totalAmount)}
-                  </p>
                 </div>
               </div>
             </CardContent>
@@ -339,7 +319,7 @@ function OrderItemDetailCard({ item }: { item: OrderItemDto }) {
         {/* Variant Info */}
         {item.variantInfo && (
           <p className="text-xs text-emerald-700 mb-1">
-            📦 {item.variantInfo}
+            {item.variantInfo}
           </p>
         )}
         <p className="text-sm text-muted-foreground">
