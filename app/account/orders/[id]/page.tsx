@@ -336,6 +336,12 @@ function OrderItemDetailCard({ item }: { item: OrderItemDto }) {
         <p className="font-semibold text-emerald-900 mb-1 line-clamp-2">
           {item.productName || "Sản phẩm"}
         </p>
+        {/* Variant Info */}
+        {item.variantInfo && (
+          <p className="text-xs text-emerald-700 mb-1">
+            📦 {item.variantInfo}
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
           Số lượng: {item.quantity}
         </p>

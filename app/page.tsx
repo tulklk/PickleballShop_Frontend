@@ -25,6 +25,7 @@ import banner6 from "@/app/img/homepage_img/6.png";
 import banner7 from "@/app/img/homepage_img/7.jpg";
 import banner8 from "@/app/img/homepage_img/8.jpg";
 import banner9 from "@/app/img/homepage_img/9.jpg";
+import banner10 from "@/app/img/homepage_img/6.jpg";
 
 export default function HomePage() {
   return (
@@ -166,7 +167,7 @@ function FeatureBanners() {
           className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black"
         >
           <Image
-            src={banner7}
+            src={banner10}
             alt="Sản phẩm mới Pickleball"
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
@@ -449,7 +450,7 @@ function NewProductsSection() {
         {/* Left Banner */}
         <div className="hidden lg:block w-1/4">
           <div className="relative h-full rounded-xl overflow-hidden">
-            <Image src={banner7} alt="New Products" fill className="object-cover" />
+            <Image src={banner10} alt="New Products" fill className="object-cover" />
           </div>
         </div>
 

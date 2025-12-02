@@ -72,6 +72,29 @@ export default function AdminProductCreatePage() {
             )
           : [],
       };
+
+      // Handle variants
+      if (values.variants !== undefined && values.variants !== null) {
+        if (values.variants.length === 0) {
+          // Empty array = no variants
+          productData.variants = null;
+        } else {
+          // Map variants to backend format (remove id if exists for create)
+          productData.variants = values.variants.map((v) => ({
+            color: v.color || null,
+            size: v.size || null,
+            spec: v.spec || null,
+            price: v.price,
+            originalPrice: v.originalPrice || null,
+            stockQuantity: v.stockQuantity,
+            sku: v.sku,
+            isActive: v.isActive,
+          }));
+        }
+      } else {
+        // null or undefined = no variants
+        productData.variants = null;
+      }
       
       console.log("📤 Prepared Product Data:", JSON.stringify(productData, null, 2));
       console.log("📊 Data Types Check:", {
@@ -102,19 +125,28 @@ export default function AdminProductCreatePage() {
       toast.success("Tạo sản phẩm thành công");
       router.push("/admin/products");
     } catch (error: any) {
-      console.error("❌ CREATE PRODUCT - ERROR");
-      console.error("Error object:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error status:", error?.status);
-      console.error("Error data:", JSON.stringify(error?.data, null, 2));
-      console.error("Error stack:", error?.stack);
+      console.warn("❌ CREATE PRODUCT - ERROR");
+      console.warn("Error object:", error);
+      console.warn("Error message:", error?.message);
+      console.warn("Error status:", error?.status);
+      console.warn("Error data:", JSON.stringify(error?.data, null, 2));
+      
+      // Handle 401 Unauthorized - redirect to login
+      if (error?.status === 401) {
+        console.warn("🔴 Authentication failed - redirecting to login");
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        setTimeout(() => {
+          router.push("/login?redirect=/admin/products/new");
+        }, 1500);
+        return;
+      }
       
       // Log validation errors if available
       if (error?.data?.errors) {
-        console.error("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
+        console.warn("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
       }
       if (error?.data?.title) {
-        console.error("🔴 Error Title:", error.data.title);
+        console.warn("🔴 Error Title:", error.data.title);
       }
       
       console.log("═══════════════════════════════════════════════════════");

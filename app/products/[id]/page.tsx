@@ -9,13 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
 import { useQueryClient } from "@tanstack/react-query";
+import { VariantSelector } from "@/components/shared/VariantSelector";
+import type { ProductVariantDto } from "@/lib/api/types";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -39,6 +41,7 @@ export default function ProductDetailPage() {
   const [reviewerEmail, setReviewerEmail] = useState("");
   const [saveReviewerInfo, setSaveReviewerInfo] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariantDto | null>(null);
 
   // Fetch related products (same category)
   const { data: relatedProductsData } = useProducts({
@@ -74,11 +77,50 @@ export default function ProductDetailPage() {
     setSelectedImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
   }, [allImages.length]);
 
+  // Auto-select first available variant if product has variants
+  useEffect(() => {
+    if (product?.hasVariants && product.variants && product.variants.length > 0) {
+      // Only auto-select if no variant is currently selected
+      if (!selectedVariant) {
+        // Prefer variant with stock, otherwise first active variant
+        const firstVariant = product.variants.find(v => v.isActive && v.stockQuantity > 0)
+          || product.variants.find(v => v.isActive)
+          || product.variants[0];
+        if (firstVariant) {
+          setSelectedVariant(firstVariant);
+        }
+      }
+    } else {
+      // Product doesn't have variants, clear selection
+      setSelectedVariant(null);
+    }
+  }, [product?.id, product?.hasVariants]);
+
   const handleAddToCart = async () => {
     if (!product) {
       toast.error("Không tìm thấy sản phẩm");
       return;
     }
+
+    // Validate variant selection for products with variants
+    if (product.hasVariants) {
+      if (!selectedVariant) {
+        toast.error("Vui lòng chọn màu sắc và thông số trước khi thêm vào giỏ hàng");
+        return;
+      }
+      if (selectedVariant.stockQuantity === 0) {
+        toast.error("Sản phẩm đã hết hàng");
+        return;
+      }
+    } else {
+      if (product.stockQuantity === 0) {
+        toast.error("Sản phẩm đã hết hàng");
+        return;
+      }
+    }
+
+    const variantId = product.hasVariants && selectedVariant ? selectedVariant.id : null;
+    const displayPrice = selectedVariant ? selectedVariant.price : product.price;
 
     // If not authenticated, save to localStorage (guest cart)
     if (!isAuthenticated) {
@@ -87,7 +129,7 @@ export default function ProductDetailPage() {
         quantity,
         productName: product.name || undefined,
         productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
-        unitPrice: product.price,
+        unitPrice: displayPrice,
       });
       toast.success("Đã thêm vào giỏ hàng! Đăng nhập để thanh toán.");
       // Invalidate cart query to update cart count in navbar
@@ -99,25 +141,31 @@ export default function ProductDetailPage() {
     try {
       await addCartItem.mutateAsync({
         productId: product.id,
+        productVariantId: variantId,
         quantity,
       });
       toast.success("Đã thêm vào giỏ hàng!");
     } catch (error: any) {
-      // If API fails, fallback to guest cart
-      if (error?.status === 500 || error?.status >= 500) {
+      // Handle specific error messages
+      const errorMessage = error?.data?.message || error?.message || "Không thể thêm vào giỏ hàng";
+      
+      if (errorMessage.includes("has variants") || errorMessage.includes("select a variant")) {
+        toast.error("Vui lòng chọn màu sắc và thông số trước khi thêm vào giỏ hàng");
+      } else if (errorMessage.includes("stock") || errorMessage.includes("Insufficient")) {
+        toast.error("Sản phẩm không đủ số lượng trong kho");
+      } else if (error?.status === 500 || error?.status >= 500) {
+        // If API fails, fallback to guest cart
         console.warn("API failed, saving to guest cart as fallback:", error);
         addToGuestCart({
           productId: product.id,
           quantity,
           productName: product.name || undefined,
           productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
-          unitPrice: product.price,
+          unitPrice: displayPrice,
         });
         toast.warning("Đã lưu vào giỏ hàng tạm thời. Vui lòng thử lại sau.");
         queryClient.invalidateQueries({ queryKey: ["cart"] });
       } else {
-        const errorMessage = 
-          error?.data?.message || error?.message || "Không thể thêm vào giỏ hàng";
         toast.error(errorMessage);
       }
     }
@@ -185,7 +233,7 @@ export default function ProductDetailPage() {
   const ratingLabels = ["", "Rất tệ", "Không tệ", "Trung bình", "Tốt", "Tuyệt vời"];
 
   return (
-    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 bg-white">
       {/* Review Modal */}
       {isReviewModalOpen && (
         <div 
@@ -518,22 +566,42 @@ export default function ProductDetailPage() {
             <span className="text-gray-500 text-sm">Đã bán {product.reviewCount || 0}</span>
           </div>
 
+          {/* Variant Selector */}
+          {product.hasVariants && product.variants && product.variants.length > 0 && (
+            <div className="mb-4">
+              <VariantSelector
+                product={product}
+                selectedVariant={selectedVariant}
+                onVariantSelect={setSelectedVariant}
+              />
+            </div>
+          )}
+
           {/* Price Box with Gradient */}
           <div className="bg-gradient-to-r from-emerald-500 to-lime-400 rounded-lg p-4 mb-4">
             <p className="text-white/90 text-sm mb-1">Giá khuyến mãi:</p>
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold text-white">
-                {formatCurrency(product.price)}
+                {formatCurrency(
+                  selectedVariant?.price || product.price
+                )}
               </span>
-              {product.originalPrice && product.originalPrice > product.price && (
+              {(selectedVariant?.originalPrice || product.originalPrice) && 
+               (selectedVariant?.originalPrice || product.originalPrice || 0) > (selectedVariant?.price || product.price) && (
                 <span className="text-lg text-white/70 line-through">
-                  {formatCurrency(product.originalPrice)}
+                  {formatCurrency(selectedVariant?.originalPrice || product.originalPrice || 0)}
                 </span>
               )}
             </div>
-            {product.originalPrice && product.originalPrice > product.price && (
+            {(selectedVariant?.originalPrice || product.originalPrice) && 
+             (selectedVariant?.originalPrice || product.originalPrice || 0) > (selectedVariant?.price || product.price) && (
               <p className="text-white/90 text-sm mt-1">
-                Tiết kiệm: <span className="font-semibold">{formatCurrency(product.originalPrice - product.price)}</span>
+                Tiết kiệm: <span className="font-semibold">
+                  {formatCurrency(
+                    (selectedVariant?.originalPrice || product.originalPrice || 0) - 
+                    (selectedVariant?.price || product.price)
+                  )}
+                </span>
               </p>
             )}
           </div>
@@ -568,8 +636,14 @@ export default function ProductDetailPage() {
             )}
             <div className="flex">
               <span className="text-gray-500 w-24">Tình trạng:</span>
-              <span className={product.stockQuantity > 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                {product.stockQuantity > 0 ? "Còn hàng" : "Hết hàng"}
+              <span className={
+                (selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity) > 0 
+                  ? "text-green-600 font-medium" 
+                  : "text-red-600 font-medium"
+              }>
+                {(selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity) > 0 
+                  ? "Còn hàng" 
+                  : "Hết hàng"}
               </span>
             </div>
           </div>
@@ -591,7 +665,12 @@ export default function ProductDetailPage() {
                 variant="ghost"
                 size="icon"
                 className="rounded-none h-10 w-10"
-                onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))}
+                onClick={() => {
+                  const maxStock = selectedVariant 
+                    ? selectedVariant.stockQuantity 
+                    : product.stockQuantity;
+                  setQuantity((q) => Math.min(maxStock, q + 1));
+                }}
               >
                 +
               </Button>
@@ -608,7 +687,12 @@ export default function ProductDetailPage() {
                 handleAddToCart();
                 router.push("/checkout");
               }}
-              disabled={addCartItem.isPending || product.stockQuantity === 0}
+              disabled={
+                addCartItem.isPending || 
+                (product.hasVariants 
+                  ? (!selectedVariant || selectedVariant.stockQuantity === 0)
+                  : product.stockQuantity === 0)
+              }
             >
               MUA NGAY
             </Button>
@@ -616,7 +700,12 @@ export default function ProductDetailPage() {
               size="lg"
               className="flex-1 bg-gradient-to-r from-emerald-500 to-lime-500 hover:from-emerald-600 hover:to-lime-600 text-sm md:text-base"
               onClick={handleAddToCart}
-              disabled={addCartItem.isPending || product.stockQuantity === 0}
+              disabled={
+                addCartItem.isPending || 
+                (product.hasVariants 
+                  ? (!selectedVariant || selectedVariant.stockQuantity === 0)
+                  : product.stockQuantity === 0)
+              }
             >
               <ShoppingCart className="h-4 w-4 md:h-5 md:w-5 mr-2" />
               <span className="hidden sm:inline">{addCartItem.isPending ? "Đang thêm..." : "THÊM VÀO GIỎ HÀNG"}</span>
@@ -793,7 +882,7 @@ export default function ProductDetailPage() {
                               
                               {/* Product Image after each section */}
                               {sectionImage && (
-                                <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100 mb-6">
+                                <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-white-100 mb-6">
                                   {sectionImage.includes("cloudinary.com") || sectionImage.startsWith("data:") ? (
                                     <img 
                                       src={sectionImage} 

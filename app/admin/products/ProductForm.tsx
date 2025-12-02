@@ -9,9 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
-import type { Product, ProductCategory } from "@/lib/api/types";
-import { X, Plus } from "lucide-react";
+import type { Product, ProductCategory, ProductVariantDto, ProductDto } from "@/lib/api/types";
+import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { VariantFormItem, ProductVariantFormData } from "@/components/admin/VariantFormItem";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const productSchema = z.object({
   name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
@@ -26,12 +29,14 @@ const productSchema = z.object({
   imageUrls: z.array(z.string().url("URL không hợp lệ")).optional(),
 });
 
-export type ProductFormValues = z.infer<typeof productSchema>;
+export type ProductFormValues = z.infer<typeof productSchema> & {
+  variants?: ProductVariantFormData[] | null;
+};
 
 interface ProductFormProps {
   categories: ProductCategory[] | undefined;
-  initialData?: Product | null;
-  onSubmit: (values: ProductFormValues) => Promise<void>;
+  initialData?: Product | ProductDto | null;
+  onSubmit: (values: ProductFormValues & { variants?: ProductVariantFormData[] | null }) => Promise<void>;
   loading?: boolean;
 }
 
@@ -84,6 +89,11 @@ export function ProductForm({
   // State for managing image URLs
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  
+  // State for managing variants
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState<ProductVariantFormData[]>([]);
+  const [variantCountInput, setVariantCountInput] = useState<string>("");
 
   useEffect(() => {
     if (initialData) {
@@ -117,6 +127,29 @@ export function ProductForm({
       setImageUrls(validImageUrls);
       setValue("imageUrls", validImageUrls, { shouldValidate: true });
       console.log("Loaded initial imageUrls:", validImageUrls);
+      
+      // Load variants if product has variants
+      const productDto = initialData as ProductDto;
+      if (productDto.hasVariants && productDto.variants && productDto.variants.length > 0) {
+        setHasVariants(true);
+        const initialVariants: ProductVariantFormData[] = productDto.variants.map((v) => ({
+          id: v.id,
+          color: v.color || null,
+          size: v.size || null,
+          spec: v.spec || null,
+          price: v.price,
+          originalPrice: v.originalPrice || null,
+          stockQuantity: v.stockQuantity,
+          sku: v.sku || "",
+          isActive: v.isActive,
+        }));
+        setVariants(initialVariants);
+        // Set stock to 0 when has variants
+        setValue("stockQuantity", 0);
+      } else {
+        setHasVariants(false);
+        setVariants([]);
+      }
     }
   }, [initialData, setValue]);
 
@@ -201,6 +234,143 @@ export function ProductForm({
     console.log("Removed image, updated imageUrls:", updated);
   };
 
+  // Variants management functions
+  const addVariant = () => {
+    const currentPrice = watch("price") || 0;
+    const currentOriginalPrice = watch("originalPrice");
+    
+    const newVariant: ProductVariantFormData = {
+      color: null,
+      size: null,
+      spec: null,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice || null,
+      stockQuantity: 0,
+      sku: "",
+      isActive: true,
+    };
+    
+    setVariants([...variants, newVariant]);
+  };
+
+  const addMultipleVariants = () => {
+    const count = parseInt(variantCountInput);
+    
+    // Validate input
+    if (isNaN(count) || count < 1 || count > 50) {
+      toast.error("Vui lòng nhập số lượng từ 1 đến 50");
+      return;
+    }
+    
+    const currentPrice = watch("price") || 0;
+    const currentOriginalPrice = watch("originalPrice");
+    
+    // Create multiple variants
+    const newVariants: ProductVariantFormData[] = Array.from({ length: count }, () => ({
+      color: null,
+      size: null,
+      spec: null,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice || null,
+      stockQuantity: 0,
+      sku: "",
+      isActive: true,
+    }));
+    
+    setVariants([...variants, ...newVariants]);
+    setVariantCountInput(""); // Clear input after creating
+    toast.success(`Đã tạo ${count} variant${count > 1 ? 's' : ''}`);
+  };
+
+  const toggleVariants = () => {
+    const newHasVariants = !hasVariants;
+    setHasVariants(newHasVariants);
+    
+    if (newHasVariants) {
+      // Enable variants - set stock to 0
+      setValue("stockQuantity", 0);
+      if (variants.length === 0) {
+        // Add first variant if none exists
+        const currentPrice = watch("price") || 0;
+        const currentOriginalPrice = watch("originalPrice");
+        
+        const newVariant: ProductVariantFormData = {
+          color: null,
+          size: null,
+          spec: null,
+          price: currentPrice,
+          originalPrice: currentOriginalPrice || null,
+          stockQuantity: 0,
+          sku: "",
+          isActive: true,
+        };
+        setVariants([newVariant]);
+      }
+    } else {
+      // Disable variants - clear variants array
+      setVariants([]);
+    }
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const updateVariant = (index: number, field: keyof ProductVariantFormData, value: any) => {
+    const updated = variants.map((variant, i) => 
+      i === index ? { ...variant, [field]: value } : variant
+    );
+    setVariants(updated);
+  };
+
+  // Validate variants
+  const validateVariants = (): string | null => {
+    if (!hasVariants) return null;
+    
+    if (variants.length === 0) {
+      return "Vui lòng thêm ít nhất một variant khi bật tính năng variants";
+    }
+    
+    const stockQuantity = watch("stockQuantity");
+    if (stockQuantity !== 0) {
+      return "Stock quantity phải = 0 khi product có variants";
+    }
+    
+    // Validate each variant
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i];
+      
+      // At least one attribute required
+      if (!variant.color && !variant.size && !variant.spec) {
+        return `Variant ${i + 1} phải có ít nhất một thuộc tính (Color, Size, hoặc Spec)`;
+      }
+      
+      // SKU required
+      if (!variant.sku || variant.sku.trim() === "") {
+        return `Variant ${i + 1} phải có SKU`;
+      }
+      
+      // Price must be > 0
+      if (variant.price <= 0) {
+        return `Variant ${i + 1} phải có giá lớn hơn 0`;
+      }
+      
+      // Stock quantity must be >= 0
+      if (variant.stockQuantity < 0) {
+        return `Variant ${i + 1} có số lượng tồn kho không hợp lệ`;
+      }
+    }
+    
+    // Check duplicate SKUs
+    const skus = variants.map(v => v.sku.trim().toLowerCase()).filter(Boolean);
+    const uniqueSkus = new Set(skus);
+    if (skus.length !== uniqueSkus.size) {
+      return "Variant SKUs không được trùng nhau";
+    }
+    
+    return null;
+  };
+
   const onSubmitForm = async (values: ProductFormValues) => {
     console.log("=== Form Submit ===");
     console.log("Form values:", JSON.stringify(values, null, 2));
@@ -231,6 +401,13 @@ export function ProductForm({
     
     console.log("✅ Category ID validated:", finalCategoryId);
     
+    // Validate variants
+    const variantError = validateVariants();
+    if (variantError) {
+      toast.error(variantError);
+      return;
+    }
+    
     try {
       // Always use state imageUrls as source of truth (it's updated when upload/remove)
       // Filter to ensure all are valid strings
@@ -241,7 +418,7 @@ export function ProductForm({
         : [];
       
       // Ensure all data types are correct
-      const submitData: ProductFormValues = {
+      const submitData: ProductFormValues & { variants?: ProductVariantFormData[] | null } = {
         ...values,
         // Ensure categoryId is valid and not empty
         categoryId: finalCategoryId,
@@ -253,10 +430,17 @@ export function ProductForm({
         stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
         // Always use state imageUrls (source of truth)
         imageUrls: finalImageUrls,
+        // Add variants data
+        variants: hasVariants ? variants : null,
       };
       
       console.log("=== Final Submit Data ===");
       console.log("Submit data:", JSON.stringify(submitData, null, 2));
+      console.log("Variants:", {
+        hasVariants,
+        variantsCount: variants.length,
+        variants: variants,
+      });
       console.log("Category ID validation:", {
         value: submitData.categoryId,
         isEmpty: !submitData.categoryId || submitData.categoryId === "",
@@ -347,7 +531,17 @@ export function ProductForm({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <Label>Tồn kho</Label>
-          <Input type="number" {...register("stockQuantity", { valueAsNumber: true })} />
+          <Input 
+            type="number" 
+            {...register("stockQuantity", { valueAsNumber: true })} 
+            disabled={hasVariants}
+          />
+          {hasVariants && (
+            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Stock quantity đã được tự động set = 0 vì product có variants
+            </p>
+          )}
         </div>
         <div>
           <Label>Mã SKU</Label>
@@ -425,6 +619,101 @@ export function ProductForm({
           <p className="text-sm text-destructive">{errors.imageUrls.message}</p>
         )}
       </div>
+
+      {/* Variants Toggle */}
+      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <div className="flex items-center gap-2">
+          <Switch
+            id="hasVariants"
+            checked={hasVariants}
+            onCheckedChange={toggleVariants}
+          />
+          <Label htmlFor="hasVariants" className="text-base font-semibold cursor-pointer">
+            Sản phẩm có variants (màu sắc, size, thông số)
+          </Label>
+        </div>
+      </div>
+
+      {/* Variants Section */}
+      {hasVariants && (
+        <Card className="border-2 border-emerald-200">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between mb-4">
+              <CardTitle className="text-lg">Quản lý Variants</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={addVariant}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Thêm 1 Variant
+                </Button>
+              </div>
+            </div>
+            {/* Bulk Create Variants */}
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+              <Label htmlFor="variantCount" className="text-sm font-medium whitespace-nowrap">
+                Tạo nhiều variants cùng lúc:
+              </Label>
+              <Input
+                id="variantCount"
+                type="number"
+                min="1"
+                max="50"
+                placeholder="Số lượng"
+                value={variantCountInput}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 50)) {
+                    setVariantCountInput(value);
+                  }
+                }}
+                className="w-24"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addMultipleVariants();
+                  }
+                }}
+              />
+              <span className="text-xs text-gray-500 whitespace-nowrap">(tối đa 50)</span>
+              <Button
+                type="button"
+                onClick={addMultipleVariants}
+                variant="default"
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700"
+                disabled={!variantCountInput || parseInt(variantCountInput) < 1 || parseInt(variantCountInput) > 50}
+              >
+                <Plus className="h-4 w-4" />
+                {variantCountInput && parseInt(variantCountInput) > 0
+                  ? `Tạo ${variantCountInput} Variant${parseInt(variantCountInput) > 1 ? "s" : ""}`
+                  : "Tạo Variants"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {variants.length > 0 ? (
+              variants.map((variant, index) => (
+                <VariantFormItem
+                  key={index}
+                  variant={variant}
+                  index={index}
+                  basePrice={watch("price") || 0}
+                  baseOriginalPrice={watch("originalPrice")}
+                  onChange={(field, value) => updateVariant(index, field, value)}
+                  onRemove={() => removeVariant(index)}
+                />
+              ))
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                <p className="text-gray-500">Chưa có variant nào. Vui lòng thêm ít nhất một variant.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center gap-2">
         <input

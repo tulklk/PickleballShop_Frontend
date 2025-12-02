@@ -153,64 +153,231 @@ class ApiClient {
 
     if (!response.ok) {
       let errorData: unknown;
+      let errorText = "";
+      
       try {
-        const text = await response.text();
-        // Try to parse as JSON, fallback to text
-        try {
-          errorData = text ? JSON.parse(text) : { message: "Empty response" };
-        } catch {
-          errorData = text || { message: "Unknown error occurred" };
+        errorText = await response.text();
+        
+        // Handle empty error response
+        if (!errorText || errorText.trim() === "") {
+          // Provide meaningful error messages based on status code
+          if (response.status === 401) {
+            errorData = { 
+              message: "Bạn cần đăng nhập để thực hiện thao tác này. Vui lòng đăng nhập lại." 
+            };
+          } else if (response.status === 403) {
+            errorData = { 
+              message: "Bạn không có quyền thực hiện thao tác này." 
+            };
+          } else if (response.status === 404) {
+            errorData = { 
+              message: "Không tìm thấy tài nguyên yêu cầu." 
+            };
+          } else if (response.status >= 500) {
+            errorData = { 
+              message: "Lỗi máy chủ. Vui lòng thử lại sau." 
+            };
+          } else {
+            errorData = { 
+              message: response.statusText || `Lỗi ${response.status}` 
+            };
+          }
+        } else {
+          // Try to parse as JSON
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            // If not JSON, use text as message
+            errorData = { message: errorText };
+          }
         }
-      } catch {
-        errorData = { message: "Failed to read error response" };
+      } catch (readError) {
+        // If we can't read response, provide default error
+        if (response.status === 401) {
+          errorData = { 
+            message: "Bạn cần đăng nhập để thực hiện thao tác này. Vui lòng đăng nhập lại." 
+          };
+        } else {
+          errorData = { 
+            message: response.statusText || "Không thể đọc phản hồi lỗi từ máy chủ" 
+          };
+        }
       }
       
-      // Debug logging in development (use console.warn to avoid triggering Next.js error overlay)
+      // Extract error message
+      let errorMessage = "Unknown error";
+      if (errorData && typeof errorData === "object") {
+        if ("message" in errorData && errorData.message) {
+          errorMessage = String(errorData.message);
+        } else if ("error" in errorData && errorData.error) {
+          errorMessage = String(errorData.error);
+        } else if ("title" in errorData && errorData.title) {
+          errorMessage = String(errorData.title);
+        }
+      }
+      
+      // Provide friendly Vietnamese error messages for common status codes
+      if (response.status === 401) {
+        // Clear tokens on 401 error
+        this.setAccessToken(null);
+        this.setRefreshToken(null);
+        
+        errorMessage = errorMessage.includes("đăng nhập") 
+          ? errorMessage 
+          : "Bạn cần đăng nhập để thực hiện thao tác này. Vui lòng đăng nhập lại.";
+      } else if (response.status === 403) {
+        errorMessage = errorMessage.includes("quyền") 
+          ? errorMessage 
+          : "Bạn không có quyền thực hiện thao tác này.";
+      }
+      
+      // Debug logging (use console.warn to avoid Next.js error overlay)
       if (process.env.NODE_ENV === "development") {
         console.warn(`[API Error] ${response.status} ${response.statusText}`, {
           url,
+          errorMessage,
           errorData,
+          errorText: errorText ? errorText.substring(0, 500) : "", // Log first 500 chars if available
         });
       }
-      
-      // Create error with better message
-      const errorMessage = 
-        (errorData && typeof errorData === "object" && "message" in errorData)
-          ? String(errorData.message)
-          : response.statusText || "Unknown error";
       
       throw new ApiError(response.status, errorMessage, errorData);
     }
 
     // Handle empty responses
     const contentType = response.headers.get("content-type");
-    const text = await response.text();
+    let text = await response.text();
     
     if (!text || text.trim() === "") {
       if (process.env.NODE_ENV === "development") {
-        console.warn(`[API Response] Empty response for ${url}`);
+        console.log(`[API Response] Empty response for ${url} - returning empty result`);
       }
-      return [] as T; // Return empty array for list endpoints
-    }
-    
-    if (!contentType || !contentType.includes("application/json")) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(`[API Response] Non-JSON response for ${url}:`, contentType);
-      }
-      return {} as T;
+      // For void return types (like PUT/DELETE), return undefined
+      // For other types, return empty array or empty object based on expected type
+      return undefined as T;
     }
 
-    try {
-      const json = JSON.parse(text);
+    // Clean the text: remove BOM, trim whitespace, remove control characters
+    text = text.trim();
+    
+    // Remove BOM (Byte Order Mark) if present
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
+    
+    // Check if response looks like HTML (error page)
+    if (text.trim().startsWith("<") || text.toLowerCase().includes("<!doctype")) {
       if (process.env.NODE_ENV === "development") {
-        console.log(`[API Response] ${url}:`, json);
+        console.warn(`[API Response] HTML response received for ${url}. First 500 chars:`, text.substring(0, 500));
+      }
+      // Try to extract error message from HTML
+      const errorMatch = text.match(/<title[^>]*>(.*?)<\/title>/i) || text.match(/<h1[^>]*>(.*?)<\/h1>/i);
+      const errorMessage = errorMatch ? errorMatch[1] : "Server returned HTML instead of JSON";
+      throw new ApiError(response.status, errorMessage, { responseText: text.substring(0, 1000) });
+    }
+    
+    // Check content type
+    if (contentType && !contentType.includes("application/json") && !contentType.includes("text/json")) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[API Response] Non-JSON content-type for ${url}:`, contentType);
+        console.warn(`[API Response] Response preview:`, text.substring(0, 200));
+      }
+      // Still try to parse if it looks like JSON
+      if (!text.trim().startsWith("{") && !text.trim().startsWith("[")) {
+        throw new ApiError(response.status, `Expected JSON but got ${contentType}`, { contentType, responseText: text.substring(0, 500) });
+      }
+    }
+
+    // Try to parse JSON
+    try {
+      // Additional validation: check if text looks like JSON
+      const trimmedText = text.trim();
+      
+      // Check if response is too large (might indicate an issue)
+      if (trimmedText.length > 10000000) { // 10MB limit
+        throw new Error("Response is too large to parse safely");
+      }
+      
+      if (!trimmedText.startsWith("{") && !trimmedText.startsWith("[")) {
+        throw new Error("Response does not start with { or [");
+      }
+
+      // Validate JSON structure before parsing (basic check)
+      const openBraces = (trimmedText.match(/{/g) || []).length;
+      const closeBraces = (trimmedText.match(/}/g) || []).length;
+      const openBrackets = (trimmedText.match(/\[/g) || []).length;
+      const closeBrackets = (trimmedText.match(/\]/g) || []).length;
+      
+      if (trimmedText.startsWith("{")) {
+        if (Math.abs(openBraces - closeBraces) > 5) {
+          throw new Error(`Mismatched braces: ${openBraces} open, ${closeBraces} close`);
+        }
+      } else if (trimmedText.startsWith("[")) {
+        if (Math.abs(openBrackets - closeBrackets) > 5) {
+          throw new Error(`Mismatched brackets: ${openBrackets} open, ${closeBrackets} close`);
+        }
+      }
+
+      // Use trimmedText for parsing to avoid issues with leading/trailing whitespace
+      const json = JSON.parse(trimmedText);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[API Response] Successfully parsed JSON for ${url} (${trimmedText.length} chars)`);
       }
       return json;
-    } catch (parseError) {
+    } catch (parseError: any) {
+      // Enhanced error logging with detailed information (use console.warn to avoid Next.js error overlay)
+      const errorMessage = parseError.message || "Unknown JSON parse error";
+      const positionMatch = errorMessage.match(/position (\d+)/);
+      const errorPosition = positionMatch ? parseInt(positionMatch[1]) : null;
+      
+      // Use console.warn instead of console.error to avoid Next.js error overlay
       if (process.env.NODE_ENV === "development") {
-        console.error(`[API Response] Failed to parse JSON for ${url}:`, parseError, text);
+        console.warn(`[API Response] Failed to parse JSON for ${url}:`);
+        console.warn(`  Error:`, errorMessage);
+        console.warn(`  Response length:`, text.length);
+        
+        if (errorPosition !== null && errorPosition !== undefined) {
+          const start = Math.max(0, errorPosition - 150);
+          const end = Math.min(text.length, errorPosition + 150);
+          console.warn(`  Error at position:`, errorPosition);
+          console.warn(`  Context around error position:`);
+          console.warn(`  ...${text.substring(start, end)}...`);
+          console.warn(`  Character at position ${errorPosition}:`, `"${text[errorPosition]}" (char code: ${text.charCodeAt(errorPosition)})`);
+          
+          // Try to find the line and column
+          const beforeError = text.substring(0, errorPosition);
+          const lineNumber = (beforeError.match(/\n/g) || []).length + 1;
+          const lastNewline = beforeError.lastIndexOf('\n');
+          const columnNumber = errorPosition - lastNewline;
+          console.warn(`  Approximate line: ${lineNumber}, column: ${columnNumber}`);
+        } else {
+          console.warn(`  Response preview (first 1500 chars):`, text.substring(0, 1500));
+        }
       }
-      throw new ApiError(500, "Invalid JSON response", { text, parseError });
+      
+      // Check for common JSON issues and provide friendly error messages
+      let friendlyErrorMessage = "Invalid JSON response from server";
+      if (errorMessage.includes("Expected ',' or '}'")) {
+        friendlyErrorMessage = "JSON syntax error: Missing comma or closing brace. The server response may be malformed.";
+      } else if (errorMessage.includes("Unexpected token")) {
+        friendlyErrorMessage = "JSON syntax error: Unexpected token found in response.";
+      } else if (errorMessage.includes("Unexpected end")) {
+        friendlyErrorMessage = "JSON syntax error: Response appears to be truncated.";
+      }
+      
+      throw new ApiError(
+        response.status || 500, 
+        friendlyErrorMessage,
+        { 
+          parseError: errorMessage,
+          responseLength: text.length,
+          errorPosition: errorPosition,
+          responsePreview: errorPosition 
+            ? text.substring(Math.max(0, errorPosition - 500), Math.min(text.length, errorPosition + 500))
+            : text.substring(0, Math.min(1000, text.length)),
+          fullResponse: text.length < 50000 ? text : undefined // Only include full response if it's not too large
+        }
+      );
     }
   }
 
@@ -653,6 +820,11 @@ class ApiClient {
         : [],
     };
 
+    // Handle variants if provided
+    if ((data as any).variants !== undefined) {
+      payload.variants = (data as any).variants;
+    }
+
     console.log("🔵 [adminCreateProduct] Final payload:", JSON.stringify(payload, null, 2));
     console.log("🔵 [adminCreateProduct] Payload types:", {
       name: typeof payload.name,
@@ -714,6 +886,15 @@ class ApiClient {
           )
         : [],
     };
+
+    // Handle variants for update:
+    // - Only add variants field if it's explicitly provided
+    // - If undefined, don't add it = keep existing variants
+    // - If null or [], add it = remove all variants
+    // - If [...], add it = replace all variants
+    if ((data as any).variants !== undefined) {
+      payload.variants = (data as any).variants;
+    }
 
     console.log("🟡 [adminUpdateProduct] Final payload:", JSON.stringify(payload, null, 2));
     console.log("🟡 [adminUpdateProduct] Payload types:", {

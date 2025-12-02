@@ -352,6 +352,12 @@ function OrderProductPreview({ item, remaining }: { item?: OrderItemDto; remaini
       </div>
       <div>
         <p className="font-medium text-slate-900">{item.productName || "Sản phẩm"}</p>
+        {/* Variant Info */}
+        {item.variantInfo && (
+          <p className="text-xs text-slate-500">
+            📦 {item.variantInfo}
+          </p>
+        )}
         <p className="text-xs text-slate-500">
           SL: {item.quantity}
           {remaining > 0 && <span className="ml-2 text-blue-600">+{remaining} sản phẩm</span>}

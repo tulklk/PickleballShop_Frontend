@@ -371,6 +371,12 @@ export default function AdminOrderDetailPage() {
                 >
                   <div>
                     <p className="font-medium">{item.productName || "N/A"}</p>
+                    {/* Variant Info */}
+                    {item.variantInfo && (
+                      <p className="text-xs text-muted-foreground">
+                        📦 {item.variantInfo}
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground">
                       Số lượng: {item.quantity}
                     </p>

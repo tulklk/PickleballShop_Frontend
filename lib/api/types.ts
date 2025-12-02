@@ -135,6 +135,21 @@ export interface ProductListDtoPagedResultDto {
   hasNextPage: boolean;
 }
 
+// Product Variant DTO
+export interface ProductVariantDto {
+  id: string;
+  productId: string;
+  color: string | null;
+  size: string | null;
+  spec: string | null;
+  price: number;
+  originalPrice: number | null;
+  stockQuantity: number;
+  sku: string | null;
+  isActive: boolean;
+  displayName?: string | null; // For display purposes: "Màu: Đỏ, Thông số: 13mm"
+}
+
 export interface ProductDto {
   id: string;
   name: string | null;
@@ -158,6 +173,8 @@ export interface ProductDto {
   averageRating: number | null;
   reviewCount: number;
   createdAt: string;
+  hasVariants?: boolean; // NEW: Product có variants hay không
+  variants?: ProductVariantDto[] | null; // NEW: Danh sách variants
 }
 
 export interface ProductCategory {
@@ -166,6 +183,18 @@ export interface ProductCategory {
   slug: string | null;
   description: string | null;
   parentCategoryId: string | null;
+}
+
+// Product Variant for Create/Update (without id and productId)
+export interface ProductVariantCreateDto {
+  color?: string | null;
+  size?: string | null;
+  spec?: string | null;
+  price: number;
+  originalPrice?: number | null;
+  stockQuantity: number;
+  sku: string;
+  isActive: boolean;
 }
 
 export interface Product {
@@ -185,6 +214,8 @@ export interface Product {
   weightRange: WeightRange;
   surfaceType: SurfaceType;
   material: string | null;
+  imageUrls?: string[] | null; // For admin create/update
+  variants?: ProductVariantCreateDto[] | null; // For admin create/update
 }
 
 export interface CartDto {
@@ -197,8 +228,10 @@ export interface CartDto {
 export interface CartItemDto {
   id: string;
   productId: string;
+  productVariantId?: string | null; // NEW: Variant ID nếu có
   productName: string | null;
   productImageUrl: string | null;
+  variantInfo?: string | null; // NEW: Thông tin variant hiển thị: "Màu: Đỏ, Thông số: 13mm"
   unitPrice: number;
   quantity: number;
   lineTotal: number;
@@ -206,6 +239,7 @@ export interface CartItemDto {
 
 export interface AddCartItemRequest {
   productId: string;
+  productVariantId?: string | null; // NEW: Variant ID nếu product có variants
   quantity: number;
 }
 
@@ -243,8 +277,10 @@ export interface OrderDto {
 export interface OrderItemDto {
   id: string;
   productId: string;
+  productVariantId?: string | null; // NEW: Variant ID nếu có
   productName: string | null;
   productImageUrl: string | null;
+  variantInfo?: string | null; // NEW: Thông tin variant hiển thị
   unitPrice: number;
   quantity: number;
   lineTotal: number;
@@ -312,8 +348,10 @@ export interface Order {
 export interface OrderItem {
   id: string;
   productId: string;
+  productVariantId?: string | null; // NEW: Variant ID nếu có
   productName: string | null;
   productImageUrl: string | null;
+  variantInfo?: string | null; // NEW: Thông tin variant hiển thị
   unitPrice: number;
   quantity: number;
   lineTotal: number;
