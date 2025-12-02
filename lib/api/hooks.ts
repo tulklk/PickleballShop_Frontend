@@ -13,6 +13,7 @@ import type {
   ChangePasswordRequest,
   VerifyEmailRequest,
   ResendVerificationEmailRequest,
+  ForgotPasswordRequest,
   UpdateOrderStatusRequest,
   UpdatePaymentStatusRequest,
   OrderStatus,
@@ -179,6 +180,12 @@ export function useVerifyEmail() {
 export function useResendVerificationEmail() {
   return useMutation({
     mutationFn: (data: ResendVerificationEmailRequest) => apiClient.resendVerificationEmail(data),
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (data: ForgotPasswordRequest) => apiClient.forgotPassword(data),
   });
 }
 

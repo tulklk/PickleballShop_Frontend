@@ -64,6 +64,10 @@ export interface ResendVerificationEmailRequest {
   email: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
 export interface AuthResponse {
   accessToken: string | null;
   refreshToken: string | null;

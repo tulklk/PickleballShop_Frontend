@@ -6,6 +6,7 @@ import type {
   ChangePasswordRequest,
   VerifyEmailRequest,
   ResendVerificationEmailRequest,
+  ForgotPasswordRequest,
   CategoryDto,
   ProductListDtoPagedResultDto,
   ProductDto,
@@ -474,6 +475,13 @@ class ApiClient {
 
   async resendVerificationEmail(data: ResendVerificationEmailRequest): Promise<void> {
     return this.request<void>("/api/Auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+    return this.request<void>("/api/Auth/forgot-password", {
       method: "POST",
       body: JSON.stringify(data),
     });
