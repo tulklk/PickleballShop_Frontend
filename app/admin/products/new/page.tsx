@@ -80,16 +80,27 @@ export default function AdminProductCreatePage() {
           productData.variants = null;
         } else {
           // Map variants to backend format (remove id if exists for create)
-          productData.variants = values.variants.map((v) => ({
-            color: v.color || null,
-            size: v.size || null,
-            spec: v.spec || null,
-            price: v.price,
-            originalPrice: v.originalPrice || null,
-            stockQuantity: v.stockQuantity,
-            sku: v.sku,
-            isActive: v.isActive,
-          }));
+          // Ensure all required fields are present and valid
+          productData.variants = values.variants.map((v, index) => {
+            // Validate SKU - it's required in backend
+            const sku = v.sku?.trim() || "";
+            if (!sku) {
+              throw new Error(`Variant ${index + 1} phải có SKU`);
+            }
+            
+            return {
+              color: v.color?.trim() || null,
+              size: v.size?.trim() || null,
+              spec: v.spec?.trim() || null,
+              price: typeof v.price === "number" ? v.price : Number(v.price) || 0,
+              originalPrice: v.originalPrice !== undefined && v.originalPrice !== null
+                ? (typeof v.originalPrice === "number" ? v.originalPrice : Number(v.originalPrice))
+                : null,
+              stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : Number(v.stockQuantity) || 0,
+              sku: sku, // Ensure SKU is never empty
+              isActive: Boolean(v.isActive),
+            };
+          });
         }
       } else {
         // null or undefined = no variants
@@ -141,9 +152,61 @@ export default function AdminProductCreatePage() {
         return;
       }
       
+      // Handle 500 Internal Server Error - show detailed error
+      if (error?.status === 500) {
+        console.warn("🔴 Server Error (500):", error?.data);
+        
+        // Try to extract detailed error message
+        let serverErrorMessage = "Lỗi máy chủ. Vui lòng kiểm tra dữ liệu và thử lại.";
+        
+        if (error?.data) {
+          // Check for validation errors in the response
+          if (error.data.errors) {
+            const validationErrors: string[] = [];
+            for (const [key, value] of Object.entries(error.data.errors)) {
+              if (Array.isArray(value)) {
+                validationErrors.push(`${key}: ${value.join(", ")}`);
+              } else if (typeof value === "string") {
+                validationErrors.push(`${key}: ${value}`);
+              }
+            }
+            if (validationErrors.length > 0) {
+              serverErrorMessage = "Lỗi dữ liệu: " + validationErrors.join("; ");
+            }
+          }
+          
+          // Check for other error fields
+          if (error.data.message) {
+            serverErrorMessage = error.data.message;
+          } else if (error.data.error) {
+            serverErrorMessage = error.data.error;
+          } else if (error.data.detail) {
+            serverErrorMessage = error.data.detail;
+          } else if (error.data.title) {
+            serverErrorMessage = error.data.title;
+          }
+        }
+        
+        toast.error(serverErrorMessage);
+        return;
+      }
+      
       // Log validation errors if available
       if (error?.data?.errors) {
         console.warn("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
+        // Format validation errors for display
+        const validationErrors: string[] = [];
+        for (const [key, value] of Object.entries(error.data.errors)) {
+          if (Array.isArray(value)) {
+            validationErrors.push(`${key}: ${value.join(", ")}`);
+          } else if (typeof value === "string") {
+            validationErrors.push(`${key}: ${value}`);
+          }
+        }
+        if (validationErrors.length > 0) {
+          toast.error("Lỗi dữ liệu: " + validationErrors.join("; "));
+          return;
+        }
       }
       if (error?.data?.title) {
         console.warn("🔴 Error Title:", error.data.title);

@@ -26,6 +26,7 @@ import banner7 from "@/app/img/homepage_img/7.jpg";
 import banner8 from "@/app/img/homepage_img/8.jpg";
 import banner9 from "@/app/img/homepage_img/9.jpg";
 import banner10 from "@/app/img/homepage_img/6.jpg";
+import banner12 from "@/app/img/homepage_img/12.jpg";
 
 export default function HomePage() {
   return (
@@ -499,6 +500,16 @@ function CategoryProductsSection() {
         badge: "NEW PRODUCT",
         title: "TITANIUM EXCEED",
         subtitle: "SALE NOW"
+      }
+    },
+    { 
+      name: "BÓNG PICKLEBALL", 
+      searchKey: "bóng",
+      banner: banner12,
+      bannerText: {
+        badge: "HOT",
+        title: "PICKLEBALL BALLS",
+        subtitle: "OFFICIAL BALLS"
       }
     }
   ];

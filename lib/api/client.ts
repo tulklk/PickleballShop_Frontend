@@ -206,13 +206,44 @@ class ApiClient {
       
       // Extract error message
       let errorMessage = "Unknown error";
+      let detailedErrors: any = null;
+      
       if (errorData && typeof errorData === "object") {
+        // Check for validation errors (usually in 'errors' field)
+        if ("errors" in errorData && errorData.errors) {
+          detailedErrors = errorData.errors;
+          // Format validation errors into readable message
+          if (typeof errorData.errors === "object") {
+            const errorMessages: string[] = [];
+            for (const [key, value] of Object.entries(errorData.errors)) {
+              if (Array.isArray(value)) {
+                errorMessages.push(`${key}: ${value.join(", ")}`);
+              } else if (typeof value === "string") {
+                errorMessages.push(`${key}: ${value}`);
+              }
+            }
+            if (errorMessages.length > 0) {
+              errorMessage = errorMessages.join("; ");
+            }
+          }
+        }
+        
+        // Extract main error message
         if ("message" in errorData && errorData.message) {
           errorMessage = String(errorData.message);
         } else if ("error" in errorData && errorData.error) {
           errorMessage = String(errorData.error);
         } else if ("title" in errorData && errorData.title) {
           errorMessage = String(errorData.title);
+        } else if ("detail" in errorData && errorData.detail) {
+          errorMessage = String(errorData.detail);
+        }
+        
+        // For 500 errors, try to get more details
+        if (response.status === 500 && errorMessage === "Unknown error") {
+          if ("stackTrace" in errorData && errorData.stackTrace) {
+            errorMessage = "Lỗi máy chủ: Vui lòng kiểm tra dữ liệu và thử lại";
+          }
         }
       }
       
@@ -229,6 +260,11 @@ class ApiClient {
         errorMessage = errorMessage.includes("quyền") 
           ? errorMessage 
           : "Bạn không có quyền thực hiện thao tác này.";
+      } else if (response.status === 500) {
+        // For 500 errors, provide more context if available
+        if (!errorMessage || errorMessage === "Unknown error") {
+          errorMessage = "Lỗi máy chủ. Vui lòng kiểm tra dữ liệu và thử lại.";
+        }
       }
       
       // Debug logging (use console.warn to avoid Next.js error overlay)
@@ -821,8 +857,37 @@ class ApiClient {
     };
 
     // Handle variants if provided
-    if ((data as any).variants !== undefined) {
-      payload.variants = (data as any).variants;
+    if ((data as any).variants !== undefined && (data as any).variants !== null) {
+      const variants = (data as any).variants;
+      if (Array.isArray(variants) && variants.length > 0) {
+        // Validate and format variants
+        const formattedVariants = variants.map((v: any, index: number) => {
+          // SKU is required - validate it's not empty
+          const sku = v.sku?.trim() || "";
+          if (!sku) {
+            throw new Error(`Variant ${index + 1}: SKU is required and cannot be empty`);
+          }
+          
+          return {
+            color: v.color?.trim() || null,
+            size: v.size?.trim() || null,
+            spec: v.spec?.trim() || null,
+            price: typeof v.price === "number" ? v.price : Number(v.price) || 0,
+            originalPrice: v.originalPrice !== undefined && v.originalPrice !== null
+              ? (typeof v.originalPrice === "number" ? v.originalPrice : Number(v.originalPrice))
+              : null,
+            stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : Number(v.stockQuantity) || 0,
+            sku: sku, // SKU is required and validated above
+            isActive: Boolean(v.isActive),
+          };
+        });
+        
+        payload.variants = formattedVariants;
+        console.log("🔵 [adminCreateProduct] Formatted variants:", JSON.stringify(formattedVariants, null, 2));
+      } else if (variants === null || (Array.isArray(variants) && variants.length === 0)) {
+        // Send null for empty array or explicitly null
+        payload.variants = null;
+      }
     }
 
     console.log("🔵 [adminCreateProduct] Final payload:", JSON.stringify(payload, null, 2));
