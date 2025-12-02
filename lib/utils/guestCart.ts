@@ -9,6 +9,7 @@ export interface GuestCartItem extends AddCartItemRequest {
   productName?: string;
   productImageUrl?: string;
   unitPrice?: number;
+  variantInfo?: string | null; // Variant display info: "Màu: Đỏ, Thông số: 13mm"
 }
 
 export type GuestCartItemInput = Omit<GuestCartItem, "addedAt">;

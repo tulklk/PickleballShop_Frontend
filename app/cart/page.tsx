@@ -214,7 +214,7 @@ function CartContent() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold mb-1 md:mb-2 text-sm md:text-base line-clamp-2">{item.productName}</h3>
                     {/* Variant Info */}
-                    {item.variantInfo && (
+                    {"variantInfo" in item && item.variantInfo && (
                       <p className="text-xs md:text-sm text-gray-500 mb-1">
                         📦 {item.variantInfo}
                       </p>

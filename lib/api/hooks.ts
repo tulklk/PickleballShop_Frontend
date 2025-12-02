@@ -289,8 +289,10 @@ export function useCart() {
           const items = guestCart.map((item, index) => ({
             id: `guest-${index}`,
             productId: item.productId,
+            productVariantId: item.productVariantId || null,
             productName: item.productName || null,
             productImageUrl: item.productImageUrl || null,
+            variantInfo: item.variantInfo || null,
             unitPrice: item.unitPrice || 0,
             quantity: item.quantity,
             lineTotal: (item.unitPrice || 0) * item.quantity,
@@ -310,8 +312,10 @@ export function useCart() {
         const items = guestCart.map((item, index) => ({
           id: `guest-${index}`,
           productId: item.productId,
+          productVariantId: item.productVariantId || null,
           productName: item.productName || null,
           productImageUrl: item.productImageUrl || null,
+          variantInfo: item.variantInfo || null,
           unitPrice: item.unitPrice || 0,
           quantity: item.quantity,
           lineTotal: (item.unitPrice || 0) * item.quantity,
