@@ -130,7 +130,7 @@ function WishlistProductCard({
               </span>
               {hasDiscount && (
                 <span className="text-xs text-gray-400 line-through">
-                  {formatCurrency(product.originalPrice)}
+                  {formatCurrency(product.originalPrice as number)}
                 </span>
               )}
             </div>
