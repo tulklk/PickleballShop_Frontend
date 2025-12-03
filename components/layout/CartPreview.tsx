@@ -78,7 +78,7 @@ export function CartPreview({ onClose }: CartPreviewProps) {
   }
 
   return (
-    <div className="w-80">
+  <div className="w-full max-w-sm sm:w-80">
       {/* Cart Items */}
       <div className="max-h-80 overflow-y-auto">
         {items.slice(0, 5).map((item, index) => {

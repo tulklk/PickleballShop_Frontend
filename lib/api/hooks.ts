@@ -21,6 +21,7 @@ import type {
   UserDto,
   User,
   UpdateUserRequest,
+  WishlistItem,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -659,6 +660,42 @@ export function useUsers() {
     queryKey: ["users"],
     // Use admin endpoint for user management in admin panel
     queryFn: () => apiClient.adminGetUsers(),
+  });
+}
+
+// Wishlist hooks
+export function useWishlist() {
+  return useQuery({
+    queryKey: ["wishlist"],
+    queryFn: async () => {
+      const result: any = await apiClient.getWishlist();
+      // Normalize to array in case backend returns paged result or wrapped object
+      if (Array.isArray(result)) {
+        return result as WishlistItem[];
+      }
+      if (result && Array.isArray(result.items)) {
+        return result.items as WishlistItem[];
+      }
+      return [] as WishlistItem[];
+    },
+    initialData: [] as WishlistItem[],
+  });
+}
+
+export function useToggleWishlist(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (isInWishlist: boolean) => {
+      if (!productId) return;
+      if (isInWishlist) {
+        await apiClient.removeFromWishlist(productId);
+      } else {
+        await apiClient.addToWishlist(productId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+    },
   });
 }
 

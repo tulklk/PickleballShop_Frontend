@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -348,10 +348,10 @@ export function Navbar() {
                 </Button>
               </Link>
 
-              {/* Cart Preview Dropdown */}
+              {/* Cart Preview Dropdown - only show on desktop (md+) */}
               {showCartPreview && (
                 <div
-                  className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+                  className="hidden md:block absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 animate-in fade-in slide-in-from-top-2 duration-200"
                   onMouseEnter={handleCartMouseEnter}
                   onMouseLeave={handleCartMouseLeave}
                 >
@@ -426,6 +426,14 @@ export function Navbar() {
                         >
                           <Package className="h-4 w-4 text-emerald-600" />
                           <span>Lịch sử đơn hàng</span>
+                        </Link>
+                        <Link
+                          href="/account/wishlist"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <Heart className="h-4 w-4 text-emerald-600" />
+                          <span>Sản phẩm yêu thích</span>
                         </Link>
                         <div className="border-t border-gray-100 my-1"></div>
                         <button
@@ -546,6 +554,14 @@ export function Navbar() {
                   >
                     <Package className="h-4 w-4 text-emerald-600" />
                     <span>Lịch sử đơn hàng</span>
+                  </Link>
+                  <Link
+                    href="/account/wishlist"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Heart className="h-4 w-4 text-emerald-600" />
+                    <span>Sản phẩm yêu thích</span>
                   </Link>
                   {isAdmin && (
                     <Link

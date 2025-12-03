@@ -370,3 +370,14 @@ export interface CreateOrderResponse {
   order: OrderDto;
   payment?: CreatePaymentResponse;
 }
+
+// Wishlist
+export interface WishlistItem {
+  id: string;
+  productId: string;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Backend returns full Product in Wishlist.product; we keep it flexible here
+  product?: ProductDto | null;
+}

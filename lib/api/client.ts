@@ -31,6 +31,7 @@ import type {
   UserDto,
   User,
   UpdateUserRequest,
+  WishlistItem,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -1055,6 +1056,23 @@ class ApiClient {
     return this.request<void>(`/api/admin/AdminUsers/${id}/status`, {
       method: "PUT",
       body: JSON.stringify(payload),
+    });
+  }
+
+  // Wishlist endpoints
+  async getWishlist(): Promise<WishlistItem[]> {
+    return this.request<WishlistItem[]>("/api/Wishlist");
+  }
+
+  async addToWishlist(productId: string): Promise<void> {
+    return this.request<void>(`/api/Wishlist/${productId}`, {
+      method: "POST",
+    });
+  }
+
+  async removeFromWishlist(productId: string): Promise<void> {
+    return this.request<void>(`/api/Wishlist/${productId}`, {
+      method: "DELETE",
     });
   }
 }

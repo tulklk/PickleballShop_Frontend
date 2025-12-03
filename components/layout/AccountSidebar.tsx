@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { User, ShoppingBag, Shield } from "lucide-react";
+import { User, ShoppingBag, Shield, Heart } from "lucide-react";
 
 const accountNavItems = [
   { href: "/account", label: "Tổng quan", icon: User },
   { href: "/account/profile", label: "Thông tin cá nhân", icon: User },
   { href: "/account/orders", label: "Quản lý đơn hàng", icon: ShoppingBag },
+  { href: "/account/wishlist", label: "Sản phẩm yêu thích", icon: Heart },
   { href: "/account/security", label: "Mật khẩu & bảo mật", icon: Shield },
 ];
 

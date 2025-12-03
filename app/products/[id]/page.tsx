@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useProduct, useAddCartItem, useProducts } from "@/lib/api/hooks";
+import { useProduct, useAddCartItem, useProducts, useWishlist, useToggleWishlist } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail } from "lucide-react";
+import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail, Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
@@ -42,6 +42,12 @@ export default function ProductDetailPage() {
   const [saveReviewerInfo, setSaveReviewerInfo] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantDto | null>(null);
+
+  const { data: wishlist } = useWishlist();
+  const wishlistToggle = useToggleWishlist(productId);
+
+  const isInWishlist =
+    !!product && !!wishlist?.some((item) => item.productId === product.id);
 
   // Fetch related products (same category)
   const { data: relatedProductsData } = useProducts({
@@ -542,7 +548,44 @@ export default function ProductDetailPage() {
 
         {/* Product Info */}
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-3 text-gray-900">{product.name}</h1>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex-1">
+              {product.name}
+            </h1>
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white hover:bg-emerald-50 transition-colors"
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast.error("Vui lòng đăng nhập để sử dụng danh sách yêu thích");
+                  return;
+                }
+                wishlistToggle.mutate(isInWishlist, {
+                  onSuccess: () => {
+                    toast.success(
+                      isInWishlist
+                        ? "Đã xóa sản phẩm khỏi danh sách yêu thích"
+                        : "Đã thêm sản phẩm vào danh sách yêu thích"
+                    );
+                  },
+                  onError: (error: any) => {
+                    const message =
+                      error?.data?.message ||
+                      error?.message ||
+                      "Không thể cập nhật danh sách yêu thích";
+                    toast.error(message);
+                  },
+                });
+              }}
+              disabled={wishlistToggle.isPending}
+              aria-label="Yêu thích"
+            >
+              <Heart
+                className={`h-5 w-5 ${
+                  isInWishlist ? "fill-red-500 text-red-500" : "text-emerald-600"
+                }`}
+              />
+            </button>
+          </div>
           
           {/* Rating & Sold Count */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
