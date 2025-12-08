@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useCart, useCategories, useUserMe, useLogout } from "@/lib/api/hooks";
+import type { ProductDto, ProductListDtoPagedResultDto } from "@/lib/api/types";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getGuestCartItemCount } from "@/lib/utils/guestCart";
 import { Poppins } from "next/font/google";
 import { CartPreview } from "./CartPreview";
@@ -54,6 +56,10 @@ export function Navbar() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<ProductDto[]>([]);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update guest cart count when not authenticated
   useEffect(() => {
@@ -98,6 +104,52 @@ export function Navbar() {
     if (searchQuery.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
     }
+  };
+
+  // Fetch search suggestions with debounce
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        setIsSearchLoading(true);
+        // Dùng getProducts với SearchTerm để bám sát logic backend
+        const result: ProductListDtoPagedResultDto = await apiClient.getProducts({
+          SearchTerm: searchQuery.trim(),
+          PageSize: 5,
+          Page: 1,
+        } as any);
+        setSuggestions(result?.items || []);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.warn("Search suggestions error:", error);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsSearchLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  const handleSelectSuggestion = (productId: string) => {
+    setShowSuggestions(false);
+    setSearchQuery("");
+    setSuggestions([]);
+    router.push(`/products/${productId}`);
   };
 
   const cartItemCount = isAuthenticated ? (cart?.totalItems || 0) : guestCartCount;
@@ -317,8 +369,56 @@ export function Navbar() {
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
                 className="pl-10"
               />
+              {showSuggestions && (
+                <div className="absolute left-0 top-full mt-2 w-full bg-white border border-gray-200 shadow-lg rounded-lg z-50 max-h-80 overflow-y-auto">
+                  {isSearchLoading && (
+                    <div className="px-4 py-3 text-sm text-gray-500">Đang tìm kiếm...</div>
+                  )}
+                  {!isSearchLoading && suggestions.length === 0 && (
+                    <div className="px-4 py-3 text-sm text-gray-500">Không tìm thấy sản phẩm phù hợp</div>
+                  )}
+                  {!isSearchLoading &&
+                    suggestions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelectSuggestion(item.id)}
+                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors flex items-center gap-3"
+                      >
+                        <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                          {item.primaryImageUrl ? (
+                            <img
+                              src={item.primaryImageUrl}
+                              alt={item.name || "Product"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-xs text-gray-400">
+                              No img
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 line-clamp-1">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-gray-500 line-clamp-1">
+                            {item.brand || "Sản phẩm"}
+                          </p>
+                          <div className="text-xs text-emerald-600 font-semibold">
+                            {formatCurrency(item.price)}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
           </form>
 
