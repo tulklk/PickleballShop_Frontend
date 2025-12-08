@@ -185,7 +185,7 @@ export function ChatBox() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[420px] md:h-[520px] w-[calc(100vw-2rem)] md:w-[360px] max-w-[380px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden">
+        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[550px] md:h-[520px] w-[calc(100vw-2rem)] md:w-[360px] max-w-[380px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
