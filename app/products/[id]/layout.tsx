@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             alt: product.name || "Sản phẩm Pickleball",
           },
         ],
-        type: "product",
+        type: "website",
       },
       twitter: {
         card: "summary_large_image",
