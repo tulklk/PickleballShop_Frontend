@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useCart, useCategories, useUserMe, useLogout } from "@/lib/api/hooks";
-import type { ProductDto, ProductListDtoPagedResultDto } from "@/lib/api/types";
+import type { ProductListDto, ProductListDtoPagedResultDto } from "@/lib/api/types";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
@@ -56,7 +56,7 @@ export function Navbar() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<ProductDto[]>([]);
+  const [suggestions, setSuggestions] = useState<ProductListDto[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
