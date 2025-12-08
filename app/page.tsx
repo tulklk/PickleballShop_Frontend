@@ -29,8 +29,43 @@ import banner10 from "@/app/img/homepage_img/6.jpg";
 import banner12 from "@/app/img/homepage_img/12.jpg";
 
 export default function HomePage() {
+  // Generate structured data (JSON-LD) for SEO
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com");
+  
+  const organizationStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "SportsActivityLocation",
+    name: "IKA Sport",
+    description: "Cửa hàng chuyên cung cấp vợt Pickleball, giày Pickleball, bóng và phụ kiện chính hãng tại Việt Nam",
+    url: siteUrl,
+    logo: `${siteUrl}/img/logopickleball.png`,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "236 Mỹ Đình, Phường Mỹ Đình 2",
+      addressLocality: "Nam Từ Liêm",
+      addressRegion: "Hà Nội",
+      addressCountry: "VN",
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+84-824-010-188",
+      contactType: "customer service",
+      email: "support@ikasport.com",
+      availableLanguage: "Vietnamese",
+    },
+    sameAs: [
+      // Add social media links when available
+    ],
+  };
+
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      {/* Structured Data (JSON-LD) for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+      />
+      <div className="min-h-screen bg-white">
       {/* Hero Banner Slider */}
       <HeroBannerSlider />
 
@@ -61,6 +96,7 @@ export default function HomePage() {
       {/* Trust Badges */}
       <TrustBadges />
     </div>
+    </>
   );
 }
 

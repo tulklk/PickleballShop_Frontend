@@ -238,8 +238,57 @@ export default function ProductDetailPage() {
 
   const ratingLabels = ["", "Rất tệ", "Không tệ", "Trung bình", "Tốt", "Tuyệt vời"];
 
+  // Generate structured data (JSON-LD) for SEO
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com");
+  const productUrl = `${siteUrl}/products/${product.id}`;
+  const imageUrl = product.primaryImageUrl || `${siteUrl}/img/logopickleball.png`;
+  const price = selectedVariant ? selectedVariant.price : product.price;
+  const availability = (selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity) > 0 
+    ? "https://schema.org/InStock" 
+    : "https://schema.org/OutOfStock";
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: product.imageUrls && product.imageUrls.length > 0 
+      ? product.imageUrls 
+      : [imageUrl],
+    description: product.description || `${product.name} - Sản phẩm Pickleball chính hãng tại IKA Sport`,
+    sku: product.sku || product.id,
+    brand: {
+      "@type": "Brand",
+      name: product.brand || "IKA Sport",
+    },
+    offers: {
+      "@type": "Offer",
+      url: productUrl,
+      priceCurrency: "VND",
+      price: price.toString(),
+      availability: availability,
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      seller: {
+        "@type": "Organization",
+        name: "IKA Sport",
+      },
+    },
+    aggregateRating: product.averageRating ? {
+      "@type": "AggregateRating",
+      ratingValue: product.averageRating.toString(),
+      reviewCount: (product.reviewCount || 0).toString(),
+      bestRating: "5",
+      worstRating: "1",
+    } : undefined,
+  };
+
   return (
-    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 bg-white">
+    <>
+      {/* Structured Data (JSON-LD) for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 bg-white">
       {/* Review Modal */}
       {isReviewModalOpen && (
         <div 
@@ -1261,6 +1310,7 @@ export default function ProductDetailPage() {
         </Card>
       </div>
     </div>
+    </>
   );
 }
 

@@ -341,14 +341,18 @@ export function Navbar() {
                         </div>
 
                         {/* Banner Image */}
-                        <div className="hidden lg:block w-[250px] h-[180px] relative rounded-lg overflow-hidden flex-shrink-0">
-                          <Image
-                            src={bannerDropdown}
-                            alt="Pickleball Products"
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
+                        {showProductDropdown && (
+                          <div className="hidden lg:block w-[250px] h-[180px] relative rounded-lg overflow-hidden shrink-0">
+                            <Image
+                              src={bannerDropdown}
+                              alt="Pickleball Products"
+                              fill
+                              className="object-cover"
+                              loading="lazy"
+                              sizes="250px"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -391,12 +395,15 @@ export function Navbar() {
                         onClick={() => handleSelectSuggestion(item.id)}
                         className="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors flex items-center gap-3"
                       >
-                        <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                        <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100 shrink-0">
                           {item.primaryImageUrl ? (
-                            <img
+                            <Image
                               src={item.primaryImageUrl}
-                              alt={item.name || "Product"}
-                              className="h-full w-full object-cover"
+                              alt={item.name ? `${item.name} - Sản phẩm Pickleball` : "Sản phẩm Pickleball"}
+                              fill
+                              className="object-cover"
+                              loading="lazy"
+                              sizes="48px"
                             />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-xs text-gray-400">
@@ -479,12 +486,15 @@ export function Navbar() {
                 >
                   <div className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-md hover:bg-emerald-50 transition-colors">
                     {/* Avatar */}
-                    <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-200 bg-emerald-50 flex-shrink-0">
+                    <div className="relative h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-200 bg-emerald-50 shrink-0">
                       {userMe?.avatarUrl ? (
-                        <img
+                        <Image
                           src={userMe.avatarUrl}
                           alt={userMe.fullName || "User"}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
+                          loading="lazy"
+                          sizes="32px"
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center bg-emerald-100">
