@@ -22,6 +22,7 @@ import type {
   User,
   UpdateUserRequest,
   WishlistItem,
+  ChatMessageRequest,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -863,6 +864,13 @@ export function useSession() {
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: false, // Don't refetch on mount if data is fresh
     refetchOnReconnect: false, // Don't refetch on reconnect
+  });
+}
+
+// Chat hooks
+export function useChatMessage() {
+  return useMutation({
+    mutationFn: (data: ChatMessageRequest) => apiClient.sendChatMessage(data),
   });
 }
 

@@ -32,6 +32,8 @@ import type {
   User,
   UpdateUserRequest,
   WishlistItem,
+  ChatMessageRequest,
+  ChatMessageResponse,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -1074,6 +1076,18 @@ class ApiClient {
     return this.request<void>(`/api/Wishlist/${productId}`, {
       method: "DELETE",
     });
+  }
+
+  // Chat endpoints
+  async sendChatMessage(data: ChatMessageRequest): Promise<ChatMessageResponse> {
+    return this.request<ChatMessageResponse>("/api/Chat/message", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkChatHealth(): Promise<{ status: string }> {
+    return this.request<{ status: string }>("/api/Chat/health");
   }
 }
 

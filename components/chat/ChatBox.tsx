@@ -8,12 +8,30 @@ import { MessageCircle, X, Send, Bot, User } from "lucide-react";
 import Image from "next/image";
 import logo from "@/app/img/logopickleball.png";
 import { cn } from "@/lib/utils";
+import { useChatMessage } from "@/lib/api/hooks";
+import type { ChatMessage as ChatMessageType, ChatMessageResponse } from "@/lib/api/types";
+
+const SUGGESTED_QUESTIONS = [
+  "Gợi ý giúp tôi các sản phẩm dành cho người mới đi",
+  "Tôi nên chọn vợt nào cho người mới chơi?",
+  "Có chương trình giảm giá nào không?",
+];
+
+interface SuggestedProduct {
+  id: string;
+  name: string;
+  brand?: string;
+  price?: number;
+  originalPrice?: number | null;
+  imageUrls?: string[] | null;
+}
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  suggestions?: SuggestedProduct[];
 }
 
 export function ChatBox() {
@@ -27,12 +45,30 @@ export function ChatBox() {
     },
   ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const chatMutation = useChatMessage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Helper: format content from backend (support simple markdown **bold** and line breaks)
+  const renderFormattedContent = (text: string) => {
+    const paragraphs = text.split(/\n{2,}/);
+    return paragraphs.map((para, idx) => {
+      const html = para
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\n/g, "<br/>");
+      return (
+        <p
+          key={idx}
+          className="mb-1 last:mb-0"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      );
+    });
   };
 
   useEffect(() => {
@@ -43,44 +79,48 @@ export function ChatBox() {
     }
   }, [messages, isOpen]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (preset?: string) => {
+    const content = (preset ?? input).trim();
+    if (!content || chatMutation.isPending) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim(),
+      content,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
+    if (!preset) {
+      setInput("");
+    }
+    // Hide suggestions after user interacts
+    setShowSuggestions(false);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // Build conversation history for context
+      const conversationHistory: ChatMessageType[] = [
+        ...messages.map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        })),
+        {
+          role: "user",
+          content,
         },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          })),
-        }),
+      ];
+
+      const response: ChatMessageResponse = await chatMutation.mutateAsync({
+        message: content,
+        conversationHistory,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
-
-      const data = await response.json();
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.message || "Xin lỗi, tôi không thể trả lời câu hỏi này.",
+        content: response.message || "Xin lỗi, tôi không thể trả lời câu hỏi này.",
         timestamp: new Date(),
+        suggestions: response.suggestedProducts || [],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -93,8 +133,6 @@ export function ChatBox() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -147,11 +185,17 @@ export function ChatBox() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[400px] md:h-[500px] w-[calc(100vw-1.5rem)] md:w-[400px] max-w-[400px] max-h-[calc(100vh-8rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden">
+        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[420px] md:h-[520px] w-[calc(100vw-2rem)] md:w-[360px] max-w-[380px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
+                <Image
+                  src={logo}
+                  alt="IKA Sport"
+                  width={24}
+                  height={24}
+                  className="rounded-full object-contain bg-white"
+                />
                 <CardTitle className="text-lg font-semibold">
                   Trợ lý AI PickleBall
                 </CardTitle>
@@ -183,23 +227,91 @@ export function ChatBox() {
                       <Bot className="h-4 w-4 text-white" />
                     </div>
                   )}
-                  <div
-                    className={cn(
-                      "max-w-[80%] rounded-lg px-4 py-2 shadow-sm",
-                      message.role === "user"
-                        ? "bg-green-600 text-white"
-                        : "bg-white text-gray-800 border border-gray-200"
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
-                    <p className="text-xs mt-1 opacity-70">
-                      {message.timestamp.toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                  <div className="max-w-[80%] space-y-2">
+                    <div
+                      className={cn(
+                        "rounded-lg px-4 py-2 shadow-sm",
+                        message.role === "user"
+                          ? "bg-green-600 text-white"
+                          : "bg-white text-gray-800 border border-gray-200"
+                      )}
+                    >
+                      <div className="text-sm leading-relaxed space-y-1 break-words">
+                        {renderFormattedContent(message.content)}
+                      </div>
+                      <p className="text-xs mt-2 opacity-70">
+                        {message.timestamp.toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Gợi ý sản phẩm từ backend */}
+                    {message.role === "assistant" &&
+                      message.suggestions &&
+                      message.suggestions.length > 0 && (
+                        <div className="grid grid-cols-1 gap-2">
+                          {message.suggestions.map((prod) => {
+                            const img =
+                              prod.imageUrls && prod.imageUrls.length > 0
+                                ? prod.imageUrls[0]!
+                                : "/placeholder-product.jpg";
+                            return (
+                              <div
+                                key={prod.id}
+                                className="flex gap-3 rounded-md border border-gray-200 bg-white p-2 shadow-sm"
+                              >
+                                <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
+                                  {img === "/placeholder-product.jpg" ? (
+                                    <div className="h-full w-full flex items-center justify-center text-[10px] text-gray-400">
+                                      No img
+                                    </div>
+                                  ) : img.startsWith("http") ? (
+                                    <Image
+                                      src={img}
+                                      alt={prod.name}
+                                      fill
+                                      className="object-cover"
+                                      sizes="56px"
+                                    />
+                                  ) : (
+                                    <img
+                                      src={img}
+                                      alt={prod.name}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold line-clamp-2 text-gray-900">
+                                    {prod.name}
+                                  </p>
+                                  {prod.brand && (
+                                    <p className="text-xs text-gray-500">{prod.brand}</p>
+                                  )}
+                                  <div className="flex items-center gap-2 mt-1 text-xs">
+                                    {prod.price !== undefined && (
+                                      <span className="font-semibold text-emerald-600">
+                                        {new Intl.NumberFormat("vi-VN").format(prod.price)} đ
+                                      </span>
+                                    )}
+                                    {prod.originalPrice &&
+                                      prod.originalPrice > (prod.price || 0) && (
+                                        <span className="text-gray-400 line-through">
+                                          {new Intl.NumberFormat("vi-VN").format(
+                                            prod.originalPrice
+                                          )}{" "}
+                                          đ
+                                        </span>
+                                      )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                   </div>
                   {message.role === "user" && (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
@@ -208,7 +320,7 @@ export function ChatBox() {
                   )}
                 </div>
               ))}
-              {isLoading && (
+              {chatMutation.isPending && (
                 <div className="flex gap-2 justify-start">
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
                     <Bot className="h-4 w-4 text-white" />
@@ -227,28 +339,51 @@ export function ChatBox() {
 
             {/* Input Area */}
             <div className="border-t border-gray-200 p-4 bg-white">
+              {/* Quick suggestions */}
+              {showSuggestions && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {SUGGESTED_QUESTIONS.map((q) => (
+                    <Button
+                      key={q}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs whitespace-nowrap"
+                      onClick={() => {
+                        setShowSuggestions(false);
+                        handleSend(q);
+                      }}
+                      disabled={chatMutation.isPending}
+                    >
+                      {q}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
                 <Input
                   ref={inputRef}
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    if (e.target.value.trim().length > 0) {
+                      setShowSuggestions(false);
+                    }
+                  }}
                   onKeyPress={handleKeyPress}
                   placeholder="Nhập câu hỏi của bạn..."
-                  disabled={isLoading}
+                  disabled={chatMutation.isPending}
                   className="flex-1"
                 />
                 <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isLoading}
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || chatMutation.isPending}
                   className="bg-green-600 hover:bg-green-700"
                   size="icon"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Trợ lý AI có thể mắc lỗi. Vui lòng kiểm tra thông tin quan trọng.
-              </p>
+              {/* Removed disclaimer text per request */}
             </div>
           </CardContent>
         </Card>

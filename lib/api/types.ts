@@ -381,3 +381,29 @@ export interface WishlistItem {
   // Backend returns full Product in Wishlist.product; we keep it flexible here
   product?: ProductDto | null;
 }
+
+// Chat
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+}
+
+export interface ChatMessageRequest {
+  message: string;
+  conversationHistory?: ChatMessage[];
+}
+
+export interface ChatMessageResponse {
+  message: string;
+  conversationId?: string;
+  // Optional product suggestions from backend
+  suggestedProducts?: Array<{
+    id: string;
+    name: string;
+    brand?: string;
+    price?: number;
+    originalPrice?: number | null;
+    imageUrls?: string[] | null;
+    stockQuantity?: number | null;
+  }>;
+}
