@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/useAuth";
 import {
   useProductCommentsBySlug,
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/utils/formatDate";
 import Image from "next/image";
+import { Send } from "lucide-react";
 
 interface ProductCommentsProps {
   productSlug: string;
@@ -21,11 +22,33 @@ interface ProductCommentsProps {
 export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) {
   const { isAuthenticated } = useAuth();
   const { data: comments, isLoading } = useProductCommentsBySlug(productSlug);
+  // Build a nested tree from flat comments (backend may return flat list)
+  const commentTree = useMemo(() => {
+    if (!comments || comments.length === 0) return [] as ProductComment[];
+
+    const map = new Map<string, ProductComment & { replies: ProductComment[] }>();
+    const roots: (ProductComment & { replies: ProductComment[] })[] = [];
+
+    comments.forEach((c) => {
+      map.set(c.id, { ...c, replies: c.replies ?? [] });
+    });
+
+    map.forEach((c) => {
+      if (c.parentCommentId && map.has(c.parentCommentId)) {
+        map.get(c.parentCommentId)!.replies.push(c);
+      } else {
+        roots.push(c);
+      }
+    });
+
+    return roots as ProductComment[];
+  }, [comments]);
   const addComment = useAddProductCommentBySlug(productSlug);
   const replyComment = useReplyProductCommentBySlug(productSlug);
   const deleteComment = useDeleteProductCommentBySlug(productSlug);
   const [content, setContent] = useState("");
   const [replyContent, setReplyContent] = useState<Record<string, string>>({});
+  const [replyOpen, setReplyOpen] = useState<Record<string, boolean>>({});
 
   const draftKey = `comment-draft-${productSlug}`;
 
@@ -63,6 +86,7 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
     await replyComment.mutateAsync({ parentCommentId: commentId, content: text.trim() });
     setReplyContent((prev) => ({ ...prev, [commentId]: "" }));
     localStorage.removeItem(`${draftKey}-reply-${commentId}`);
+    setReplyOpen((prev) => ({ ...prev, [commentId]: false }));
   };
 
   const handleDelete = async (commentId: string) => {
@@ -142,22 +166,46 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
             </div>
             <p className="text-sm text-gray-800 mt-2 whitespace-pre-line">{comment.content}</p>
 
-            {isAdmin && (
-              <div className="mt-2">
+            <div className="mt-2 flex items-center gap-4 text-sm">
+              <button
+                type="button"
+                className="text-emerald-600 hover:underline font-medium"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    const current = window.location.pathname;
+                    window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
+                    return;
+                  }
+                  setReplyOpen((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }));
+                }}
+              >
+                Trả lời
+              </button>
+            </div>
+
+            {replyOpen[comment.id] && (
+              <div className="mt-3 space-y-2">
                 <Textarea
-                  placeholder="Trả lời với tư cách Admin..."
+                  placeholder={
+                    isAuthenticated ? "Trả lời..." : "Đăng nhập để trả lời"
+                  }
                   value={replyContent[comment.id] || ""}
                   onChange={(e) => setReplyContent((prev) => ({ ...prev, [comment.id]: e.target.value }))}
-                  className="mb-2"
+                  className="min-h-[80px]"
                   rows={2}
+                  disabled={!isAuthenticated || replyComment.isPending}
                 />
-                <Button
-                  size="sm"
-                  disabled={replyComment.isPending}
-                  onClick={() => handleReply(comment.id)}
-                >
-                  Trả lời
-                </Button>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    className="flex items-center gap-2"
+                    disabled={!isAuthenticated || replyComment.isPending || !(replyContent[comment.id] || "").trim()}
+                    onClick={() => handleReply(comment.id)}
+                  >
+                    <Send className="h-4 w-4" />
+                    <span>Gửi</span>
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -190,22 +238,23 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
           disabled={!isAuthenticated || addComment.isPending}
         />
         <Button
-          className="mt-2"
+          className="mt-2 flex items-center gap-2"
           onClick={handleAdd}
           disabled={!isAuthenticated || addComment.isPending || !content.trim()}
         >
-          Gửi bình luận
+          <Send className="h-4 w-4" />
+          <span>Gửi bình luận</span>
         </Button>
       </div>
 
       {/* Comments list */}
       {isLoading ? (
         <p className="text-sm text-gray-500">Đang tải bình luận...</p>
-      ) : (comments?.length || 0) === 0 ? (
+      ) : (commentTree?.length || 0) === 0 ? (
         <p className="text-sm text-gray-500">Chưa có bình luận nào.</p>
       ) : (
         <div className="space-y-2">
-          {comments!.map((comment) => renderComment(comment))}
+          {commentTree!.map((comment) => renderComment(comment))}
         </div>
       )}
     </section>

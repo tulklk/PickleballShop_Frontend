@@ -276,8 +276,9 @@ export function useAddProductComment(productId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (content: string) => apiClient.addProductComment(productId, content),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", "comments", productId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["product", "comments", productId] });
+      await queryClient.refetchQueries({ queryKey: ["product", "comments", productId] });
     },
   });
 }
@@ -287,8 +288,9 @@ export function useReplyProductComment(productId: string) {
   return useMutation({
     mutationFn: ({ parentCommentId, content }: { parentCommentId: string; content: string }) =>
       apiClient.replyProductComment(productId, parentCommentId, content),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", "comments", productId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["product", "comments", productId] });
+      await queryClient.refetchQueries({ queryKey: ["product", "comments", productId] });
     },
   });
 }
@@ -306,8 +308,9 @@ export function useAddProductCommentBySlug(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (content: string) => apiClient.addProductCommentBySlug(slug, content),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+      await queryClient.refetchQueries({ queryKey: ["product", "comments", "slug", slug] });
     },
   });
 }
@@ -317,8 +320,9 @@ export function useReplyProductCommentBySlug(slug: string) {
   return useMutation({
     mutationFn: ({ parentCommentId, content }: { parentCommentId: string; content: string }) =>
       apiClient.replyProductCommentBySlug(slug, parentCommentId, content),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+      await queryClient.refetchQueries({ queryKey: ["product", "comments", "slug", slug] });
     },
   });
 }
