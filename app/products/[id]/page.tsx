@@ -3,13 +3,13 @@
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useProduct, useAddCartItem, useProducts, useWishlist, useToggleWishlist } from "@/lib/api/hooks";
+import { useProductBySlug, useAddCartItem, useProducts, useWishlist, useToggleWishlist } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail, Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,12 +18,16 @@ import { addToGuestCart } from "@/lib/utils/guestCart";
 import { useQueryClient } from "@tanstack/react-query";
 import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
+import { getProductUrl } from "@/lib/utils/productUrl";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const productId = params.id as string;
-  const { data: product, isLoading } = useProduct(productId);
+  const identifier = params.id as string; // slug hoặc id, backend chấp nhận cả hai
+  const productBySlugQuery = useProductBySlug(identifier);
+
+  const product = productBySlugQuery.data;
+  const isLoading = productBySlugQuery.isLoading;
   const addCartItem = useAddCartItem();
   const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
@@ -44,7 +48,7 @@ export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantDto | null>(null);
 
   const { data: wishlist } = useWishlist();
-  const wishlistToggle = useToggleWishlist(productId);
+  const wishlistToggle = useToggleWishlist(product?.id || identifier);
 
   const isInWishlist =
     !!product && !!wishlist?.some((item) => item.productId === product.id);
@@ -177,6 +181,19 @@ export default function ProductDetailPage() {
     }
   };
 
+  // Redirect to backend-provided slug when needed
+  // This useEffect must be called before any conditional returns to maintain hook order
+  useEffect(() => {
+    if (!product) return;
+    const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+    const targetUrl = getProductUrl(product); // Uses backend slug if available
+    
+    // Redirect if current path differs from canonical target
+    if (currentPath !== targetUrl) {
+      router.replace(targetUrl);
+    }
+  }, [product, router]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -240,7 +257,8 @@ export default function ProductDetailPage() {
 
   // Generate structured data (JSON-LD) for SEO
   const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com");
-  const productUrl = `${siteUrl}/products/${product.id}`;
+  const productSlug = product.slug || product.id;
+  const productUrl = `${siteUrl}/products/${productSlug}`;
   const imageUrl = product.primaryImageUrl || `${siteUrl}/img/logopickleball.png`;
   const price = selectedVariant ? selectedVariant.price : product.price;
   const availability = (selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity) > 0 
@@ -1212,7 +1230,7 @@ export default function ProductDetailPage() {
                 return (
                   <Link
                     key={relatedProduct.id}
-                    href={`/products/${relatedProduct.id}`}
+                    href={getProductUrl(relatedProduct)}
                     className="group"
                   >
                     <Card className="overflow-hidden hover:shadow-lg transition-shadow">

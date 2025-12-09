@@ -535,7 +535,8 @@ class ApiClient {
   }
 
   async getProductBySlug(slug: string): Promise<ProductDto> {
-    return this.request<ProductDto>(`/api/Products/slug/${slug}`);
+    // Backend now supports slug or id in a single endpoint
+    return this.request<ProductDto>(`/api/Products/${slug}`);
   }
 
   async getFeaturedProducts(count?: number): Promise<ProductDto[]> {

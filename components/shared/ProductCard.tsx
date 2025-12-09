@@ -10,6 +10,7 @@ import { ShoppingCart, Star } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
 import { useQueryClient } from "@tanstack/react-query";
+import { getProductUrl } from "@/lib/utils/productUrl";
 
 interface ProductCardProps {
   product: ProductListDto | ProductDto;
@@ -116,7 +117,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const originalPrice = "originalPrice" in product ? product.originalPrice : null;
 
   return (
-    <Link href={`/products/${product.id}`}>
+    <Link href={getProductUrl(product)}>
       <Card className="group hover:shadow-lg transition-shadow h-full flex flex-col">
         <div className="relative aspect-square overflow-hidden rounded-t-lg bg-gray-100">
           {imageUrl !== "/placeholder-product.jpg" ? (

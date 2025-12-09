@@ -13,6 +13,7 @@ import { useProducts, useCategories } from "@/lib/api/hooks";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
+import { getProductUrl } from "@/lib/utils/productUrl";
 
 // Import homepage images
 import banner1 from "@/app/img/homepage_img/1.jpg";
@@ -402,7 +403,7 @@ function FlashSaleSection() {
                   </div>
                 </div>
               </div>
-              <Link href={`/products/${saleProducts[0].id}`}>
+              <Link href={getProductUrl(saleProducts[0])}>
                 <Button className="w-full bg-emerald-600 hover:bg-emerald-700">CHỌN MUA</Button>
               </Link>
             </>
@@ -427,7 +428,7 @@ function FlashSaleSection() {
 
           <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
             {saleProducts.slice(1).map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="shrink-0 w-[200px]">
+              <Link key={product.id} href={getProductUrl(product)} className="shrink-0 w-[200px]">
                 <Card className="bg-white hover:shadow-lg transition-shadow">
                   <CardContent className="p-3">
                     <div className="relative aspect-square mb-2">
@@ -616,7 +617,7 @@ function CategoryProductsSection() {
               {/* Products Grid - 2 rows x 4 columns */}
               <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
                 {displayProducts.map((product) => (
-                  <Link key={product.id} href={`/products/${product.id}`} className="group">
+                  <Link key={product.id} href={getProductUrl(product)} className="group">
                     <Card className="bg-white hover:shadow-lg transition-all hover:-translate-y-1 h-full">
                       <CardContent className="p-3">
                         <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
@@ -714,7 +715,7 @@ function TrendingSection() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">ĐANG TRENDING</h3>
           <div className="space-y-4">
             {trendingProducts.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="flex gap-3 group">
+              <Link key={product.id} href={getProductUrl(product)} className="flex gap-3 group">
                 <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
@@ -746,7 +747,7 @@ function TrendingSection() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG XEM</h3>
           <div className="space-y-4">
             {viewedProducts.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="flex gap-3 group">
+              <Link key={product.id} href={getProductUrl(product)} className="flex gap-3 group">
                 <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
@@ -773,7 +774,7 @@ function TrendingSection() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG MUA</h3>
           <div className="space-y-4">
             {boughtProducts.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="flex gap-3 group">
+              <Link key={product.id} href={getProductUrl(product)} className="flex gap-3 group">
                 <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />

@@ -20,15 +20,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Dynamic product pages
+  // Dynamic product pages - use slug for SEO-friendly URLs
   try {
     const productsData = await apiClient.getProducts({ PageSize: 1000 });
-    const productPages: MetadataRoute.Sitemap = (productsData?.items || []).map((product) => ({
-      url: `${baseUrl}/products/${product.id}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }));
+    const productPages: MetadataRoute.Sitemap = (productsData?.items || []).map((product) => {
+      // Use slug if available, fallback to ID
+      const productSlug = product.slug || product.id;
+      return {
+        url: `${baseUrl}/products/${productSlug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly",
+        priority: 0.8,
+      };
+    });
 
     return [...staticPages, ...productPages];
   } catch (error) {

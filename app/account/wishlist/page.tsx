@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect } from "react";
 import { useWishlist, useProduct } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useAddCartItem } from "@/lib/api/hooks";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
+import { getProductUrl } from "@/lib/utils/productUrl";
 
 function WishlistProductCard({
   item,
@@ -89,7 +91,7 @@ function WishlistProductCard({
         <div className="flex items-center gap-4">
           {/* Ảnh sản phẩm nhỏ bên trái */}
           <Link
-            href={`/products/${product.id}`}
+            href={getProductUrl(product)}
             className="relative w-28 h-28 rounded-md overflow-hidden bg-gray-100 flex-shrink-0"
           >
             {image === "/placeholder-product.jpg" ? (
@@ -115,7 +117,7 @@ function WishlistProductCard({
 
           {/* Thông tin sản phẩm */}
           <div className="flex-1">
-            <Link href={`/products/${product.id}`}>
+            <Link href={getProductUrl(product)}>
               <h2 className="font-semibold text-base mb-1 line-clamp-2 hover:text-emerald-700">
                 {product.name}
               </h2>
@@ -176,6 +178,18 @@ function WishlistProductCard({
 export default function WishlistPage() {
   const { data: wishlist, isLoading } = useWishlist();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
+
+  // Force refetch wishlist when component mounts and user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Small delay to ensure auth state is fully updated
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, queryClient]);
 
   const removeMutation = useMutation({
     mutationFn: async (productId: string) => {

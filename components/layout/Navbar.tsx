@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { getGuestCartItemCount } from "@/lib/utils/guestCart";
 import { Poppins } from "next/font/google";
 import { CartPreview } from "./CartPreview";
+import { getProductUrl } from "@/lib/utils/productUrl";
 
 import logo from "@/app/img/logopickleball.png";
 import bannerDropdown from "@/app/img/homepage_img/1.jpg";
@@ -145,11 +146,13 @@ export function Navbar() {
     };
   }, [searchQuery]);
 
-  const handleSelectSuggestion = (productId: string) => {
+  const handleSelectSuggestion = (product: ProductListDto) => {
     setShowSuggestions(false);
     setSearchQuery("");
     setSuggestions([]);
-    router.push(`/products/${productId}`);
+    // Use slug URL for SEO, fallback to ID
+    const productUrl = getProductUrl(product);
+    router.push(productUrl);
   };
 
   const cartItemCount = isAuthenticated ? (cart?.totalItems || 0) : guestCartCount;
@@ -343,15 +346,15 @@ export function Navbar() {
                         {/* Banner Image */}
                         {showProductDropdown && (
                           <div className="hidden lg:block w-[250px] h-[180px] relative rounded-lg overflow-hidden shrink-0">
-                            <Image
-                              src={bannerDropdown}
-                              alt="Pickleball Products"
-                              fill
-                              className="object-cover"
+                          <Image
+                            src={bannerDropdown}
+                            alt="Pickleball Products"
+                            fill
+                            className="object-cover"
                               loading="lazy"
                               sizes="250px"
-                            />
-                          </div>
+                          />
+                        </div>
                         )}
                       </div>
                     </div>
@@ -392,7 +395,7 @@ export function Navbar() {
                         key={item.id}
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSelectSuggestion(item.id)}
+                        onClick={() => handleSelectSuggestion(item)}
                         className="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors flex items-center gap-3"
                       >
                         <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100 shrink-0">

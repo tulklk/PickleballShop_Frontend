@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { apiClient } from "@/lib/api/client";
+import { isUUID, extractIdFromSlug } from "@/lib/utils/productUrl";
 
 type Props = {
   params: { id: string };
@@ -7,7 +8,25 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const product = await apiClient.getProductById(params.id);
+    const identifier = params.id;
+    const isSlug = !isUUID(identifier);
+    
+    let product = null;
+
+    if (isSlug) {
+      try {
+        product = await apiClient.getProductBySlug(identifier);
+      } catch (err) {
+        const fallbackId = extractIdFromSlug(identifier);
+        if (fallbackId) {
+          product = await apiClient.getProductById(fallbackId);
+        } else {
+          throw err;
+        }
+      }
+    } else {
+      product = await apiClient.getProductById(identifier);
+    }
     
     if (!product) {
       return {
@@ -16,7 +35,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com";
-    const productUrl = `${siteUrl}/products/${params.id}`;
+    // Use slug URL for SEO, fallback to ID if slug not available
+    const productSlug = product.slug || identifier;
+    const productUrl = `${siteUrl}/products/${productSlug}`;
     const imageUrl = product.primaryImageUrl || `${siteUrl}/img/logopickleball.png`;
     const price = product.hasVariants && product.variants && product.variants.length > 0
       ? Math.min(...product.variants.map(v => v.price))

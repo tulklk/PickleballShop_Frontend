@@ -87,6 +87,7 @@ export function useLogin() {
       // Sync guest cart to server after login
       await syncGuestCart();
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
   });
 }
@@ -108,6 +109,7 @@ export function useRegister() {
       // Sync guest cart to server after register
       await syncGuestCart();
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
   });
 }
@@ -146,9 +148,15 @@ export function useGoogleAuthLogin() {
       }
       // Save user info to React Query cache
       queryClient.setQueryData(["user"], data.user);
+      // Invalidate user/me to refetch full user data
+      queryClient.invalidateQueries({ queryKey: ["user", "me"] });
       // Sync guest cart to server after Google login
       await syncGuestCart();
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+      // Delay slightly to ensure user state is updated before refetching wishlist
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      }, 200);
     },
   });
 }
@@ -666,19 +674,34 @@ export function useUsers() {
 
 // Wishlist hooks
 export function useWishlist() {
+  const { isAuthenticated, user } = useAuth();
+  
   return useQuery({
-    queryKey: ["wishlist"],
+    queryKey: ["wishlist", isAuthenticated, user?.id], // Include user ID to refetch when user changes
     queryFn: async () => {
-      const result: any = await apiClient.getWishlist();
-      // Normalize to array in case backend returns paged result or wrapped object
-      if (Array.isArray(result)) {
-        return result as WishlistItem[];
+      if (!isAuthenticated) {
+        return [] as WishlistItem[];
       }
-      if (result && Array.isArray(result.items)) {
-        return result.items as WishlistItem[];
+      
+      try {
+        const result: any = await apiClient.getWishlist();
+        // Normalize to array in case backend returns paged result or wrapped object
+        if (Array.isArray(result)) {
+          return result as WishlistItem[];
+        }
+        if (result && Array.isArray(result.items)) {
+          return result.items as WishlistItem[];
+        }
+        return [] as WishlistItem[];
+      } catch (error) {
+        console.error("Failed to fetch wishlist:", error);
+        return [] as WishlistItem[];
       }
-      return [] as WishlistItem[];
     },
+    enabled: isAuthenticated && !!user?.id, // Only fetch when authenticated and user ID is available
+    staleTime: 0, // Always consider stale to refetch when needed
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     initialData: [] as WishlistItem[],
   });
 }

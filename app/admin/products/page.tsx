@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
+import { getProductUrl } from "@/lib/utils/productUrl";
 import { PackagePlus, Trash2, Eye, Pencil, Package } from "lucide-react";
 import type { Product, ProductListDto, ProductDto } from "@/lib/api/types";
 import Image from "next/image";
@@ -271,7 +272,7 @@ export default function AdminProductsPage() {
                         <TableCell>
                         <div className="flex justify-end gap-2">
                             <Link
-                              href={`/products/${product.id}`}
+                              href={getProductUrl(product)}
                               target="_blank"
                             >
                               <Button size="icon" variant="outline">
