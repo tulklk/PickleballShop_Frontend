@@ -75,8 +75,10 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
     const avatar = comment.userAvatar;
     const isAdminComment = !!comment.isAdmin;
 
+    const isReply = depth > 0;
+
     return (
-      <div key={comment.id} className={`border rounded-lg p-3 mb-3 ${depth > 0 ? "ml-4" : ""}`}>
+      <div key={comment.id} className={`rounded-lg p-3 mb-3 ${depth > 0 ? "ml-4" : ""}`}>
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center overflow-hidden shrink-0">
             {avatar ? (
@@ -94,26 +96,39 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-emerald-900">{displayName}</span>
-                {isAdminComment && (
-                  <span className="inline-flex items-center justify-center h-5 w-5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      className="h-5 w-5"
-                    >
-                      <path
-                        fill="#0EA15F"
-                        d="M10.9 2.2c.5-.3 1.2-.3 1.7 0l1.7 1c.2.1.4.1.6 0l1.8-1c.5-.3 1.2-.3 1.7 0l1.6 1c.5.3.8.9.7 1.5l-.4 1.9c0 .2 0 .4.2.6l1.4 1.5c.4.4.5 1.1.3 1.6l-.7 1.8c-.1.2-.1.4 0 .6l.7 1.8c.2.6.1 1.2-.3 1.7l-1.4 1.5c-.1.2-.2.4-.2.6l.4 1.9c.1.6-.2 1.2-.7 1.5l-1.6 1c-.5.3-1.2.3-1.7 0l-1.8-1c-.2-.1-.4-.1-.6 0l-1.7 1c-.5.3-1.2.3-1.7 0l-1.7-1c-.2-.1-.4-.1-.6 0l-1.7 1c-.5.3-1.2.3-1.7 0l-1.6-1c-.5-.3-.8-.9-.7-1.5l.4-1.9c0-.2 0-.4-.2-.6l-1.4-1.5c-.4-.4-.5-1.1-.3-1.6l.7-1.8c.1-.2.1-.4 0-.6l-.7-1.8c-.2-.6-.1-1.2.3-1.7l1.4-1.5c.1-.2.2-.4.2-.6l-.4-1.9c-.1-.6.2-1.2.7-1.5l1.6-1c.5-.3 1.2-.3 1.7 0l1.7 1c.2.1.4.1.6 0l1.7-1Zm-2 12.8 5.9-5.9-1.4-1.4-4.5 4.5-1.8-1.8-1.4 1.4 3.2 3.2Z"
-                      />
-                    </svg>
+            <div
+              className={`flex ${isReply ? "items-center justify-between" : "flex-col gap-1 md:flex-row md:items-start md:justify-between"}`}
+            >
+              <div className={isReply ? "flex items-center gap-2" : "flex flex-col gap-1"}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-emerald-900">{displayName}</span>
+                  {isAdminComment && (
+                    <span className="inline-flex items-center justify-center h-5 w-5">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5"
+                      >
+                        <path
+                          fill="#0EA15F"
+                          d="M10.9 2.2c.5-.3 1.2-.3 1.7 0l1.7 1c.2.1.4.1.6 0l1.8-1c.5-.3 1.2-.3 1.7 0l1.6 1c.5.3.8.9.7 1.5l-.4 1.9c0 .2 0 .4.2 .6l1.4 1.5c.4 .4 .5 1.1 .3 1.6l-.7 1.8c-.1 .2-.1 .4 0 .6l.7 1.8c.2 .6 .1 1.2-.3 1.7l-1.4 1.5c-.1 .2-.2 .4-.2 .6l.4 1.9c.1 .6-.2 1.2-.7 1.5l-1.6 1c-.5 .3-1.2 .3-1.7 0l-1.8-1c-.2-.1-.4-.1-.6 0l-1.7 1c-.5 .3-1.2 .3-1.7 0l-1.7-1c-.2-.1-.4-.1-.6 0l-1.7 1c-.5 .3-1.2 .3-1.7 0l-1.6-1c-.5-.3-.8-.9-.7-1.5l.4-1.9c0-.2 0-.4-.2-.6l-1.4-1.5c-.4-.4-.5-1.1-.3-1.6l.7-1.8c.1-.2 .1-.4 0-.6l-.7-1.8c-.2-.6-.1-1.2 .3-1.7l1.4-1.5c.1-.2 .2-.4 .2-.6l-.4-1.9c-.1-.6 .2-1.2 .7-1.5l1.6-1c.5-.3 1.2-.3 1.7 0l1.7 1c.2 .1 .4 .1 .6 0l1.7-1Zm-2 12.8 5.9-5.9-1.4-1.4-4.5 4.5-1.8-1.8-1.4 1.4 3.2 3.2Z"
+                        />
+                      </svg>
+                    </span>
+                  )}
+                  {isReply && (
+                    <span className="text-xs text-gray-500">
+                      {comment.createdAt ? formatDateTime(comment.createdAt) : ""}
+                    </span>
+                  )}
+                </div>
+                {!isReply && (
+                  <span className="text-xs text-gray-500">
+                    {comment.createdAt ? formatDateTime(comment.createdAt) : ""}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-500">
-                {comment.createdAt ? formatDateTime(comment.createdAt) : ""}
                 {isAdmin && (
                   <button
                     className="text-red-500 hover:underline"
