@@ -34,6 +34,7 @@ import type {
   WishlistItem,
   ChatMessageRequest,
   ChatMessageResponse,
+  ProductComment,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
