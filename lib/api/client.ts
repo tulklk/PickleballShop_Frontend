@@ -539,6 +539,59 @@ class ApiClient {
     return this.request<ProductDto>(`/api/Products/${slug}`);
   }
 
+  async getProductComments(productId: string): Promise<ProductComment[]> {
+    const res = await this.request<any>(`/api/Products/${productId}/comments`);
+    if (Array.isArray(res)) return res as ProductComment[];
+    if (res && Array.isArray(res.comments)) return res.comments as ProductComment[];
+    return [];
+  }
+
+  async addProductComment(productId: string, content: string): Promise<void> {
+    return this.request<void>(`/api/Products/${productId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async replyProductComment(productId: string, parentCommentId: string, content: string): Promise<void> {
+    return this.request<void>(`/api/Products/${productId}/comments/${parentCommentId}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  // Comment APIs by slug
+  async getProductCommentsBySlug(slug: string): Promise<ProductComment[]> {
+    const res = await this.request<any>(`/api/Products/slug/${slug}/comments`);
+    if (Array.isArray(res)) return res as ProductComment[];
+    if (res && Array.isArray(res.comments)) return res.comments as ProductComment[];
+    return [];
+  }
+
+  async addProductCommentBySlug(slug: string, content: string): Promise<void> {
+    return this.request<void>(`/api/Products/slug/${slug}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async replyProductCommentBySlug(slug: string, parentCommentId: string, content: string): Promise<void> {
+    return this.request<void>(`/api/Products/slug/${slug}/comments/${parentCommentId}/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async deleteProductCommentBySlug(slug: string, commentId: string): Promise<void> {
+    return this.request<void>(`/api/Products/slug/${slug}/comments/${commentId}`, {
+      method: "DELETE",
+    });
+  }
+
   async getFeaturedProducts(count?: number): Promise<ProductDto[]> {
     const query = count ? `?count=${count}` : "";
     return this.request<ProductDto[]>(`/api/Products/featured${query}`);

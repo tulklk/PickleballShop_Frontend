@@ -23,6 +23,7 @@ import type {
   UpdateUserRequest,
   WishlistItem,
   ChatMessageRequest,
+  ProductComment,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -259,6 +260,76 @@ export function useProductBySlug(slug: string) {
     queryKey: ["product", "slug", slug],
     queryFn: () => apiClient.getProductBySlug(slug),
     enabled: !!slug,
+  });
+}
+
+// Product comments
+export function useProductComments(productId: string) {
+  return useQuery({
+    queryKey: ["product", "comments", productId],
+    queryFn: () => apiClient.getProductComments(productId),
+    enabled: !!productId,
+  });
+}
+
+export function useAddProductComment(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) => apiClient.addProductComment(productId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", "comments", productId] });
+    },
+  });
+}
+
+export function useReplyProductComment(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ parentCommentId, content }: { parentCommentId: string; content: string }) =>
+      apiClient.replyProductComment(productId, parentCommentId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", "comments", productId] });
+    },
+  });
+}
+
+// Product comments by slug
+export function useProductCommentsBySlug(slug: string) {
+  return useQuery({
+    queryKey: ["product", "comments", "slug", slug],
+    queryFn: () => apiClient.getProductCommentsBySlug(slug),
+    enabled: !!slug,
+  });
+}
+
+export function useAddProductCommentBySlug(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) => apiClient.addProductCommentBySlug(slug, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+    },
+  });
+}
+
+export function useReplyProductCommentBySlug(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ parentCommentId, content }: { parentCommentId: string; content: string }) =>
+      apiClient.replyProductCommentBySlug(slug, parentCommentId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+    },
+  });
+}
+
+export function useDeleteProductCommentBySlug(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => apiClient.deleteProductCommentBySlug(slug, commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", "comments", "slug", slug] });
+    },
   });
 }
 

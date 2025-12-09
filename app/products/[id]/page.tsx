@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail, Heart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
 import { getProductUrl } from "@/lib/utils/productUrl";
+import { ProductComments } from "@/components/product/ProductComments";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -30,6 +31,7 @@ export default function ProductDetailPage() {
   const isLoading = productBySlugQuery.isLoading;
   const addCartItem = useAddCartItem();
   const { isAuthenticated, user } = useAuth();
+  const isAdmin = user?.role === "Admin" || user?.role === "2";
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -1290,6 +1292,11 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Product Comments */}
+      <div className="mt-12 border-t pt-8">
+        <ProductComments productSlug={product.slug || identifier} isAdmin={!!isAdmin} />
+      </div>
 
       {/* Newsletter Section */}
       <div className="mt-12 border-t pt-8">

@@ -382,6 +382,24 @@ export interface WishlistItem {
   product?: ProductDto | null;
 }
 
+// Product Comments
+export interface ProductComment {
+  id: string;
+  productId: string;
+  userId?: string;
+  parentCommentId?: string | null;
+  content: string;
+  isEdited?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  // Optional extra fields if backend returns user info / nested replies
+  userFullName?: string | null;
+  userName?: string | null;
+  userAvatar?: string | null;
+  isAdmin?: boolean;
+  replies?: ProductComment[];
+}
+
 // Chat
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
