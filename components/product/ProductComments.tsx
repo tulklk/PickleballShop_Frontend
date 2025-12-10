@@ -22,23 +22,66 @@ interface ProductCommentsProps {
 export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) {
   const { isAuthenticated } = useAuth();
   const { data: comments, isLoading } = useProductCommentsBySlug(productSlug);
-  // Build a nested tree from flat comments (backend may return flat list)
+  // Build tree with flattened replies (all replies at same level under root comment)
   const commentTree = useMemo(() => {
     if (!comments || comments.length === 0) return [] as ProductComment[];
 
-    const map = new Map<string, ProductComment & { replies: ProductComment[] }>();
-    const roots: (ProductComment & { replies: ProductComment[] })[] = [];
+    // Flatten all comments (including nested replies) into a single list
+    const flattenComments = (commentList: ProductComment[]): ProductComment[] => {
+      const result: ProductComment[] = [];
+      const addComment = (c: ProductComment) => {
+        result.push(c);
+        if (c.replies && c.replies.length > 0) {
+          c.replies.forEach(addComment);
+        }
+      };
+      commentList.forEach(addComment);
+      return result;
+    };
 
-    comments.forEach((c) => {
-      map.set(c.id, { ...c, replies: c.replies ?? [] });
+    // Get all comments as flat list
+    const allComments = flattenComments(comments);
+
+    // Build map for quick lookup
+    const map = new Map<string, ProductComment & { flatReplies: ProductComment[] }>();
+    allComments.forEach((c) => {
+      if (!map.has(c.id)) {
+        map.set(c.id, { ...c, flatReplies: [] });
+      }
     });
 
-    map.forEach((c) => {
-      if (c.parentCommentId && map.has(c.parentCommentId)) {
-        map.get(c.parentCommentId)!.replies.push(c);
-      } else {
-        roots.push(c);
+    // Separate roots and replies
+    const roots: (ProductComment & { flatReplies: ProductComment[] })[] = [];
+
+    // Helper to find root parent ID
+    const findRootId = (commentId: string): string | null => {
+      const comment = map.get(commentId);
+      if (!comment) return null;
+      if (!comment.parentCommentId || !map.has(comment.parentCommentId)) {
+        return commentId;
       }
+      return findRootId(comment.parentCommentId);
+    };
+
+    // Organize into roots and flat replies
+    map.forEach((c) => {
+      if (!c.parentCommentId || !map.has(c.parentCommentId)) {
+        // This is a root comment
+        roots.push(c);
+      } else {
+        // This is a reply - find the root and add to its flatReplies
+        const rootId = findRootId(c.id);
+        if (rootId && rootId !== c.id && map.has(rootId)) {
+          map.get(rootId)!.flatReplies.push(c);
+        }
+      }
+    });
+
+    // Sort replies by createdAt
+    roots.forEach((root) => {
+      root.flatReplies.sort((a, b) => 
+        new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
     });
 
     return roots as ProductComment[];
@@ -102,7 +145,7 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
     const isReply = depth > 0;
 
     return (
-      <div key={comment.id} className={`rounded-lg p-3 mb-3 ${depth > 0 ? "ml-4" : ""}`}>
+      <div key={comment.id} className={`mb-3 ${isReply ? "ml-8" : ""}`}>
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center overflow-hidden shrink-0">
             {avatar ? (
@@ -121,7 +164,7 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
           </div>
           <div className="flex-1 min-w-0">
             <div
-              className={`flex ${isReply ? "items-center justify-between" : "flex-col gap-1 md:flex-row md:items-start md:justify-between"}`}
+              className={`flex ${isReply ? "items-center gap-2" : "flex-col gap-1 md:flex-row md:items-start md:justify-between"}`}
             >
               <div className={isReply ? "flex items-center gap-2" : "flex flex-col gap-1"}>
                 <div className="flex items-center gap-2">
@@ -152,17 +195,19 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                {isAdmin && (
-                  <button
-                    className="text-red-500 hover:underline"
-                    disabled={deleteComment.isPending}
-                    onClick={() => handleDelete(comment.id)}
-                  >
-                    Xóa
-                  </button>
-                )}
-              </div>
+              {!isReply && (
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  {isAdmin && (
+                    <button
+                      className="text-red-500 hover:underline"
+                      disabled={deleteComment.isPending}
+                      onClick={() => handleDelete(comment.id)}
+                    >
+                      Xóa
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <p className="text-sm text-gray-800 mt-2 whitespace-pre-line">{comment.content}</p>
 
@@ -181,6 +226,15 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
               >
                 Trả lời
               </button>
+              {isAdmin && isReply && (
+                <button
+                  className="text-red-500 hover:underline text-xs"
+                  disabled={deleteComment.isPending}
+                  onClick={() => handleDelete(comment.id)}
+                >
+                  Xóa
+                </button>
+              )}
             </div>
 
             {replyOpen[comment.id] && (
@@ -209,9 +263,12 @@ export function ProductComments({ productSlug, isAdmin }: ProductCommentsProps) 
               </div>
             )}
 
-            {comment.replies && comment.replies.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {comment.replies.map((child) => renderComment(child, depth + 1))}
+            {(comment as ProductComment & { flatReplies?: ProductComment[] }).flatReplies && 
+             (comment as ProductComment & { flatReplies?: ProductComment[] }).flatReplies!.length > 0 && (
+              <div className="mt-3">
+                {(comment as ProductComment & { flatReplies?: ProductComment[] }).flatReplies!.map((child) => 
+                  renderComment(child, 1)
+                )}
               </div>
             )}
           </div>

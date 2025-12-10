@@ -308,7 +308,7 @@ export default function ProductDetailPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 bg-white">
+    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 bg-white">
       {/* Review Modal */}
       {isReviewModalOpen && (
         <div 
