@@ -11,9 +11,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes - giảm refetch không cần thiết
-            refetchOnWindowFocus: false,
+            staleTime: 10 * 60 * 1000, // 10 minutes - data được coi là fresh trong 10 phút
+            gcTime: 30 * 60 * 1000, // 30 minutes - cache được giữ trong 30 phút (cacheTime renamed to gcTime)
+            refetchOnWindowFocus: false, // Không refetch khi focus lại window
             refetchOnMount: false, // Không refetch khi mount lại nếu data còn fresh
+            refetchOnReconnect: false, // Không refetch khi reconnect internet
             retry: (failureCount, error) => {
               // Không retry nếu là lỗi 4xx (client error) hoặc 5xx (server error) từ backend
               if (error && typeof error === "object" && "status" in error) {

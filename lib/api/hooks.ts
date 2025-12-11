@@ -205,6 +205,8 @@ export function useCategories() {
   return useQuery({
     queryKey: ["categories"],
     queryFn: () => apiClient.getCategories(),
+    staleTime: 30 * 60 * 1000, // 30 minutes - Categories ít thay đổi
+    gcTime: 60 * 60 * 1000, // 60 minutes - Giữ cache lâu hơn
     retry: 1,
     retryOnMount: false,
   });
@@ -215,6 +217,8 @@ export function useCategory(id: string) {
     queryKey: ["category", id],
     queryFn: () => apiClient.getCategoryById(id),
     enabled: !!id,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 60 minutes
   });
 }
 
@@ -223,6 +227,8 @@ export function useCategoryBySlug(slug: string) {
     queryKey: ["category", "slug", slug],
     queryFn: () => apiClient.getCategoryBySlug(slug),
     enabled: !!slug,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 60 minutes
   });
 }
 
@@ -242,8 +248,11 @@ export function useProducts(params?: {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => apiClient.getProducts(params),
+    staleTime: 15 * 60 * 1000, // 15 minutes - Products thay đổi không thường xuyên
+    gcTime: 45 * 60 * 1000, // 45 minutes - Giữ cache để navigate qua lại nhanh
     retry: 1,
     retryOnMount: false,
+    placeholderData: (previousData) => previousData, // Giữ data cũ khi loading data mới (UX mượt mà)
   });
 }
 
@@ -252,6 +261,8 @@ export function useProduct(id: string) {
     queryKey: ["product", id],
     queryFn: () => apiClient.getProductById(id),
     enabled: !!id,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 45 * 60 * 1000, // 45 minutes
   });
 }
 
@@ -260,6 +271,8 @@ export function useProductBySlug(slug: string) {
     queryKey: ["product", "slug", slug],
     queryFn: () => apiClient.getProductBySlug(slug),
     enabled: !!slug,
+    staleTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 45 * 60 * 1000, // 45 minutes
   });
 }
 
@@ -269,6 +282,8 @@ export function useProductComments(productId: string) {
     queryKey: ["product", "comments", productId],
     queryFn: () => apiClient.getProductComments(productId),
     enabled: !!productId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - Comments có thể thay đổi thường xuyên hơn
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 }
 
@@ -301,6 +316,8 @@ export function useProductCommentsBySlug(slug: string) {
     queryKey: ["product", "comments", "slug", slug],
     queryFn: () => apiClient.getProductCommentsBySlug(slug),
     enabled: !!slug,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 }
 
@@ -341,6 +358,8 @@ export function useFeaturedProducts(count?: number) {
   return useQuery({
     queryKey: ["products", "featured", count],
     queryFn: () => apiClient.getFeaturedProducts(count),
+    staleTime: 20 * 60 * 1000, // 20 minutes - Featured products ít thay đổi
+    gcTime: 60 * 60 * 1000, // 60 minutes
     retry: 1,
     retryOnMount: false,
   });
@@ -355,6 +374,9 @@ export function useSearchProducts(params?: {
     queryKey: ["products", "search", params],
     queryFn: () => apiClient.searchProducts(params),
     enabled: !!params?.q,
+    staleTime: 10 * 60 * 1000, // 10 minutes - Search results
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    placeholderData: (previousData) => previousData, // Giữ kết quả search cũ khi loading
   });
 }
 
@@ -542,6 +564,8 @@ export function useMyOrders() {
   return useQuery({
     queryKey: ["orders", "my"],
     queryFn: () => apiClient.getMyOrders(),
+    staleTime: 2 * 60 * 1000, // 2 minutes - Orders có thể thay đổi (payment status, order status)
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -550,6 +574,8 @@ export function useOrder(id: string) {
     queryKey: ["order", id],
     queryFn: () => apiClient.getOrderById(id),
     enabled: !!id,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -564,6 +590,8 @@ export function useAdminCategories() {
   return useQuery({
     queryKey: ["admin", "categories"],
     queryFn: () => apiClient.adminGetCategories(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 }
 
@@ -572,6 +600,8 @@ export function useAdminCategory(id: string) {
     queryKey: ["admin", "category", id],
     queryFn: () => apiClient.adminGetCategoryById(id),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 }
 
@@ -623,6 +653,8 @@ export function useAdminOrders(params?: {
   return useQuery({
     queryKey: ["admin", "orders", params],
     queryFn: () => apiClient.adminGetOrders(params),
+    staleTime: 1 * 60 * 1000, // 1 minute - Admin orders cần update thường xuyên
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -631,6 +663,8 @@ export function useAdminOrder(id: string) {
     queryKey: ["admin", "order", id],
     queryFn: () => apiClient.adminGetOrderById(id),
     enabled: !!id,
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -674,6 +708,8 @@ export function useAdminProducts(options?: { enabled?: boolean }) {
     queryKey: ["admin", "products"],
     queryFn: () => apiClient.adminGetProducts(),
     enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
     retry: 1,
   });
 }
@@ -683,6 +719,8 @@ export function useAdminProduct(id: string) {
     queryKey: ["admin", "product", id],
     queryFn: () => apiClient.adminGetProductById(id),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 }
 
