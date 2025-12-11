@@ -64,13 +64,22 @@ export default function ProductDetailPage() {
   // Build images array - must be before useCallback hooks
   const placeholderImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EProduct Image%3C/text%3E%3C/svg%3E";
   
+  // Helper to validate image URL
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+      return false;
+    }
+    // Check if it's a valid URL (http/https) or a data URL
+    return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('/');
+  };
+  
   const allImages: string[] = [];
-  if (product?.primaryImageUrl) {
+  if (product?.primaryImageUrl && isValidImageUrl(product.primaryImageUrl)) {
     allImages.push(product.primaryImageUrl);
   }
   if (product?.imageUrls && product.imageUrls.length > 0) {
     product.imageUrls.forEach((img) => {
-      if (!allImages.includes(img)) {
+      if (isValidImageUrl(img) && !allImages.includes(img)) {
         allImages.push(img);
       }
     });
@@ -369,8 +378,8 @@ export default function ProductDetailPage() {
                         <Star
                           className={`h-10 w-10 transition-colors ${
                             star <= reviewRating
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300 hover:text-yellow-300"
+                              ? "fill-emerald-500 text-emerald-500"
+                              : "text-gray-300 hover:text-emerald-300"
                           }`}
                         />
                       </button>
@@ -666,7 +675,7 @@ export default function ProductDetailPage() {
                     key={star}
                     className={`h-4 w-4 ${
                       star <= (product.averageRating || 5)
-                        ? "fill-yellow-400 text-yellow-400"
+                        ? "fill-emerald-500 text-emerald-500"
                         : "text-gray-300"
                     }`}
                   />

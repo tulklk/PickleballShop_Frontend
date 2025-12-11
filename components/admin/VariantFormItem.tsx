@@ -37,10 +37,17 @@ export function VariantFormItem({
   onChange,
   onRemove,
 }: VariantFormItemProps) {
-  const [variantType, setVariantType] = useState<"color" | "size" | "spec" | "custom">(() => {
+  const [variantType, setVariantType] = useState<"color" | "size" | "sizeClothing" | "spec" | "custom">(() => {
     // Auto-detect variant type based on existing data
     if (variant.color) return "color";
-    if (variant.size) return "size";
+    if (variant.size) {
+      // Check if size is S, M, L, XL (clothing sizes)
+      const sizeUpper = variant.size.toUpperCase().trim();
+      if (["S", "M", "L", "XL", "XXL", "XXXL"].includes(sizeUpper)) {
+        return "sizeClothing";
+      }
+      return "size";
+    }
     if (variant.spec) return "spec";
     return "color"; // Default
   });
@@ -68,13 +75,13 @@ export function VariantFormItem({
         <select
           value={variantType}
           onChange={(e) => {
-            const newType = e.target.value as "color" | "size" | "spec" | "custom";
+            const newType = e.target.value as "color" | "size" | "sizeClothing" | "spec" | "custom";
             setVariantType(newType);
             // Clear other fields when switching type
             if (newType === "color") {
               onChange("size", null);
               onChange("spec", null);
-            } else if (newType === "size") {
+            } else if (newType === "size" || newType === "sizeClothing") {
               onChange("color", null);
               onChange("spec", null);
             } else if (newType === "spec") {
@@ -86,6 +93,7 @@ export function VariantFormItem({
         >
           <option value="color">Màu sắc (cho vợt)</option>
           <option value="size">Size (cho giày)</option>
+          <option value="sizeClothing">Size (cho quần áo: S, M, L, XL)</option>
           <option value="spec">Thông số (cho vợt: 13mm, 15mm)</option>
           <option value="custom">Tùy chỉnh</option>
         </select>
@@ -119,6 +127,27 @@ export function VariantFormItem({
             placeholder="Ví dụ: 40, 41, 42, 43"
             className="mt-1"
           />
+        </div>
+      )}
+
+      {variantType === "sizeClothing" && (
+        <div>
+          <Label className="text-sm font-semibold">
+            Size: <span className="text-red-500">*</span>
+          </Label>
+          <select
+            value={variant.size || ""}
+            onChange={(e) => onChange("size", e.target.value || null)}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="">Chọn size</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+            <option value="XXL">XXL</option>
+            <option value="XXXL">XXXL</option>
+          </select>
         </div>
       )}
 

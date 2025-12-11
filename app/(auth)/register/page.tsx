@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowRight, BadgeCheck, HeartHandshake, Mail } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { TypingText } from "@/components/shared/TypingText";
 
 const registerSchema = z
   .object({
@@ -40,6 +41,11 @@ export default function RegisterPage() {
   const registerMutation = useRegister();
   const resendVerificationMutation = useResendVerificationEmail();
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     register,
@@ -90,18 +96,24 @@ export default function RegisterPage() {
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(146,226,180,0.2),transparent_60%)]" />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-[radial-gradient(circle_at_bottom,rgba(45,181,138,0.12),transparent_55%)] blur-3xl" />
+        {/* Floating Decorative Elements */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-20 right-10 w-20 h-20 bg-emerald-400/20 rounded-full blur-xl float-animation" />
+          <div className="absolute bottom-40 left-20 w-32 h-32 bg-lime-400/20 rounded-full blur-2xl float-animation-slow" />
+          <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-green-400/20 rounded-full blur-lg float-animation" style={{ animationDelay: '1.5s' }} />
+        </div>
       </div>
       <div className="container relative mx-auto grid min-h-[calc(100vh-140px)] items-center gap-12 px-4 py-16 lg:grid-cols-[minmax(0,1fr)_440px]">
         <div className="space-y-8">
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-4 py-1 text-sm font-semibold text-emerald-600 shadow-sm">
+          <span className={`inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-4 py-1 text-sm font-semibold text-emerald-600 shadow-sm slide-in-left ${mounted ? '' : 'opacity-0'}`}>
             <BadgeCheck className="h-4 w-4 text-emerald-500" />
             Thành viên IKA Sport
           </span>
           <div>
-            <h1 className="text-4xl font-bold text-emerald-950 md:text-5xl">
-              Tạo tài khoản & mở khóa ưu đãi dành riêng cho bạn
+            <h1 className={`text-4xl font-bold text-emerald-950 md:text-5xl fade-in-up ${mounted ? '' : 'opacity-0'}`}>
+              <span className="gradient-text">Tạo tài khoản</span> & mở khóa ưu đãi dành riêng cho bạn
             </h1>
-            <p className="mt-4 text-lg text-emerald-900/80 max-w-2xl">
+            <p className={`mt-4 text-lg text-emerald-900/80 max-w-2xl fade-in-up-delay-1 ${mounted ? '' : 'opacity-0'}`}>
               Nhận gợi ý paddle theo trình độ, tích điểm mua sắm và cập nhật
               nhanh các giải đấu Pickleball trên khắp Việt Nam.
             </p>
@@ -109,41 +121,53 @@ export default function RegisterPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              "Ưu đãi sinh nhật & thành viên thân thiết.",
-              "Giao nhanh nội thành & đổi trả dễ dàng.",
-              "Tư vấn paddle 1:1 cùng chuyên gia IKA.",
-              "Nhận vé mời workshop / tour demo.",
+              { text: "Ưu đãi sinh nhật & thành viên thân thiết.", delay: "fade-in-up-delay-2" },
+              { text: "Giao nhanh nội thành & đổi trả dễ dàng.", delay: "fade-in-up-delay-2" },
+              { text: "Tư vấn paddle 1:1 cùng chuyên gia IKA.", delay: "fade-in-up-delay-3" },
+              { text: "Nhận vé mời workshop / tour demo.", delay: "fade-in-up-delay-3" },
             ].map((item) => (
               <div
-                key={item}
-                className="rounded-2xl border border-emerald-100 bg-white/80 p-4 text-sm font-medium text-emerald-900 shadow-[0_12px_30px_rgba(15,118,110,0.08)]"
+                key={item.text}
+                className={`rounded-2xl border border-emerald-100 bg-white/80 p-4 text-sm font-medium text-emerald-900 shadow-[0_12px_30px_rgba(15,118,110,0.08)] hover-lift transition-all cursor-pointer ${item.delay} ${mounted ? '' : 'opacity-0'}`}
               >
                 <span className="mr-2 text-emerald-500">•</span>
-                {item}
+                {item.text}
               </div>
             ))}
           </div>
 
-          <div className="rounded-3xl border border-emerald-100 bg-white/70 p-6 shadow-[0_20px_50px_rgba(15,118,110,0.12)] backdrop-blur">
-            <p className="text-lg font-semibold text-emerald-900">
+          <div className={`rounded-3xl border border-emerald-100 bg-white/70 p-6 shadow-[0_20px_50px_rgba(15,118,110,0.12)] backdrop-blur hover-lift scale-in ${mounted ? '' : 'opacity-0'}`}>
+            <p className="text-lg font-semibold text-emerald-900 gradient-text">
               Ưu đãi dành cho thành viên mới
             </p>
             <p className="mt-2 text-sm text-emerald-900/80">
-              Giảm ngay 10% set paddle + ball trong 7 ngày đầu tiên sau khi bạn
+              Giảm ngay <span className="font-bold text-emerald-600">10%</span> set paddle + ball trong <span className="font-bold">7 ngày đầu tiên</span> sau khi bạn
               đăng ký tài khoản. Áp dụng tự động khi đăng nhập.
             </p>
-            <div className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-600">
+            <div className="mt-3 inline-flex items-center text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer">
               Liên hệ đội ngũ chăm sóc <HeartHandshake className="ml-2 h-4 w-4" />
             </div>
           </div>
         </div>
 
-        <Card className="relative z-10 w-full border-emerald-100 shadow-[0_20px_60px_rgba(15,118,110,0.18)]">
+        <Card className={`relative z-10 w-full border-emerald-100 shadow-[0_20px_60px_rgba(15,118,110,0.18)] slide-in-right ${mounted ? '' : 'opacity-0'}`}>
           <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-3xl text-emerald-950">
-              Tạo tài khoản
+            <CardTitle className="text-3xl text-emerald-950 min-h-[2.5rem] flex items-center justify-center">
+              {mounted ? (
+                <TypingText 
+                  text="Tạo tài khoản" 
+                  speed={100}
+                  deleteSpeed={60}
+                  pauseTime={2500}
+                  className="gradient-text"
+                  showCursor={true}
+                  loop={true}
+                />
+              ) : (
+                <span className="gradient-text">Tạo tài khoản</span>
+              )}
             </CardTitle>
-            <CardDescription className="text-base text-emerald-900/80">
+            <CardDescription className="text-base text-emerald-900/80 fade-in-up-delay-1">
               Điền thông tin để gia nhập cộng đồng Pickleball của IKA
             </CardDescription>
           </CardHeader>
@@ -179,13 +203,14 @@ export default function RegisterPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 fade-in-up-delay-2">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Họ và tên</Label>
                 <Input
                   id="fullName"
                   {...register("fullName")}
                   placeholder="Nhập họ và tên"
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
                 {errors.fullName && (
                   <p className="text-sm text-destructive">
@@ -201,6 +226,7 @@ export default function RegisterPage() {
                   type="email"
                   {...register("email")}
                   placeholder="Nhập email"
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">
@@ -215,6 +241,7 @@ export default function RegisterPage() {
                   id="phoneNumber"
                   {...register("phoneNumber")}
                   placeholder="Nhập số điện thoại"
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
                 {errors.phoneNumber && (
                   <p className="text-sm text-destructive">
@@ -230,6 +257,7 @@ export default function RegisterPage() {
                   type="password"
                   {...register("password")}
                   placeholder="Nhập mật khẩu"
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">
@@ -245,6 +273,7 @@ export default function RegisterPage() {
                   type="password"
                   {...register("confirmPassword")}
                   placeholder="Nhập lại mật khẩu"
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
                 {errors.confirmPassword && (
                   <p className="text-sm text-destructive">
@@ -255,7 +284,7 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full transition-all duration-300 hover:scale-105"
                 disabled={registerMutation.isPending}
               >
                 {registerMutation.isPending
@@ -264,14 +293,14 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-emerald-900/80">
+            <p className="mt-6 text-center text-sm text-emerald-900/80 fade-in-up-delay-3">
               Đã có tài khoản?{" "}
               <Link
                 href="/login"
-                className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-800"
+                className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-800 transition-all duration-300 hover:gap-2"
               >
                 Đăng nhập ngay
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3 w-3 transition-transform duration-300" />
               </Link>
             </p>
           </CardContent>

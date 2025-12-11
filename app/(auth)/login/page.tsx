@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Mail, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { TypingText } from "@/components/shared/TypingText";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -43,6 +44,11 @@ export default function LoginPage() {
   const { isAdmin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     register,
@@ -140,15 +146,15 @@ export default function LoginPage() {
 
       <div className="container relative mx-auto grid min-h-[calc(100vh-140px)] items-center gap-12 px-4 py-16 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-8">
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-4 py-1 text-sm font-semibold text-emerald-600 shadow-sm">
+          <span className={`inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-4 py-1 text-sm font-semibold text-emerald-600 shadow-sm slide-in-left ${mounted ? '' : 'opacity-0'}`}>
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
             Tài khoản chuyên dụng Pickleball
           </span>
           <div>
-            <h1 className="text-4xl font-bold text-emerald-950 md:text-5xl">
-              Đăng nhập nhanh để tiếp tục hành trình Pickleball
+            <h1 className={`text-4xl font-bold text-emerald-950 md:text-5xl fade-in-up ${mounted ? '' : 'opacity-0'}`}>
+              <span className="gradient-text">Đăng nhập nhanh</span> để tiếp tục hành trình Pickleball
             </h1>
-            <p className="mt-4 text-lg text-emerald-900/80 max-w-2xl">
+            <p className={`mt-4 text-lg text-emerald-900/80 max-w-2xl fade-in-up-delay-1 ${mounted ? '' : 'opacity-0'}`}>
               Đồng bộ đơn hàng, theo dõi lịch sử mua sắm và nhận ưu đãi từ hệ
               sinh thái IKA Sport chỉ với một lần đăng nhập.
             </p>
@@ -159,16 +165,18 @@ export default function LoginPage() {
                 icon: Sparkles,
                 title: "Ưu đãi theo cấp độ",
                 desc: "Combo paddle, ball và trang phục dành riêng từng trình độ.",
+                delay: "fade-in-up-delay-2"
               },
               {
                 icon: Trophy,
                 title: "Theo dõi giải đấu",
                 desc: "Nhận thông báo sự kiện & workshop Pickleball gần bạn.",
+                delay: "fade-in-up-delay-3"
               },
-            ].map((item) => (
+            ].map((item, index) => (
               <div
                 key={item.title}
-                className="rounded-2xl border border-emerald-100 bg-white/80 p-5 shadow-[0_15px_40px_rgba(15,118,110,0.08)] backdrop-blur"
+                className={`rounded-2xl border border-emerald-100 bg-white/80 p-5 shadow-[0_15px_40px_rgba(15,118,110,0.08)] backdrop-blur ${item.delay} ${mounted ? '' : 'opacity-0'} hover:scale-105 transition-transform duration-300`}
               >
                 <item.icon className="h-8 w-8 text-emerald-500" />
                 <p className="mt-3 text-lg font-semibold text-emerald-900">
@@ -179,9 +187,13 @@ export default function LoginPage() {
             ))}
           </div>
           <div className="flex flex-wrap gap-8 text-sm text-emerald-900/70">
-            {communityStats.map((stat) => (
-              <div key={stat.label}>
-                <p className="text-2xl font-semibold text-emerald-600">
+            {communityStats.map((stat, index) => (
+              <div 
+                key={stat.label}
+                className={`count-up ${mounted ? '' : 'opacity-0'}`}
+                style={{ animationDelay: `${0.8 + index * 0.2}s` }}
+              >
+                <p className="text-2xl font-semibold text-emerald-600 gradient-text">
                   {stat.value}
                 </p>
                 <p>{stat.label}</p>
@@ -190,12 +202,24 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <Card className="relative z-10 w-full border-emerald-100 shadow-[0_20px_60px_rgba(15,118,110,0.18)]">
+        <Card className={`relative z-10 w-full border-emerald-100 shadow-[0_20px_60px_rgba(15,118,110,0.18)] scale-in ${mounted ? '' : 'opacity-0'}`}>
           <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-3xl text-emerald-950">
-              Chào mừng quay lại
+            <CardTitle className="text-3xl text-emerald-950 min-h-[2.5rem] flex items-center justify-center">
+              {mounted ? (
+                <TypingText 
+                  text="Chào mừng quay lại" 
+                  speed={80}
+                  deleteSpeed={50}
+                  pauseTime={2000}
+                  className="gradient-text"
+                  showCursor={true}
+                  loop={true}
+                />
+              ) : (
+                <span className="gradient-text">Chào mừng quay lại</span>
+              )}
             </CardTitle>
-            <CardDescription className="text-base text-emerald-900/80">
+            <CardDescription className="text-base text-emerald-900/80 fade-in-up-delay-1">
               Nhập email & mật khẩu hoặc dùng Google để tiếp tục
             </CardDescription>
           </CardHeader>
@@ -239,14 +263,15 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 fade-in-up-delay-2">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="fade-in-up-delay-2">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   {...register("email")}
                   placeholder="your@email.com"
+                  className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">
@@ -256,11 +281,11 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between fade-in-up-delay-2">
                   <Label htmlFor="password">Password</Label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm font-semibold text-emerald-600 hover:text-emerald-800"
+                    className="text-sm font-semibold text-emerald-600 hover:text-emerald-800 transition-colors"
                   >
                     Quên mật khẩu?
                   </Link>
@@ -271,6 +296,7 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     {...register("password")}
                     placeholder="••••••••"
+                    className="transition-all duration-300 focus:scale-[1.02] focus:shadow-lg"
                   />
                   <button
                     type="button"
@@ -292,12 +318,16 @@ export default function LoginPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                className="w-full transition-all duration-300 hover:scale-105" 
+                disabled={isSubmitting}
+              >
                 {loginMutation.isPending ? "Đang đăng nhập..." : "Đăng nhập"}
               </Button>
             </form>
 
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground fade-in-up-delay-3">
               <span className="h-px flex-1 bg-border" />
               Hoặc
               <span className="h-px flex-1 bg-border" />
@@ -305,7 +335,7 @@ export default function LoginPage() {
 
             {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
               <div
-                className={`flex justify-center ${
+                className={`flex justify-center fade-in-up-delay-3 transition-all duration-300 hover:scale-105 ${
                   googleLoginMutation.isPending
                     ? "pointer-events-none opacity-70"
                     : ""
@@ -323,21 +353,21 @@ export default function LoginPage() {
                 />
               </div>
             ) : (
-              <div className="flex justify-center">
+              <div className="flex justify-center fade-in-up-delay-3">
                 <p className="text-sm text-muted-foreground">
                   Google Sign-In chưa được cấu hình. Vui lòng thêm NEXT_PUBLIC_GOOGLE_CLIENT_ID vào .env.local
                 </p>
               </div>
             )}
 
-            <p className="text-center text-sm text-emerald-900/80">
+            <p className="text-center text-sm text-emerald-900/80 fade-in-up-delay-3">
               Chưa có tài khoản?{" "}
               <Link
                 href="/register"
-                className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-800"
+                className="inline-flex items-center gap-1 font-semibold text-emerald-600 hover:text-emerald-800 transition-all duration-300 hover:gap-2"
               >
                 Đăng ký ngay
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </p>
           </CardContent>

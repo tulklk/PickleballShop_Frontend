@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductDto, ProductVariantDto } from "@/lib/api/types";
 import { Package } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface VariantSelectorProps {
   product: ProductDto;
@@ -27,13 +28,52 @@ export function VariantSelector({
     return Array.from(colorSet).sort();
   }, [variants]);
 
+  // Check if product is clothing (quần áo)
+  const isClothing = useMemo(() => {
+    const categoryName = product.categoryName?.toLowerCase() || "";
+    const productName = product.name?.toLowerCase() || "";
+    return (
+      categoryName.includes("quần") ||
+      categoryName.includes("áo") ||
+      categoryName.includes("clothing") ||
+      productName.includes("quần") ||
+      productName.includes("áo")
+    );
+  }, [product.categoryName, product.name]);
+
   const sizes = useMemo(() => {
     const sizeSet = new Set<string>();
     variants.forEach((v) => {
       if (v.size) sizeSet.add(v.size);
     });
+    
+    // For clothing, sort S, M, L, XL first, then others
+    if (isClothing) {
+      const clothingSizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
+      const otherSizes: string[] = [];
+      
+      Array.from(sizeSet).forEach((size) => {
+        const upperSize = size.toUpperCase().trim();
+        if (!clothingSizes.includes(upperSize)) {
+          otherSizes.push(size);
+        }
+      });
+      
+      return [
+        ...clothingSizes.filter((s) => sizeSet.has(s)),
+        ...otherSizes.sort((a, b) => {
+          const aNum = parseInt(a);
+          const bNum = parseInt(b);
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return aNum - bNum;
+          }
+          return a.localeCompare(b);
+        }),
+      ];
+    }
+    
+    // For non-clothing, sort numerically if possible
     return Array.from(sizeSet).sort((a, b) => {
-      // Sort sizes numerically if possible
       const aNum = parseInt(a);
       const bNum = parseInt(b);
       if (!isNaN(aNum) && !isNaN(bNum)) {
@@ -41,7 +81,7 @@ export function VariantSelector({
       }
       return a.localeCompare(b);
     });
-  }, [variants]);
+  }, [variants, isClothing]);
 
   const specs = useMemo(() => {
     const specSet = new Set<string>();
@@ -209,24 +249,38 @@ export function VariantSelector({
             {sizes.map((size) => {
               const available = isOptionAvailable(size, "size");
               const outOfStock = isOutOfStock(size, "size");
-              const variant = getAvailableVariants(size, "size")[0];
+              const isSelected = selectedSize === size;
+              
               return (
-                <Button
+                <button
                   key={size}
                   type="button"
-                  variant={selectedSize === size ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedSize(size)}
-                  disabled={!available || outOfStock}
-                  className={`min-w-[60px] ${
-                    selectedSize === size
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : ""
-                  } ${outOfStock ? "opacity-50 cursor-not-allowed line-through" : ""}`}
+                  onClick={() => !outOfStock && setSelectedSize(size)}
+                  disabled={outOfStock}
+                  className={`
+                    relative min-w-[50px] h-10 px-4 rounded-md
+                    border-2 transition-all
+                    ${isSelected 
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 font-semibold" 
+                      : "border-gray-300 bg-white text-gray-700 hover:border-emerald-400"
+                    }
+                    ${outOfStock 
+                      ? "opacity-50 cursor-not-allowed bg-gray-100 border-gray-200" 
+                      : "cursor-pointer"
+                    }
+                  `}
+                  style={outOfStock ? {
+                    backgroundImage: `repeating-linear-gradient(
+                      45deg,
+                      transparent,
+                      transparent 4px,
+                      rgba(0, 0, 0, 0.1) 4px,
+                      rgba(0, 0, 0, 0.1) 8px
+                    )`
+                  } : {}}
                 >
                   {size}
-                  {outOfStock && " (Hết)"}
-                </Button>
+                </button>
               );
             })}
           </div>

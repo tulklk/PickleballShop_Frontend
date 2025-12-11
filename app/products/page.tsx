@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectItem } from "@/components/ui/select";
 import ProductsLoading from "./loading";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { useScrollAnimation } from "@/lib/hooks/useScrollAnimation";
 
 export default function ProductsPage() {
   return (
@@ -125,13 +126,16 @@ function ProductsPageContent() {
     });
   }
 
+  const { ref: sidebarRef, isVisible: sidebarVisible } = useScrollAnimation({ threshold: 0.1 });
+  const { ref: contentRef, isVisible: contentVisible } = useScrollAnimation({ threshold: 0.1 });
+
   return (
     <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
       <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-emerald-950">Sản phẩm</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Filters Sidebar */}
-        <aside className="lg:col-span-1">
+        <aside ref={sidebarRef} className={`lg:col-span-1 scroll-animate ${sidebarVisible ? 'visible' : ''}`}>
           <div className="space-y-4 border border-emerald-100 rounded-lg p-3 md:p-4 bg-white/95 shadow-sm">
             <h2 className="font-semibold text-lg text-emerald-950">Bộ lọc</h2>
 
@@ -204,7 +208,7 @@ function ProductsPageContent() {
 
             <Button 
               onClick={handleSearch} 
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="w-full"
             >
               Áp dụng bộ lọc
             </Button>
@@ -212,7 +216,7 @@ function ProductsPageContent() {
         </aside>
 
         {/* Products Grid */}
-        <div className="lg:col-span-3">
+        <div ref={contentRef} className={`lg:col-span-3 scroll-animate ${contentVisible ? 'visible' : ''}`}>
           {isLoading ? (
             <ProductGridSkeleton count={12} />
           ) : data?.items && data.items.length > 0 ? (
@@ -232,7 +236,7 @@ function ProductsPageContent() {
               
               {/* Pagination - Luôn hiển thị nếu có data */}
               {data && (
-                <div className="mt-8 flex flex-col items-center gap-4">
+                <div className={`mt-8 flex flex-col items-center gap-4 scroll-animate ${contentVisible ? 'visible' : ''}`}>
                   {/* Tính toán totalPages nếu API không trả về */}
                   {(() => {
                     const totalPages = data.totalPages || Math.ceil((data.totalCount || 0) / (data.pageSize || 12));
@@ -292,7 +296,7 @@ function ProductsPageContent() {
                                   onClick={() => setPage(pageNumber)}
                                   className={
                                     isActive
-                                      ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500 min-w-[40px]"
+                                      ? "bg-primary text-primary-foreground hover:bg-primary/90 border-primary min-w-[40px]"
                                       : "border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 text-emerald-900 min-w-[40px]"
                                   }
                                 >

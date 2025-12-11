@@ -149,7 +149,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   key={star}
                   className={`h-4 w-4 ${
                     star <= (product.averageRating || 5)
-                      ? "fill-lime-400 text-lime-400"
+                      ? "fill-emerald-500 text-emerald-500"
                       : "fill-gray-200 text-gray-200"
                   }`}
                 />

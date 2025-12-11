@@ -113,8 +113,8 @@ function HeroBannerSlider() {
   }, [banners.length]);
 
   return (
-    <section className="relative">
-      <div className="flex">
+    <section className="relative overflow-hidden">
+      <div className="flex relative">
         {/* Main Banner */}
         <div className="relative w-full lg:w-2/3 h-[300px] md:h-[450px] overflow-hidden">
           {banners.map((banner, idx) => (
@@ -136,13 +136,13 @@ function HeroBannerSlider() {
           
           {/* Navigation Arrows */}
           <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10 transition-all duration-300 hover:scale-110 hover-glow"
             onClick={() => setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length)}
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10 transition-all duration-300 hover:scale-110 hover-glow"
             onClick={() => setCurrentSlide((prev) => (prev + 1) % banners.length)}
           >
             <ChevronRight className="h-6 w-6" />
@@ -153,8 +153,8 @@ function HeroBannerSlider() {
             {banners.map((_, idx) => (
               <button
                 key={idx}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  idx === currentSlide ? "bg-lime-400" : "bg-white/60"
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  idx === currentSlide ? "bg-emerald-500 w-8" : "bg-white/60 hover:bg-white/80 hover:scale-125"
                 }`}
                 onClick={() => setCurrentSlide(idx)}
               />
@@ -164,27 +164,27 @@ function HeroBannerSlider() {
 
         {/* Side Banners */}
         <div className="hidden lg:flex flex-col w-1/3 gap-2 pl-2">
-          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group">
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group shimmer-on-hover">
             <Image
               src={banner5}
               alt="Side Banner 1"
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover group-hover:scale-110 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent flex items-end p-4">
-              <Button className="bg-lime-400 text-black hover:bg-lime-500">XEM NGAY</Button>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-105">XEM NGAY</Button>
             </div>
           </Link>
-          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group bg-white">
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group bg-white shimmer-on-hover">
             <Image
               src={banner11}
               alt="JOOLA Pro IV New Colorway Vietnam Edition"
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover group-hover:scale-110 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 z-10">
-              <Button className="bg-lime-400 text-black hover:bg-lime-500 shadow-xl px-8 py-2.5 text-sm font-bold tracking-wide transition-all duration-300 hover:scale-105">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl px-8 py-2.5 text-sm font-bold tracking-wide transition-all duration-300 hover:scale-105">
                 XEM NGAY
               </Button>
             </div>
@@ -202,27 +202,28 @@ function FeatureBanners() {
         {/* Big left banner - Sản phẩm mới */}
         <Link
           href="/products"
-          className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black"
+          className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black hover-lift shimmer-on-hover"
         >
           <Image
             src={banner10}
             alt="Sản phẩm mới Pickleball"
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+            className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-90"
           />
           <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-between p-6 md:p-8">
             <div className="space-y-2">
-              <p className="text-xs md:text-sm font-semibold tracking-[0.2em] text-white/70">
+              <p className="text-xs md:text-sm font-semibold tracking-[0.2em] text-white/70 slide-left-right">
                 SẢN PHẨM MỚI
               </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white fade-in-scale">
                 JOOLA 3S DUAL
               </h2>
-              <p className="text-sm md:text-base text-white/80">ĐÃ CÓ MẶT TẠI IKA SPORT</p>
+              <p className="text-sm md:text-base text-white/80 fade-in-up">ĐÃ CÓ MẶT TẠI IKA SPORT</p>
             </div>
-            <div className="mt-4">
-              <Button className="bg-white text-black hover:bg-emerald-500 hover:text-white px-6 font-semibold">
-                XEM NGAY
+            <div className="mt-4 slide-in-bottom">
+              <Button className="bg-white text-black hover:bg-primary hover:text-white px-6 font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg relative overflow-hidden group">
+                <span className="relative z-10">XEM NGAY</span>
+                <span className="absolute inset-0 bg-black/10 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
               </Button>
             </div>
           </div>
@@ -231,30 +232,31 @@ function FeatureBanners() {
         {/* Right banner - Tiêu điểm tháng */}
         <Link
           href="/products"
-          className="relative overflow-hidden rounded-2xl group bg-black"
+          className="relative overflow-hidden rounded-2xl group bg-black hover-lift shimmer-on-hover"
         >
           <Image
             src={banner9}
             alt="Tiêu điểm tháng - sản phẩm nổi bật"
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90"
+            className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-90"
           />
           <div className="absolute inset-0 bg-black/70 flex flex-col justify-between p-6">
             <div className="space-y-1">
-              <p className="text-xs font-semibold tracking-[0.2em] text-lime-400">
+              <p className="text-xs font-semibold tracking-[0.2em] text-emerald-400">
                 TIÊU ĐIỂM
               </p>
-              <h3 className="text-lg md:text-xl font-bold text-white">THÁNG NÀY</h3>
-              <p className="text-sm text-white/80">
+              <h3 className="text-lg md:text-xl font-bold text-white fade-in-scale">THÁNG NÀY</h3>
+              <p className="text-sm text-white/80 fade-in-up">
                 Bộ sưu tập vợt nổi bật được nhiều vận động viên lựa chọn.
               </p>
             </div>
             <div className="mt-4">
               <Button
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-black px-4 text-sm font-semibold"
+                className="border-white text-white hover:bg-white hover:text-black px-4 text-sm font-semibold transition-all duration-300 hover:scale-110 hover:shadow-lg relative overflow-hidden group"
               >
-                XEM NGAY
+                <span className="relative z-10">XEM NGAY</span>
+                <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
               </Button>
             </div>
           </div>
@@ -269,7 +271,7 @@ function PromotionBanners() {
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Banner 1 - Trao đổi vợt cũ */}
-        <div className="bg-linear-to-r from-amber-50 to-amber-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-amber-200/50">
+        <div className="bg-linear-to-r from-amber-50 to-amber-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-2 hover:scale-105 border border-amber-200/50 hover-glow shimmer-on-hover cursor-pointer group">
           <div className="flex-1">
             <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">TRAO ĐỔI VỢT CŨ</h3>
             <p className="text-sm font-semibold text-emerald-600 mb-3">TIẾT KIỆM NHẤT</p>
@@ -281,12 +283,12 @@ function PromotionBanners() {
           </div>
           <div className="text-right ml-4 shrink-0">
             <p className="text-xs text-gray-500 mb-1">CHI PHÍ</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-none">THẤP</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-none group-hover:scale-110 transition-transform duration-300">THẤP</p>
           </div>
         </div>
 
         {/* Banner 2 - Thay đế giày */}
-        <div className="bg-linear-to-r from-orange-50 to-orange-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-orange-200/50">
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-2 hover:scale-105 border border-orange-200/50 hover-glow shimmer-on-hover cursor-pointer group">
           <div className="flex-1">
             <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">THAY ĐẾ GIÀY PICKLEBALL</h3>
             <p className="text-sm text-gray-700 mb-3">GIỮ NGUYÊN CẤU TRÚC</p>
@@ -298,12 +300,12 @@ function PromotionBanners() {
           </div>
           <div className="text-right ml-4 shrink-0">
             <p className="text-xs text-gray-500 mb-1">CHUẨN</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none">100%</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none group-hover:scale-110 transition-transform duration-300">100%</p>
           </div>
         </div>
 
         {/* Banner 3 - Sửa vợt */}
-        <div className="bg-linear-to-r from-lime-50 to-lime-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border border-lime-200/50">
+        <div className="bg-linear-to-r from-lime-50 to-lime-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-2 hover:scale-105 border border-lime-200/50 hover-glow shimmer-on-hover cursor-pointer group">
           <div className="flex-1">
             <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">SỬA VỢT PICKLEBALL</h3>
             <p className="text-sm text-gray-700 mb-3">CHI PHÍ THẤP NHẤT</p>
@@ -315,7 +317,7 @@ function PromotionBanners() {
           </div>
           <div className="text-right ml-4 shrink-0">
             <p className="text-xs text-gray-500 mb-1">KHÔI PHỤC</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-lime-600 leading-none">99%</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none group-hover:scale-110 transition-transform duration-300">99%</p>
           </div>
         </div>
       </div>
@@ -358,18 +360,18 @@ function FlashSaleSection() {
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
       <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
         {/* Deal of the day */}
-        <div className="lg:w-1/3 bg-white rounded-xl border p-4 md:p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">CHỈ CÓ TRONG HÔM NAY</h3>
+        <div className="lg:w-1/3 bg-white rounded-xl border p-4 md:p-6 hover-lift">
+          <h3 className="text-xl font-bold text-gray-900 mb-2 gradient-text">CHỈ CÓ TRONG HÔM NAY</h3>
           {saleProducts[0] && (
             <>
-              <div className="relative aspect-square mb-4">
+              <div className="relative aspect-square mb-4 overflow-hidden rounded-lg group">
                 {saleProducts[0].primaryImageUrl?.includes("cloudinary") ? (
-                  <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                  <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                 ) : (
-                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill className="object-contain" />
+                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill className="object-contain group-hover:scale-110 transition-transform duration-500" />
                 )}
                 {saleProducts[0].originalPrice && (
-                  <span className="absolute top-2 right-2 bg-lime-400 text-black text-sm font-bold px-2 py-1 rounded">
+                  <span className="absolute top-2 right-2 bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded pulse-animation shadow-lg">
                     -{Math.round((1 - saleProducts[0].price / saleProducts[0].originalPrice) * 100)}%
                   </span>
                 )}
@@ -377,7 +379,7 @@ function FlashSaleSection() {
               <h4 className="font-medium text-gray-900 line-clamp-2 mb-2">{saleProducts[0].name}</h4>
               <div className="flex items-center gap-1 mb-2">
                 {[1,2,3,4,5].map(s => (
-                  <Star key={s} className={`h-4 w-4 ${s <= (saleProducts[0].averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                  <Star key={s} className={`h-4 w-4 ${s <= (saleProducts[0].averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
                 ))}
               </div>
               <div className="flex items-center gap-2 mb-4">
@@ -389,22 +391,25 @@ function FlashSaleSection() {
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Đặt mua ngay! Ưu đãi sẽ kết thúc sau:</p>
                 <div className="flex gap-2">
-                  <div className="bg-gray-100 rounded px-3 py-2 text-center">
-                    <span className="text-2xl font-bold">{String(timeLeft.hours).padStart(2, '0')}</span>
+                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200 hover:scale-110 transition-transform duration-300">
+                    <span className="text-2xl font-bold text-emerald-600 number-counter">{String(timeLeft.hours).padStart(2, '0')}</span>
                     <p className="text-xs text-gray-500">GIỜ</p>
                   </div>
-                  <div className="bg-gray-100 rounded px-3 py-2 text-center">
-                    <span className="text-2xl font-bold">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200 hover:scale-110 transition-transform duration-300">
+                    <span className="text-2xl font-bold text-emerald-600 number-counter">{String(timeLeft.minutes).padStart(2, '0')}</span>
                     <p className="text-xs text-gray-500">PHÚT</p>
                   </div>
-                  <div className="bg-gray-100 rounded px-3 py-2 text-center">
-                    <span className="text-2xl font-bold">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                  <div className="bg-linear-to-br from-red-50 to-red-100 rounded px-3 py-2 text-center border border-red-200 hover:scale-110 transition-transform duration-300 pulse-animation">
+                    <span className="text-2xl font-bold text-red-600 number-counter">{String(timeLeft.seconds).padStart(2, '0')}</span>
                     <p className="text-xs text-gray-500">GIÂY</p>
                   </div>
                 </div>
               </div>
               <Link href={getProductUrl(saleProducts[0])}>
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700">CHỌN MUA</Button>
+                <Button className="w-full hover:scale-105 transition-all duration-300 hover:shadow-lg hover:bg-emerald-600 relative overflow-hidden group">
+                  <span className="relative z-10">CHỌN MUA</span>
+                  <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                </Button>
               </Link>
             </>
           )}
@@ -414,33 +419,37 @@ function FlashSaleSection() {
         <div className="lg:w-2/3 bg-linear-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h3 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
-              <span className="text-yellow-300">⚡</span> FLASH SALE GIÁ SỐC
+              <span className="text-yellow-300 float-animation">⚡</span> FLASH SALE GIÁ SỐC
             </h3>
             <div className="flex gap-2">
-              <button onClick={() => scroll("left")} className="bg-white/20 hover:bg-white/30 rounded-full p-2">
-                <ChevronLeft className="h-5 w-5 text-white" />
-              </button>
-              <button onClick={() => scroll("right")} className="bg-white/20 hover:bg-white/30 rounded-full p-2">
-                <ChevronRight className="h-5 w-5 text-white" />
-              </button>
+          <button onClick={() => scroll("left")} className="bg-white/20 hover:bg-white/40 rounded-full p-2 transition-all duration-300 hover:scale-110 hover:rotate-[-5deg] active:scale-95">
+            <ChevronLeft className="h-5 w-5 text-white" />
+          </button>
+          <button onClick={() => scroll("right")} className="bg-white/20 hover:bg-white/40 rounded-full p-2 transition-all duration-300 hover:scale-110 hover:rotate-[5deg] active:scale-95">
+            <ChevronRight className="h-5 w-5 text-white" />
+          </button>
             </div>
           </div>
 
           <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
-            {saleProducts.slice(1).map((product) => (
-              <Link key={product.id} href={getProductUrl(product)} className="shrink-0 w-[200px]">
-                <Card className="bg-white hover:shadow-lg transition-shadow">
+            {saleProducts.slice(1).map((product, index) => (
+              <Link 
+                key={product.id} 
+                href={getProductUrl(product)} 
+                className="shrink-0 w-[200px]"
+              >
+                <Card className="bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 shimmer-on-hover group">
                   <CardContent className="p-3">
-                    <div className="relative aspect-square mb-2">
+                    <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
                       {product.primaryImageUrl?.includes("cloudinary") ? (
-                        <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                        <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
                       ) : product.primaryImageUrl ? (
-                        <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
+                        <Image src={product.primaryImageUrl} alt="" fill className="object-contain group-hover:scale-110 transition-transform duration-500" />
                       ) : (
                         <div className="w-full h-full bg-gray-100" />
                       )}
                       {product.originalPrice && (
-                        <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                        <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded pulse-animation shadow-md">
                           -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                         </span>
                       )}
@@ -454,7 +463,7 @@ function FlashSaleSection() {
                     )}
                     <div className="flex mt-1">
                       {[1,2,3,4,5].map(s => (
-                        <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-lime-400 text-lime-400" : "text-gray-300"}`} />
+                        <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
                       ))}
                     </div>
                   </CardContent>
@@ -479,8 +488,8 @@ function NewProductsSection() {
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900">SẢN PHẨM MỚI</h2>
-        <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
-          Xem tất cả <ArrowRight className="h-4 w-4" />
+        <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 group hover:gap-2 transition-all duration-300">
+          Xem tất cả <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
         </Link>
       </div>
 
@@ -494,8 +503,17 @@ function NewProductsSection() {
 
         {/* Products Grid */}
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {products.map((product, index) => (
+            <div 
+              key={product.id}
+              className="animate-fade-in-up"
+              style={{ 
+                animationDelay: `${index * 0.1}s`,
+                animationFillMode: 'both'
+              }}
+            >
+              <ProductCard product={product} />
+            </div>
           ))}
         </div>
       </div>
@@ -505,7 +523,6 @@ function NewProductsSection() {
 
 function CategoryProductsSection() {
   const { data: categories } = useCategories();
-  const { data: productsData } = useProducts({ PageSize: 100 });
 
   // Category configurations with banner images
   const categoryConfigs = [
@@ -553,140 +570,172 @@ function CategoryProductsSection() {
 
   return (
     <>
-      {categoryConfigs.map((config, idx) => {
+      {categoryConfigs.map((config) => {
         const category = categories?.find(c => 
           c.name?.toLowerCase().includes(config.searchKey.toLowerCase())
         );
-        // Filter by product name/type since ProductListDto doesn't have categoryId
-        const products = productsData?.items?.filter(p => 
-          p.name?.toLowerCase().includes(config.searchKey.toLowerCase()) ||
-          p.productType?.toLowerCase().includes(config.searchKey.toLowerCase())
-        ).slice(0, 8) || [];
 
-        // If no category products, show some products anyway
-        const displayProducts = products.length > 0 
-          ? products 
-          : productsData?.items?.slice(idx * 8, (idx + 1) * 8) || [];
-
-        if (displayProducts.length === 0) return null;
+        // Only render section if category is found
+        if (!category) return null;
 
         return (
-          <section key={config.name} className="container mx-auto px-3 md:px-4 py-4 md:py-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
-              <Link 
-                href={`/products${category ? `?categoryId=${category.id}` : ""}`} 
-                className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
-              >
-                Xem tất cả <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+          <CategoryProductSection 
+            key={config.name}
+            config={config}
+            category={category}
+          />
+        );
+      })}
+    </>
+  );
+}
 
-            <div className="flex gap-4">
-              {/* Side Banner - Dark themed like reference images */}
-              <div className="hidden lg:block w-1/4">
-                <div className="relative h-full min-h-[600px] rounded-xl overflow-hidden bg-gray-900">
-                  <Image 
-                    src={config.banner} 
-                    alt={config.name} 
-                    fill 
-                    className="object-cover" 
-                  />
-                  {/* Overlay content */}
-                  <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-6">
-                    <div>
-                      {config.bannerText.badge && (
-                        <span className="inline-block bg-lime-400 text-black text-xs font-bold px-3 py-1 rounded mb-4">
-                          {config.bannerText.badge}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">{config.bannerText.title}</h3>
-                      <p className="text-lime-400 text-sm font-medium mb-4">{config.bannerText.subtitle}</p>
-                      <Link href={`/products${category ? `?categoryId=${category.id}` : ""}`}>
-                        <Button className="bg-lime-400 text-black hover:bg-lime-500 font-semibold">
+function CategoryProductSection({ 
+  config, 
+  category
+}: { 
+  config: {
+    name: string;
+    searchKey: string;
+    banner: any;
+    bannerText: {
+      badge: string;
+      title: string;
+      subtitle: string;
+    };
+  };
+  category: { id: string; name: string | null };
+}) {
+  // Fetch products by categoryId to ensure accurate filtering
+  const { data: productsData, isLoading } = useProducts({ 
+    PageSize: 8,
+    CategoryId: category.id 
+  });
+
+  const displayProducts = productsData?.items || [];
+
+  if (isLoading) return null;
+  if (displayProducts.length === 0) return null;
+
+  return (
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
+        <Link 
+          href={`/products${category ? `?categoryId=${category.id}` : ""}`} 
+          className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 group hover:gap-2 transition-all duration-300"
+        >
+          Xem tất cả <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+        </Link>
+      </div>
+
+      <div className="flex gap-4">
+        {/* Side Banner - Dark themed like reference images */}
+        <div className="hidden lg:block w-1/4">
+          <div className="relative h-full min-h-[600px] rounded-xl overflow-hidden bg-gray-900">
+            <Image 
+              src={config.banner} 
+              alt={config.name} 
+              fill 
+              className="object-cover" 
+            />
+            {/* Overlay content */}
+            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-6">
+              <div>
+                {config.bannerText.badge && (
+                  <span className="inline-block bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded mb-4">
+                    {config.bannerText.badge}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-2">{config.bannerText.title}</h3>
+                      <p className="text-emerald-400 text-sm font-medium mb-4">{config.bannerText.subtitle}</p>
+                <Link href={`/products${category ? `?categoryId=${category.id}` : ""}`}>
+                        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">
                           MUA NGAY
                         </Button>
-                      </Link>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Products Grid - 2 rows x 4 columns */}
+        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {displayProducts.map((product) => (
+            <Link 
+              key={product.id} 
+              href={getProductUrl(product)} 
+              className="group"
+            >
+              <Card className="bg-white hover:shadow-lg transition-all hover:-translate-y-1 h-full">
+                <CardContent className="p-3">
+                  <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
+                    {product.primaryImageUrl?.includes("cloudinary") ? (
+                      <img 
+                        src={product.primaryImageUrl} 
+                        alt={product.name || ""} 
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform" 
+                      />
+                    ) : product.primaryImageUrl ? (
+                      <Image 
+                        src={product.primaryImageUrl} 
+                        alt={product.name || ""} 
+                        fill 
+                        className="object-contain group-hover:scale-105 transition-transform" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
+                        No image
+                      </div>
+                    )}
+                    {/* Discount Badge */}
+                    {product.originalPrice && product.originalPrice > product.price && (
+                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded pulse-animation shadow-lg">
+                        -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                      </span>
+                    )}
+                    {/* Hover Button */}
+                    <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm hover:scale-105 transition-transform duration-300 relative overflow-hidden group/btn">
+                        <span className="relative z-10">CHỌN</span>
+                        <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-300 origin-left"></span>
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Products Grid - 2 rows x 4 columns */}
-              <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {displayProducts.map((product) => (
-                  <Link key={product.id} href={getProductUrl(product)} className="group">
-                    <Card className="bg-white hover:shadow-lg transition-all hover:-translate-y-1 h-full">
-                      <CardContent className="p-3">
-                        <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
-                          {product.primaryImageUrl?.includes("cloudinary") ? (
-                            <img 
-                              src={product.primaryImageUrl} 
-                              alt={product.name || ""} 
-                              className="w-full h-full object-contain group-hover:scale-105 transition-transform" 
-                            />
-                          ) : product.primaryImageUrl ? (
-                            <Image 
-                              src={product.primaryImageUrl} 
-                              alt={product.name || ""} 
-                              fill 
-                              className="object-contain group-hover:scale-105 transition-transform" 
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
-                              No image
-                            </div>
-                          )}
-                          {/* Discount Badge */}
-                          {product.originalPrice && product.originalPrice > product.price && (
-                            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-                              -{Math.round((1 - product.price / product.originalPrice) * 100)}%
-                            </span>
-                          )}
-                          {/* Hover Button */}
-                          <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
-                              CHỌN
-                            </Button>
-                          </div>
-                        </div>
-                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors">
-                          {product.name}
-                        </h4>
-                        {/* Star Rating */}
+                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors">
+                    {product.name}
+                  </h4>
+                  {/* Star Rating */}
                         <div className="flex mb-2">
                           {[1, 2, 3, 4, 5].map((s) => (
                             <Star 
                               key={s} 
                               className={`h-4 w-4 ${
                                 s <= (product.averageRating || 5) 
-                                  ? "fill-lime-400 text-lime-400" 
+                                  ? "fill-emerald-500 text-emerald-500" 
                                   : "text-gray-300"
                               }`} 
                             />
                           ))}
                         </div>
-                        {/* Price */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
-                          {product.originalPrice && product.originalPrice > product.price && (
-                            <span className="text-gray-400 text-sm line-through">
-                              {formatCurrency(product.originalPrice)}
-                            </span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        );
-      })}
-    </>
+                  {/* Price */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
+                    {product.originalPrice && product.originalPrice > product.price && (
+                      <span className="text-gray-400 text-sm line-through">
+                        {formatCurrency(product.originalPrice)}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -715,7 +764,11 @@ function TrendingSection() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">ĐANG TRENDING</h3>
           <div className="space-y-4">
             {trendingProducts.map((product) => (
-              <Link key={product.id} href={getProductUrl(product)} className="flex gap-3 group">
+              <Link 
+                key={product.id} 
+                href={getProductUrl(product)} 
+                className="flex gap-3 group"
+              >
                 <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
@@ -723,7 +776,7 @@ function TrendingSection() {
                     <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
                   ) : null}
                   {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded">
+                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded pulse-animation shadow-md">
                       -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                     </span>
                   )}
@@ -732,7 +785,7 @@ function TrendingSection() {
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
                   <div className="flex mt-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
                     ))}
                   </div>
                   <p className="text-red-600 font-bold text-sm mt-1">{formatCurrency(product.price)}</p>
@@ -747,7 +800,11 @@ function TrendingSection() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG XEM</h3>
           <div className="space-y-4">
             {viewedProducts.map((product) => (
-              <Link key={product.id} href={getProductUrl(product)} className="flex gap-3 group">
+              <Link 
+                key={product.id} 
+                href={getProductUrl(product)} 
+                className="flex gap-3 group"
+              >
                 <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
@@ -759,7 +816,7 @@ function TrendingSection() {
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
                   <div className="flex mt-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
                     ))}
                   </div>
                   <p className="text-red-600 font-bold text-sm mt-1">{formatCurrency(product.price)}</p>
@@ -774,7 +831,11 @@ function TrendingSection() {
           <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG MUA</h3>
           <div className="space-y-4">
             {boughtProducts.map((product) => (
-              <Link key={product.id} href={getProductUrl(product)} className="flex gap-3 group">
+              <Link 
+                key={product.id} 
+                href={getProductUrl(product)} 
+                className="flex gap-3 group"
+              >
                 <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
@@ -791,7 +852,7 @@ function TrendingSection() {
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
                   <div className="flex mt-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
                     ))}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
@@ -849,7 +910,7 @@ function CategoryLinksGrid() {
         ))}
         <Link
           href="/products"
-          className="bg-linear-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg transition-all"
+          className="bg-linear-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg transition-all hover-scale"
         >
           <span className="text-white font-bold text-lg">Xem tất cả</span>
         </Link>
@@ -867,18 +928,18 @@ function NewsletterSection() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Contact Info */}
           <div className="flex gap-8">
-            <div className="flex items-center gap-3">
-              <Phone className="h-8 w-8 text-emerald-600" />
+            <div className="flex items-center gap-3 hover:scale-105 transition-transform duration-300 cursor-pointer group">
+              <Phone className="h-8 w-8 text-emerald-600 float-animation group-hover:text-emerald-700 transition-colors" />
               <div>
                 <p className="font-semibold text-gray-900">Hotline</p>
-                <p className="text-emerald-600 font-bold">0824.01.01.88</p>
+                <p className="text-emerald-600 font-bold group-hover:text-emerald-700 transition-colors">0824.01.01.88</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Mail className="h-8 w-8 text-emerald-600" />
+            <div className="flex items-center gap-3 hover:scale-105 transition-transform duration-300 cursor-pointer group">
+              <Mail className="h-8 w-8 text-emerald-600 float-animation-slow group-hover:text-emerald-700 transition-colors" />
               <div>
                 <p className="font-semibold text-gray-900">Email</p>
-                <p className="text-emerald-600">support@ikasport.com</p>
+                <p className="text-emerald-600 group-hover:text-emerald-700 transition-colors">support@ikasport.com</p>
               </div>
             </div>
           </div>
@@ -895,10 +956,10 @@ function NewsletterSection() {
                 placeholder="Nhập Email của bạn"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1"
+                className="flex-1 transition-all duration-300 focus:scale-105 focus:shadow-lg"
               />
               <Button
-                className="bg-gray-900 hover:bg-gray-800 text-white px-6"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-6 hover:scale-105 transition-all duration-300 hover:shadow-lg relative overflow-hidden group"
                 onClick={() => {
                   if (email) {
                     toast.success("Đăng ký thành công!");
@@ -906,7 +967,8 @@ function NewsletterSection() {
                   }
                 }}
               >
-                ĐĂNG KÝ
+                <span className="relative z-10">ĐĂNG KÝ</span>
+                <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
               </Button>
             </div>
           </div>
@@ -927,8 +989,11 @@ function TrustBadges() {
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {badges.map((badge) => (
-          <div key={badge.title} className="flex items-center gap-4 justify-center">
-            <badge.icon className="h-12 w-12 text-emerald-600" />
+          <div 
+            key={badge.title} 
+            className="flex items-center gap-4 justify-center hover:scale-105 transition-all duration-300 cursor-pointer group hover:shadow-lg rounded-lg p-4"
+          >
+            <badge.icon className="h-12 w-12 text-emerald-600 float-animation group-hover:text-emerald-700 transition-colors" />
             <div>
               <h4 className="font-bold text-gray-900">{badge.title}</h4>
               <p className="text-sm text-gray-600">{badge.desc}</p>
