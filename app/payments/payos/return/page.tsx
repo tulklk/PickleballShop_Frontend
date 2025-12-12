@@ -1,18 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Home, Package, Mail } from "lucide-react";
-import { apiClient } from "@/lib/api/client";
 import { useUserMe } from "@/lib/api/hooks";
-
-interface PayOSConfirmResponse {
-  success: boolean;
-  message: string;
-  orderId?: string;
-}
 
 function PayOSReturnContent() {
   const searchParams = useSearchParams();
@@ -23,128 +16,126 @@ function PayOSReturnContent() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
 
-  const confirmPayment = useCallback(async (params: {
-    code: string;
-    id: string;
-    cancel: boolean;
-    status: string;
-    orderCode: number;
-    orderId?: string;
-  }) => {
-    try {
-      const token = apiClient.getAccessToken();
-      console.log("Calling PayOS confirm API with token:", token ? "Yes" : "No");
-      console.log("PayOS confirm request body:", params);
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || "https://pickleballshop-backend.fly.dev"}/api/payments/payos/confirm`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && {
-              Authorization: `Bearer ${token}`,
-            }),
-          },
-          body: JSON.stringify(params),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText || "Lỗi xác nhận thanh toán" };
-        }
-        console.error("PayOS confirm error:", errorData);
-        return {
-          success: false,
-          message: errorData.message || "Lỗi xác nhận thanh toán",
-          orderId: undefined,
-        } as PayOSConfirmResponse;
-      }
-
-      const data: PayOSConfirmResponse = await response.json();
-      console.log("PayOS confirm response:", data);
-
-      if (data.orderId) {
-        setOrderId(data.orderId);
-      }
-      setMessage(data.message || "");
-
-      return data;
-    } catch (error) {
-      console.error("Error confirming PayOS payment:", error);
-      return {
-        success: false,
-        message: "Lỗi kết nối đến server. Vui lòng thử lại sau.",
-        orderId: undefined,
-      } as PayOSConfirmResponse;
+  // Debug: Log orderId khi state thay đổi
+  useEffect(() => {
+    if (orderId) {
+      console.log("✅ orderId state updated:", orderId);
     }
-  }, []);
+  }, [orderId]);
 
   useEffect(() => {
-    const processPayment = async () => {
-      // Đọc query params từ PayOS
+    const processPayment = () => {
+      // Đọc toàn bộ params để debug
+      const allParams: Record<string, string> = {};
+      searchParams.forEach((value, key) => {
+        allParams[key] = value;
+      });
+
+      // ĐỌC PARAMS CHÍNH
       const code = searchParams.get("code") || "";
-      const id = searchParams.get("id") || "";
-      const paymentStatus = searchParams.get("status") || "";
+      const statusParam = searchParams.get("status") || "";
+      const paymentStatus = searchParams.get("paymentStatus") || statusParam || "";
       const orderCodeParam = searchParams.get("orderCode") || "";
       const cancel = searchParams.get("cancel");
-      // Lấy orderId từ sessionStorage nếu có (được lưu khi tạo order)
-      let savedOrderId: string | undefined = sessionStorage.getItem("payos_orderId") || undefined;
-      if (savedOrderId) {
-        savedOrderId = savedOrderId.trim();
-        if (savedOrderId === "" || savedOrderId === "null" || savedOrderId === "undefined") {
-          savedOrderId = undefined;
+      const errorMessage = searchParams.get("message");
+
+      // LẤY orderId: ưu tiên orderId -> savedOrderId -> id -> sessionStorage
+      const orderIdParam =
+        searchParams.get("orderId") ||
+        searchParams.get("savedOrderId") ||
+        searchParams.get("id") ||
+        "";
+
+      let finalOrderId: string | null = null;
+      if (orderIdParam && orderIdParam.trim() && orderIdParam !== "null" && orderIdParam !== "undefined") {
+        finalOrderId = orderIdParam.trim();
+        console.log("✅ Found orderId from URL param:", finalOrderId);
+      } else {
+        const savedOrderId = sessionStorage.getItem("payos_orderId");
+        if (
+          savedOrderId &&
+          savedOrderId.trim() &&
+          savedOrderId !== "null" &&
+          savedOrderId !== "undefined"
+        ) {
+          finalOrderId = savedOrderId.trim();
+          console.log("✅ Found orderId from sessionStorage:", finalOrderId);
         }
       }
 
-      console.log("PayOS return params:", { code, id, paymentStatus, orderCodeParam, cancel, savedOrderId });
-
+      if (finalOrderId) {
+        setOrderId(finalOrderId);
+      }
       setOrderCode(orderCodeParam);
 
-      // Gọi API confirm payment với orderId nếu có
-      // Backend có thể tìm order dựa trên orderCode nếu không có orderId
-      const confirmResult = await confirmPayment({
+      console.log("✅ PayOS return params:", {
         code,
-        id,
-        cancel: cancel === "true",
-        status: paymentStatus,
-        orderCode: parseInt(orderCodeParam) || 0,
-        orderId: savedOrderId,
+        status: statusParam,
+        paymentStatus,
+        orderId: finalOrderId,
+        orderCode: orderCodeParam,
+        cancel,
+        errorMessage,
+        allParams,
       });
-      
-      // Xóa orderId khỏi sessionStorage sau khi confirm
-      sessionStorage.removeItem("payos_orderId");
 
-      // Xác định trạng thái thanh toán dựa trên cả PayOS params và backend response
-      if (cancel === "true") {
+      // XỬ LÝ TRẠNG THÁI - ƯU TIÊN SUCCESS TRƯỚC
+      const isSuccess =
+        (code === "00" && statusParam === "PAID") ||
+        (code === "00" && paymentStatus.toUpperCase() === "SUCCESS") ||
+        (paymentStatus.toUpperCase() === "SUCCESS") ||
+        (paymentStatus.toUpperCase() === "PAID") ||
+        (statusParam.toUpperCase() === "PAID");
+
+      const isCancelled = cancel === "true" || statusParam === "CANCELLED" || paymentStatus.toUpperCase() === "CANCELLED";
+      const isError =
+        paymentStatus.toUpperCase() === "ERROR" ||
+        statusParam === "ERROR" ||
+        code === "99";
+
+      if (isSuccess) {
+        console.log("✅ Payment status: SUCCESS");
+        setStatus("success");
+        if (finalOrderId) {
+          sessionStorage.removeItem("payos_orderId");
+        }
+        return;
+      }
+
+      if (isCancelled) {
+        console.log("⚠️ Payment status: CANCELLED");
         setStatus("cancelled");
-      } else if (paymentStatus === "PAID" || code === "00") {
-        // Chỉ hiển thị success nếu backend confirm thành công
-        if (confirmResult?.success === true) {
-          setStatus("success");
-          if (confirmResult.orderId) {
-            setOrderId(confirmResult.orderId);
-          }
-        } else {
-          // PayOS thành công nhưng backend confirm thất bại
-          setStatus("failed");
-          setMessage(confirmResult?.message || "Thanh toán thành công nhưng xác nhận đơn hàng thất bại. Vui lòng liên hệ hỗ trợ.");
+        if (finalOrderId) {
+          sessionStorage.removeItem("payos_orderId");
         }
-      } else {
+        return;
+      }
+
+      if (isError || (code && code !== "00")) {
+        console.log("❌ Payment status: FAILED");
         setStatus("failed");
-        if (confirmResult?.message) {
-          setMessage(confirmResult.message);
+        setMessage(errorMessage || "Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
+        if (finalOrderId) {
+          sessionStorage.removeItem("payos_orderId");
         }
+        return;
+      }
+
+      console.log("⚠️ Payment status: UNKNOWN - defaulting to failed", {
+        code,
+        statusParam,
+        paymentStatus,
+        cancel,
+      });
+      setStatus("failed");
+      setMessage(errorMessage || "Không thể xác định trạng thái thanh toán. Vui lòng kiểm tra đơn hàng của bạn.");
+      if (finalOrderId) {
+        sessionStorage.removeItem("payos_orderId");
       }
     };
 
     processPayment();
-  }, [searchParams, confirmPayment]);
+  }, [searchParams]);
 
   const renderContent = () => {
     switch (status) {
@@ -189,19 +180,40 @@ function PayOSReturnContent() {
               </div>
             </div>
 
-            {orderCode && (
-              <p className="text-sm text-emerald-600 font-medium mb-6">
-                Mã đơn hàng: {orderCode}
-              </p>
+            {/* Order Info */}
+            {(orderCode || orderId) && (
+              <div className="mx-auto max-w-md mt-4 mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                {orderCode && (
+                  <p className="text-sm text-emerald-700 font-medium mb-1">
+                    Mã đơn hàng PayOS: <span className="font-semibold">{orderCode}</span>
+                  </p>
+                )}
+                {orderId && (
+                  <p className="text-xs text-emerald-600">
+                    Order ID: <span className="font-mono">{orderId}</span>
+                  </p>
+                )}
+              </div>
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-              <Button
-                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Xem đơn hàng
-              </Button>
+              {orderId && (
+                <Button
+                  onClick={() => router.push(`/account/orders/${orderId}`)}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
+              {!orderId && (
+                <Button
+                  onClick={() => router.push("/account/orders")}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => router.push("/")}
@@ -224,19 +236,40 @@ function PayOSReturnContent() {
             <p className="text-muted-foreground mb-6">
               Bạn đã hủy giao dịch thanh toán. Đơn hàng vẫn được lưu và bạn có thể thanh toán lại sau.
             </p>
-            {orderCode && (
-              <p className="text-sm text-yellow-600 font-medium mb-6">
-                Mã đơn hàng: {orderCode}
-              </p>
+            {/* Order Info */}
+            {(orderCode || orderId) && (
+              <div className="mx-auto max-w-md mt-4 mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                {orderCode && (
+                  <p className="text-sm text-yellow-700 font-medium mb-1">
+                    Mã đơn hàng PayOS: <span className="font-semibold">{orderCode}</span>
+                  </p>
+                )}
+                {orderId && (
+                  <p className="text-xs text-yellow-600">
+                    Order ID: <span className="font-mono">{orderId}</span>
+                  </p>
+                )}
+              </div>
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-              <Button
-                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
-                className="bg-yellow-600 hover:bg-yellow-700"
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Xem đơn hàng
-              </Button>
+              {orderId && (
+                <Button
+                  onClick={() => router.push(`/account/orders/${orderId}`)}
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
+              {!orderId && (
+                <Button
+                  onClick={() => router.push("/account/orders")}
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => router.push("/")}
@@ -259,19 +292,40 @@ function PayOSReturnContent() {
             <p className="text-muted-foreground mb-6">
               {message || "Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ."}
             </p>
-            {orderCode && (
-              <p className="text-sm text-red-600 font-medium mb-6">
-                Mã đơn hàng: {orderCode}
-              </p>
+            {/* Order Info */}
+            {(orderCode || orderId) && (
+              <div className="mx-auto max-w-md mt-4 mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                {orderCode && (
+                  <p className="text-sm text-red-700 font-medium mb-1">
+                    Mã đơn hàng PayOS: <span className="font-semibold">{orderCode}</span>
+                  </p>
+                )}
+                {orderId && (
+                  <p className="text-xs text-red-600">
+                    Order ID: <span className="font-mono">{orderId}</span>
+                  </p>
+                )}
+              </div>
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-              <Button
-                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Xem đơn hàng
-              </Button>
+              {orderId && (
+                <Button
+                  onClick={() => router.push(`/account/orders/${orderId}`)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
+              {!orderId && (
+                <Button
+                  onClick={() => router.push("/account/orders")}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => router.push("/")}
