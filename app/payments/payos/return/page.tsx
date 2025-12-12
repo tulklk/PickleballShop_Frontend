@@ -16,21 +16,8 @@ function PayOSReturnContent() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
 
-  // Debug: Log orderId khi state thay đổi
-  useEffect(() => {
-    if (orderId) {
-      console.log("✅ orderId state updated:", orderId);
-    }
-  }, [orderId]);
-
   useEffect(() => {
     const processPayment = () => {
-      // Đọc toàn bộ params để debug
-      const allParams: Record<string, string> = {};
-      searchParams.forEach((value, key) => {
-        allParams[key] = value;
-      });
-
       // ĐỌC PARAMS CHÍNH
       const code = searchParams.get("code") || "";
       const statusParam = searchParams.get("status") || "";
@@ -49,7 +36,6 @@ function PayOSReturnContent() {
       let finalOrderId: string | null = null;
       if (orderIdParam && orderIdParam.trim() && orderIdParam !== "null" && orderIdParam !== "undefined") {
         finalOrderId = orderIdParam.trim();
-        console.log("✅ Found orderId from URL param:", finalOrderId);
       } else {
         const savedOrderId = sessionStorage.getItem("payos_orderId");
         if (
@@ -59,7 +45,6 @@ function PayOSReturnContent() {
           savedOrderId !== "undefined"
         ) {
           finalOrderId = savedOrderId.trim();
-          console.log("✅ Found orderId from sessionStorage:", finalOrderId);
         }
       }
 
@@ -67,17 +52,6 @@ function PayOSReturnContent() {
         setOrderId(finalOrderId);
       }
       setOrderCode(orderCodeParam);
-
-      console.log("✅ PayOS return params:", {
-        code,
-        status: statusParam,
-        paymentStatus,
-        orderId: finalOrderId,
-        orderCode: orderCodeParam,
-        cancel,
-        errorMessage,
-        allParams,
-      });
 
       // XỬ LÝ TRẠNG THÁI - ƯU TIÊN SUCCESS TRƯỚC
       const isSuccess =
@@ -94,7 +68,6 @@ function PayOSReturnContent() {
         code === "99";
 
       if (isSuccess) {
-        console.log("✅ Payment status: SUCCESS");
         setStatus("success");
         if (finalOrderId) {
           sessionStorage.removeItem("payos_orderId");
@@ -103,7 +76,6 @@ function PayOSReturnContent() {
       }
 
       if (isCancelled) {
-        console.log("⚠️ Payment status: CANCELLED");
         setStatus("cancelled");
         if (finalOrderId) {
           sessionStorage.removeItem("payos_orderId");
@@ -112,7 +84,6 @@ function PayOSReturnContent() {
       }
 
       if (isError || (code && code !== "00")) {
-        console.log("❌ Payment status: FAILED");
         setStatus("failed");
         setMessage(errorMessage || "Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
         if (finalOrderId) {
@@ -121,12 +92,6 @@ function PayOSReturnContent() {
         return;
       }
 
-      console.log("⚠️ Payment status: UNKNOWN - defaulting to failed", {
-        code,
-        statusParam,
-        paymentStatus,
-        cancel,
-      });
       setStatus("failed");
       setMessage(errorMessage || "Không thể xác định trạng thái thanh toán. Vui lòng kiểm tra đơn hàng của bạn.");
       if (finalOrderId) {
@@ -151,73 +116,63 @@ function PayOSReturnContent() {
       case "success":
         const userEmail = userMe?.email || "";
         return (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-100 flex items-center justify-center">
-              <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+          <div className="mx-auto max-w-xl text-center py-10 px-4 sm:px-8">
+            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
+              <CheckCircle2 className="h-9 w-9 text-emerald-600" />
             </div>
-            <h2 className="text-3xl font-bold mb-2 text-emerald-900">Thanh toán thành công!</h2>
-            <p className="text-muted-foreground mb-2">
+            <h2 className="mt-4 text-2xl font-bold text-emerald-900">Thanh toán thành công!</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
               Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đang được xử lý.
             </p>
-            
-            {/* Email confirmation notification */}
-            <div className="mx-auto max-w-md mt-4 mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <Mail className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
-                <div className="text-left flex-1">
-                  <p className="text-sm font-medium text-emerald-900 mb-1">
-                    Email xác nhận đã được gửi
-                  </p>
-                  {userEmail && (
-                    <p className="text-xs text-emerald-700 mb-2">
-                      Đến: <span className="font-medium">{userEmail}</span>
+
+            <div className="mt-6 space-y-4 text-left">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-full bg-emerald-100 p-2 text-emerald-600">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-emerald-900">Email xác nhận đã được gửi</p>
+                    <p className="text-xs text-emerald-700">
+                      Đến: <span className="font-medium">{userEmail || "Email bạn đăng ký"}</span>
                     </p>
-                  )}
-                  <p className="text-xs text-emerald-600">
-                    💡 Lưu ý: Nếu không thấy email trong hộp thư đến, vui lòng kiểm tra thư mục Spam/Junk.
-                  </p>
+                    <p className="mt-1 text-xs text-emerald-700/80">
+                      Nếu chưa thấy email, vui lòng kiểm tra Spam/Junk.
+                    </p>
+                  </div>
                 </div>
               </div>
+
+              {(orderCode || orderId) && (
+                <div className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
+                  {orderCode && (
+                    <div className="flex items-center justify-between text-sm text-emerald-900">
+                      <span className="text-muted-foreground">Mã đơn PayOS:</span>
+                      <span className="font-semibold">{orderCode}</span>
+                    </div>
+                  )}
+                  {orderId && (
+                    <div className="mt-2 flex items-center justify-between text-xs text-emerald-800">
+                      <span className="text-muted-foreground">Order ID:</span>
+                      <span className="font-mono">{orderId}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Order Info */}
-            {(orderCode || orderId) && (
-              <div className="mx-auto max-w-md mt-4 mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                {orderCode && (
-                  <p className="text-sm text-emerald-700 font-medium mb-1">
-                    Mã đơn hàng PayOS: <span className="font-semibold">{orderCode}</span>
-                  </p>
-                )}
-                {orderId && (
-                  <p className="text-xs text-emerald-600">
-                    Order ID: <span className="font-mono">{orderId}</span>
-                  </p>
-                )}
-              </div>
-            )}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-              {orderId && (
-                <Button
-                  onClick={() => router.push(`/account/orders/${orderId}`)}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <Package className="mr-2 h-4 w-4" />
-                  Xem đơn hàng
-                </Button>
-              )}
-              {!orderId && (
-                <Button
-                  onClick={() => router.push("/account/orders")}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <Package className="mr-2 h-4 w-4" />
-                  Xem đơn hàng
-                </Button>
-              )}
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <Button
+                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
+                className="bg-emerald-600 hover:bg-emerald-700 w-full"
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Xem đơn hàng
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => router.push("/")}
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full"
               >
                 <Home className="mr-2 h-4 w-4" />
                 Về trang chủ
