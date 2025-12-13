@@ -116,7 +116,7 @@ export function RichTextEditor({
     const selection = window.getSelection();
     const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
 
-    if (range) {
+    if (range && selection) {
       // Insert image at cursor
       const img = document.createElement("img");
       img.src = imageUrl;
