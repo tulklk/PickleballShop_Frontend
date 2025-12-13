@@ -38,6 +38,11 @@ import type {
   ProductReview,
   ProductReviewResponse,
   CreateProductReviewRequest,
+  NewsListDto,
+  NewsDto,
+  PagedNewsResponse,
+  CreateNewsRequest,
+  UpdateNewsRequest,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -1159,6 +1164,81 @@ class ApiClient {
 
   async checkChatHealth(): Promise<{ status: string }> {
     return this.request<{ status: string }>("/api/Chat/health");
+  }
+
+  // News endpoints (Public)
+  async getNews(params?: {
+    Page?: number;
+    PageSize?: number;
+    Category?: string;
+    SearchTerm?: string;
+    SortBy?: string;
+  }): Promise<PagedNewsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return this.request<PagedNewsResponse>(
+      `/api/news${query ? `?${query}` : ""}`
+    );
+  }
+
+  async getNewsDetail(idOrSlug: string): Promise<NewsDto> {
+    return this.request<NewsDto>(`/api/news/${idOrSlug}`);
+  }
+
+  async getNewsCategories(): Promise<string[]> {
+    return this.request<string[]>("/api/news/categories");
+  }
+
+  // Admin News endpoints
+  async adminGetAllNews(params?: {
+    Page?: number;
+    PageSize?: number;
+    Category?: string;
+    SearchTerm?: string;
+    SortBy?: string;
+    IsPublished?: boolean | null;
+  }): Promise<PagedNewsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return this.request<PagedNewsResponse>(
+      `/api/admin/adminnews${query ? `?${query}` : ""}`
+    );
+  }
+
+  async adminCreateNews(data: CreateNewsRequest): Promise<NewsDto> {
+    return this.request<NewsDto>("/api/admin/adminnews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateNews(id: string, data: UpdateNewsRequest): Promise<NewsDto> {
+    return this.request<NewsDto>(`/api/admin/adminnews/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeleteNews(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/admin/adminnews/${id}`, {
+      method: "DELETE",
+    });
   }
 }
 

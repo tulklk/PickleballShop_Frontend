@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Package, FolderTree, ShoppingBag, Users, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, ShoppingBag, Users, BarChart3, Newspaper } from "lucide-react";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/categories", label: "Categories", icon: FolderTree },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/users", label: "Users", icon: Users },
 ];

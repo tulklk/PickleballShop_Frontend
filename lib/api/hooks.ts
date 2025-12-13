@@ -26,6 +26,11 @@ import type {
   ProductComment,
   ProductReviewResponse,
   CreateProductReviewRequest,
+  NewsListDto,
+  NewsDto,
+  PagedNewsResponse,
+  CreateNewsRequest,
+  UpdateNewsRequest,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -1041,6 +1046,93 @@ export function useSession() {
 export function useChatMessage() {
   return useMutation({
     mutationFn: (data: ChatMessageRequest) => apiClient.sendChatMessage(data),
+  });
+}
+
+// News hooks (Public)
+export function useNews(params?: {
+  Page?: number;
+  PageSize?: number;
+  Category?: string;
+  SearchTerm?: string;
+  SortBy?: string;
+}) {
+  return useQuery({
+    queryKey: ["news", params],
+    queryFn: () => apiClient.getNews(params),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+  });
+}
+
+export function useNewsDetail(idOrSlug: string) {
+  return useQuery({
+    queryKey: ["news", "detail", idOrSlug],
+    queryFn: () => apiClient.getNewsDetail(idOrSlug),
+    enabled: !!idOrSlug,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
+  });
+}
+
+export function useNewsCategories() {
+  return useQuery({
+    queryKey: ["news", "categories"],
+    queryFn: () => apiClient.getNewsCategories(),
+    staleTime: 30 * 60 * 1000, // 30 minutes - Categories ít thay đổi
+    gcTime: 60 * 60 * 1000, // 60 minutes
+  });
+}
+
+// Admin News hooks
+export function useAdminAllNews(params?: {
+  Page?: number;
+  PageSize?: number;
+  Category?: string;
+  SearchTerm?: string;
+  SortBy?: string;
+  IsPublished?: boolean | null;
+}) {
+  return useQuery({
+    queryKey: ["admin", "news", params],
+    queryFn: () => apiClient.adminGetAllNews(params),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+export function useAdminCreateNews() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateNewsRequest) => apiClient.adminCreateNews(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
+      queryClient.invalidateQueries({ queryKey: ["news"] });
+    },
+  });
+}
+
+export function useAdminUpdateNews() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateNewsRequest }) =>
+      apiClient.adminUpdateNews(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
+      queryClient.invalidateQueries({ queryKey: ["news"] });
+      queryClient.invalidateQueries({ queryKey: ["news", "detail", variables.id] });
+    },
+  });
+}
+
+export function useAdminDeleteNews() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.adminDeleteNews(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
+      queryClient.invalidateQueries({ queryKey: ["news"] });
+    },
   });
 }
 

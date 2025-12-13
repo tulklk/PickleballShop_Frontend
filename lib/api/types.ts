@@ -458,3 +458,66 @@ export interface ChatMessageResponse {
     stockQuantity?: number | null;
   }>;
 }
+
+// News
+export interface NewsListDto {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  thumbnailUrl: string;
+  authorName: string;
+  category: string;
+  isPublished: boolean;
+  publishedAt: string | null;
+  viewCount: number;
+  createdAt: string;
+}
+
+export interface NewsDto {
+  id: string;
+  title: string;
+  slug: string;
+  content: string; // HTML content
+  summary: string | null;
+  thumbnailUrl: string;
+  authorId: string;
+  authorName: string;
+  category: string;
+  tags: string | null;
+  isPublished: boolean;
+  publishedAt: string | null;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PagedNewsResponse {
+  items: NewsListDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+export interface CreateNewsRequest {
+  title: string;
+  content: string;
+  summary?: string | null;
+  thumbnailUrl: string;
+  category: string;
+  tags?: string | null;
+  isPublished: boolean;
+}
+
+export interface UpdateNewsRequest {
+  title: string;
+  content: string;
+  summary?: string | null;
+  thumbnailUrl: string;
+  category: string;
+  tags?: string | null;
+  isPublished: boolean;
+}

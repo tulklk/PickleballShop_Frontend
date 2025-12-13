@@ -258,6 +258,17 @@ export function Navbar() {
                 Trang chủ
               </Link>
               
+              <Link
+                href="/news"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname?.startsWith("/news")
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Tin tức
+              </Link>
+              
               {/* Products Dropdown */}
               <div
                 ref={productDropdownRef}
@@ -607,6 +618,17 @@ export function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Trang chủ
+                </Link>
+                <Link
+                  href="/news"
+                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname?.startsWith("/news")
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Tin tức
                 </Link>
                 <Link
                   href="/products"
