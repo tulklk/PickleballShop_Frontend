@@ -19,11 +19,11 @@ export default function AdminNewsPage() {
   const isAdmin = user?.role === "Admin" || user?.role === "2";
 
   const [filters, setFilters] = useState({
-    page: 1,
-    pageSize: 20,
-    category: "",
-    searchTerm: "",
-    isPublished: null as boolean | null,
+    Page: 1,
+    PageSize: 20,
+    Category: "",
+    SearchTerm: "",
+    IsPublished: null as boolean | null,
   });
 
   const { data: newsData, isLoading } = useAdminAllNews(filters);
@@ -64,16 +64,16 @@ export default function AdminNewsPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input
               placeholder="Tìm kiếm..."
-              value={filters.searchTerm}
+              value={filters.SearchTerm || ""}
               onChange={(e) =>
-                setFilters({ ...filters, searchTerm: e.target.value, page: 1 })
+                setFilters({ ...filters, SearchTerm: e.target.value, Page: 1 })
               }
               className="md:col-span-2"
             />
             <select
-              value={filters.category}
+              value={filters.Category || ""}
               onChange={(e) =>
-                setFilters({ ...filters, category: e.target.value, page: 1 })
+                setFilters({ ...filters, Category: e.target.value, Page: 1 })
               }
               className="px-3 py-2 border rounded-md"
             >
@@ -88,20 +88,20 @@ export default function AdminNewsPage() {
             </select>
             <select
               value={
-                filters.isPublished === null
+                filters.IsPublished === null
                   ? "all"
-                  : filters.isPublished
+                  : filters.IsPublished
                   ? "published"
                   : "draft"
               }
               onChange={(e) =>
                 setFilters({
                   ...filters,
-                  isPublished:
+                  IsPublished:
                     e.target.value === "all"
                       ? null
                       : e.target.value === "published",
-                  page: 1,
+                  Page: 1,
                 })
               }
               className="px-3 py-2 border rounded-md"
@@ -211,7 +211,7 @@ export default function AdminNewsPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  setFilters({ ...filters, page: filters.page - 1 })
+                  setFilters({ ...filters, Page: filters.Page - 1 })
                 }
                 disabled={!newsData.hasPreviousPage}
               >
@@ -223,7 +223,7 @@ export default function AdminNewsPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  setFilters({ ...filters, page: filters.page + 1 })
+                  setFilters({ ...filters, Page: filters.Page + 1 })
                 }
                 disabled={!newsData.hasNextPage}
               >
