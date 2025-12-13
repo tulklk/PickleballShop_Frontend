@@ -400,6 +400,39 @@ export interface ProductComment {
   replies?: ProductComment[];
 }
 
+// Product Reviews
+export interface ProductReview {
+  id: string;
+  productId: string;
+  userId?: string | null;
+  fullName: string;
+  phoneNumber: string;
+  email?: string | null;
+  rating: number;
+  comment: string | null;
+  reviewImageUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductReviewResponse {
+  reviews: ProductReview[];
+  averageRating: number;
+  reviewCount: number;
+  ratingDistribution: {
+    [key: number]: number; // rating: count
+  };
+}
+
+export interface CreateProductReviewRequest {
+  fullName: string;
+  phoneNumber: string;
+  email?: string | null;
+  rating: number;
+  comment?: string | null;
+  reviewImageUrl?: string | null;
+}
+
 // Chat
 export interface ChatMessage {
   role: "user" | "assistant" | "system";

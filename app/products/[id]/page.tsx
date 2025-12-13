@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useProductBySlug, useAddCartItem, useProducts, useWishlist, useToggleWishlist } from "@/lib/api/hooks";
+import { useProductBySlug, useAddCartItem, useProducts, useWishlist, useToggleWishlist, useProductReviews, useCreateProductReview } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,13 @@ export default function ProductDetailPage() {
   const [saveReviewerInfo, setSaveReviewerInfo] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantDto | null>(null);
+  const [reviewImage, setReviewImage] = useState<File | null>(null);
+  const [reviewImagePreview, setReviewImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Reviews
+  const { data: reviewsData, isLoading: isLoadingReviews } = useProductReviews(identifier);
+  const createReview = useCreateProductReview();
 
   const { data: wishlist } = useWishlist();
   const wishlistToggle = useToggleWishlist(product?.id || identifier);
@@ -266,6 +273,101 @@ export default function ProductDetailPage() {
 
   const ratingLabels = ["", "Rất tệ", "Không tệ", "Trung bình", "Tốt", "Tuyệt vời"];
 
+  // Handle review image upload to Cloudinary
+  const handleReviewImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh hợp lệ");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+
+    setReviewImage(file);
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setReviewImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveReviewImage = () => {
+    setReviewImage(null);
+    setReviewImagePreview(null);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewerName || !reviewerPhone) {
+      toast.error("Vui lòng nhập họ tên và số điện thoại");
+      return;
+    }
+    if (reviewText.length < 10) {
+      toast.error("Nội dung đánh giá phải có ít nhất 10 ký tự");
+      return;
+    }
+
+    try {
+      let reviewImageUrl: string | null = null;
+
+      // Upload image to Cloudinary if exists
+      if (reviewImage) {
+        setIsUploadingImage(true);
+        const formData = new FormData();
+        formData.append("file", reviewImage);
+        formData.append("folder", "pickleball-shop/reviews");
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || "Lỗi khi upload ảnh");
+        }
+
+        const uploadData = await uploadResponse.json();
+        reviewImageUrl = uploadData.url;
+        setIsUploadingImage(false);
+      }
+
+      // Submit review
+      await createReview.mutateAsync({
+        productIdOrSlug: identifier,
+        data: {
+          fullName: reviewerName,
+          phoneNumber: reviewerPhone,
+          email: reviewerEmail || null,
+          rating: reviewRating,
+          comment: reviewText,
+          reviewImageUrl: reviewImageUrl,
+        },
+      });
+
+      toast.success("Đánh giá của bạn đã được gửi thành công!");
+      setIsReviewModalOpen(false);
+      setReviewText("");
+      setReviewRating(5);
+      setReviewerName("");
+      setReviewerPhone("");
+      setReviewerEmail("");
+      setReviewImage(null);
+      setReviewImagePreview(null);
+    } catch (error: any) {
+      setIsUploadingImage(false);
+      toast.error(error.message || "Có lỗi xảy ra khi gửi đánh giá");
+    }
+  };
+
   // Generate structured data (JSON-LD) for SEO
   const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com");
   const productSlug = product.slug || product.id;
@@ -352,13 +454,48 @@ export default function ProductDetailPage() {
                 />
                 <div className="flex items-center justify-between mt-2">
                   <label className="flex items-center gap-2 text-sm text-emerald-600 cursor-pointer">
-                    <input type="checkbox" className="text-emerald-600" />
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      className="hidden"
+                      id="review-image-upload"
+                      onChange={handleReviewImageChange}
+                      disabled={isUploadingImage}
+                    />
                     <span>📷 Gửi ảnh thực tế</span>
+                    <input
+                      type="checkbox"
+                      checked={!!reviewImage}
+                      onChange={(e) => {
+                        if (e.target.checked && !reviewImage) {
+                          document.getElementById("review-image-upload")?.click();
+                        } else if (!e.target.checked) {
+                          handleRemoveReviewImage();
+                        }
+                      }}
+                      className="text-emerald-600"
+                    />
                   </label>
                   <span className="text-sm text-gray-400">
                     {reviewText.length} ký tự (Tối thiểu 10)
                   </span>
                 </div>
+                {reviewImagePreview && (
+                  <div className="mt-3 relative inline-block">
+                    <img 
+                      src={reviewImagePreview} 
+                      alt="Review preview" 
+                      className="max-w-full max-h-48 rounded-lg border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveReviewImage}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Rating Stars */}
@@ -424,26 +561,11 @@ export default function ProductDetailPage() {
 
               {/* Submit Button */}
               <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 py-3"
-                onClick={() => {
-                  if (!reviewerName || !reviewerPhone) {
-                    toast.error("Vui lòng nhập họ tên và số điện thoại");
-                    return;
-                  }
-                  if (reviewText.length < 10) {
-                    toast.error("Nội dung đánh giá phải có ít nhất 10 ký tự");
-                    return;
-                  }
-                  toast.success("Đánh giá của bạn đã được gửi thành công!");
-                  setIsReviewModalOpen(false);
-                  setReviewText("");
-                  setReviewRating(5);
-                  setReviewerName("");
-                  setReviewerPhone("");
-                  setReviewerEmail("");
-                }}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 py-3 disabled:opacity-50"
+                onClick={handleSubmitReview}
+                disabled={createReview.isPending || isUploadingImage}
               >
-                GỬI ĐÁNH GIÁ
+                {isUploadingImage ? "Đang upload ảnh..." : createReview.isPending ? "Đang gửi..." : "GỬI ĐÁNH GIÁ"}
               </Button>
             </div>
           </div>
@@ -668,20 +790,34 @@ export default function ProductDetailPage() {
           {/* Rating & Sold Count */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="flex items-center gap-1">
-              <span className="font-bold text-emerald-600">{product.averageRating?.toFixed(1) || "5.0"}</span>
+              <span className="font-bold text-yellow-500">{(reviewsData?.averageRating ?? product.averageRating)?.toFixed(1) || "5.0"}</span>
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     className={`h-4 w-4 ${
-                      star <= (product.averageRating || 5)
-                        ? "fill-emerald-500 text-emerald-500"
+                      star <= (reviewsData?.averageRating ?? product.averageRating ?? 5)
+                        ? "fill-yellow-400 text-yellow-400"
                         : "text-gray-300"
                     }`}
                   />
                 ))}
               </div>
-              <span className="text-blue-500 text-sm hover:underline cursor-pointer">({product.reviewCount || 0} đánh giá)</span>
+              <span 
+                className="text-emerald-600 text-sm hover:underline cursor-pointer"
+                onClick={() => {
+                  setActiveTab("reviews");
+                  // Scroll to reviews section after a short delay to ensure tab is rendered
+                  setTimeout(() => {
+                    const reviewsSection = document.getElementById("reviews-section");
+                    if (reviewsSection) {
+                      reviewsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                  }, 100);
+                }}
+              >
+                ({reviewsData?.reviewCount ?? product.reviewCount ?? 0} đánh giá)
+              </span>
             </div>
             <span className="text-gray-300">|</span>
             <span className="text-gray-500 text-sm">Đã bán {product.reviewCount || 0}</span>
@@ -900,17 +1036,7 @@ export default function ProductDetailPage() {
             }`}
             onClick={() => setActiveTab("reviews")}
           >
-            ĐÁNH GIÁ ({product.reviewCount || 0})
-          </button>
-          <button
-            className={`px-3 md:px-6 py-2 md:py-3 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === "qa"
-                ? "bg-emerald-600 text-white rounded-t-lg"
-                : "text-gray-600 hover:text-emerald-600"
-            }`}
-            onClick={() => setActiveTab("qa")}
-          >
-            HỎI ĐÁP
+            ĐÁNH GIÁ ({reviewsData?.reviewCount ?? product.reviewCount ?? 0})
           </button>
         </div>
 
@@ -1113,22 +1239,22 @@ export default function ProductDetailPage() {
 
           {/* Đánh giá */}
           {activeTab === "reviews" && (
-            <div className="space-y-6">
+            <div id="reviews-section" className="space-y-6">
               {/* Rating Summary */}
               <Card>
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row gap-8">
                     {/* Average Rating */}
                     <div className="text-center md:border-r md:pr-8">
-                      <div className="text-5xl font-bold text-emerald-600">
-                        {product.averageRating?.toFixed(1) || "0.0"}
+                      <div className="text-5xl font-bold text-yellow-500">
+                        {reviewsData?.averageRating?.toFixed(1) || product.averageRating?.toFixed(1) || "0.0"}
                       </div>
                       <div className="flex justify-center gap-1 my-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
                             className={`h-5 w-5 ${
-                              star <= (product.averageRating || 0)
+                              star <= (reviewsData?.averageRating || product.averageRating || 0)
                                 ? "fill-yellow-400 text-yellow-400"
                                 : "text-gray-300"
                             }`}
@@ -1136,27 +1262,36 @@ export default function ProductDetailPage() {
                         ))}
                       </div>
                       <p className="text-sm text-gray-500">ĐÁNH GIÁ TRUNG BÌNH</p>
-                      <p className="text-sm text-gray-500">{product.reviewCount || 0} đánh giá</p>
+                      <p className="text-sm text-gray-500">{reviewsData?.reviewCount || product.reviewCount || 0} đánh giá</p>
                     </div>
 
                     {/* Rating Bars */}
                     <div className="flex-1 space-y-2">
-                      {[5, 4, 3, 2, 1].map((star) => (
-                        <div key={star} className="flex items-center gap-2">
-                          <span className="w-8 text-sm">{star} ⭐</span>
-                          <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-yellow-400 rounded-full"
-                              style={{
-                                width: star === 5 ? "100%" : "0%",
-                              }}
-                            />
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const count = reviewsData?.ratingDistribution?.[star] || 0;
+                        const total = reviewsData?.reviewCount || product.reviewCount || 0;
+                        const percentage = total > 0 ? (count / total) * 100 : 0;
+                        
+                        return (
+                          <div key={star} className="flex items-center gap-2">
+                            <div className="w-8 flex items-center gap-0.5">
+                              <span className="text-sm">{star}</span>
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            </div>
+                            <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-yellow-400 rounded-full transition-all"
+                                style={{
+                                  width: `${percentage}%`,
+                                }}
+                              />
+                            </div>
+                            <span className="w-32 text-sm text-gray-500 text-right">
+                              {percentage.toFixed(0)}% | {count} đánh giá
+                            </span>
                           </div>
-                          <span className="w-20 text-sm text-gray-500">
-                            {star === 5 ? `100% | ${product.reviewCount || 0} đánh giá` : "0% | 0 đánh giá"}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Write Review Button */}
@@ -1172,57 +1307,100 @@ export default function ProductDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Sample Reviews */}
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-gray-500 italic text-center py-8">Chưa có đánh giá nào cho sản phẩm này.</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Hỏi đáp */}
-          {activeTab === "qa" && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    Đặt câu hỏi về sản phẩm
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="Mời bạn tham gia thảo luận, vui lòng nhập tiếng Việt có dấu."
-                    value={questionText}
-                    onChange={(e) => setQuestionText(e.target.value)}
-                    rows={3}
-                  />
-                  <div className="flex flex-wrap gap-4 items-center">
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2">
-                        <input type="radio" name="gender" defaultChecked className="text-emerald-600" />
-                        <span>Anh</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <input type="radio" name="gender" className="text-emerald-600" />
-                        <span>Chị</span>
-                      </label>
+              {/* Reviews List */}
+              {isLoadingReviews ? (
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="border-b pb-4 last:border-0">
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-4 w-full mb-2" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                      ))}
                     </div>
-                    <Input placeholder="Họ tên*" className="flex-1 min-w-[150px]" />
-                    <Input placeholder="Email" className="flex-1 min-w-[150px]" />
-                    <Button className="bg-emerald-600 hover:bg-emerald-700">
-                      GỬI
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ) : reviewsData?.reviews && reviewsData.reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {reviewsData.reviews.map((review) => (
+                    <Card key={review.id}>
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          {/* User Avatar */}
+                          <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-emerald-600 font-bold text-lg">
+                              {review.fullName.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-gray-500 italic text-center py-8">Không có bình luận nào</p>
-                </CardContent>
-              </Card>
+                          {/* Review Content */}
+                          <div className="flex-1">
+                            {/* Name and Rating */}
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-gray-900">{review.fullName}</h4>
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-4 w-4 ${
+                                      star <= review.rating
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                {new Date(review.createdAt).toLocaleDateString("vi-VN", {
+                                  year: "numeric",
+                                  month: "2-digit",
+                                  day: "2-digit",
+                                })}
+                              </span>
+                            </div>
+
+                            {/* Review Comment */}
+                            {review.comment && (
+                              <p className="text-gray-700 mb-3 whitespace-pre-wrap">{review.comment}</p>
+                            )}
+
+                            {/* Review Image */}
+                            {review.reviewImageUrl && (
+                              <div className="mt-3">
+                                {review.reviewImageUrl.includes("cloudinary.com") || review.reviewImageUrl.startsWith("data:") ? (
+                                  <img
+                                    src={review.reviewImageUrl}
+                                    alt="Review image"
+                                    className="max-w-xs max-h-64 rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(review.reviewImageUrl || "", "_blank")}
+                                  />
+                                ) : (
+                                  <Image
+                                    src={review.reviewImageUrl}
+                                    alt="Review image"
+                                    width={300}
+                                    height={200}
+                                    className="rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => window.open(review.reviewImageUrl || "", "_blank")}
+                                  />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 italic text-center py-8">Chưa có đánh giá nào cho sản phẩm này.</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </div>

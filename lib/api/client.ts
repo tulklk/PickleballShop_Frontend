@@ -35,6 +35,9 @@ import type {
   ChatMessageRequest,
   ChatMessageResponse,
   ProductComment,
+  ProductReview,
+  ProductReviewResponse,
+  CreateProductReviewRequest,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -590,6 +593,19 @@ class ApiClient {
   async deleteProductCommentBySlug(slug: string, commentId: string): Promise<void> {
     return this.request<void>(`/api/Products/slug/${slug}/comments/${commentId}`, {
       method: "DELETE",
+    });
+  }
+
+  // Product Reviews endpoints
+  async getProductReviews(productIdOrSlug: string): Promise<ProductReviewResponse> {
+    return this.request<ProductReviewResponse>(`/api/products/${productIdOrSlug}/reviews`);
+  }
+
+  async createProductReview(productIdOrSlug: string, data: CreateProductReviewRequest): Promise<ProductReview> {
+    return this.request<ProductReview>(`/api/products/${productIdOrSlug}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
   }
 

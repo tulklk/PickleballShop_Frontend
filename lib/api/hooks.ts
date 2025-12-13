@@ -24,6 +24,8 @@ import type {
   WishlistItem,
   ChatMessageRequest,
   ProductComment,
+  ProductReviewResponse,
+  CreateProductReviewRequest,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -311,6 +313,38 @@ export function useReplyProductComment(productId: string) {
 }
 
 // Product comments by slug
+// Product Reviews hooks
+export function useProductReviews(productIdOrSlug: string) {
+  return useQuery({
+    queryKey: ["product", "reviews", productIdOrSlug],
+    queryFn: () => apiClient.getProductReviews(productIdOrSlug),
+    enabled: !!productIdOrSlug,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+export function useCreateProductReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productIdOrSlug,
+      data,
+    }: {
+      productIdOrSlug: string;
+      data: CreateProductReviewRequest;
+    }) => apiClient.createProductReview(productIdOrSlug, data),
+    onSuccess: (_, variables) => {
+      // Invalidate reviews query to refetch
+      queryClient.invalidateQueries({ queryKey: ["product", "reviews", variables.productIdOrSlug] });
+      // Also invalidate product queries (both by id and by slug) to update averageRating and reviewCount
+      queryClient.invalidateQueries({ queryKey: ["product", variables.productIdOrSlug] });
+      queryClient.invalidateQueries({ queryKey: ["product", "slug", variables.productIdOrSlug] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
 export function useProductCommentsBySlug(slug: string) {
   return useQuery({
     queryKey: ["product", "comments", "slug", slug],
