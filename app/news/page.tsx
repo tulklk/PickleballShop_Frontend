@@ -13,11 +13,11 @@ import Image from "next/image";
 
 export default function NewsListPage() {
   const [filters, setFilters] = useState({
-    page: 1,
-    pageSize: 12,
-    category: "",
-    searchTerm: "",
-    sortBy: "newest" as "newest" | "popular" | "oldest",
+    Page: 1,
+    PageSize: 12,
+    Category: "",
+    SearchTerm: "",
+    SortBy: "newest" as "newest" | "popular" | "oldest",
   });
 
   const { data: newsData, isLoading } = useNews(filters);
@@ -37,17 +37,17 @@ export default function NewsListPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Tìm kiếm tin tức..."
-              value={filters.searchTerm}
+              value={filters.SearchTerm || ""}
               onChange={(e) =>
-                setFilters({ ...filters, searchTerm: e.target.value, page: 1 })
+                setFilters({ ...filters, SearchTerm: e.target.value, Page: 1 })
               }
               className="pl-10"
             />
           </div>
           <select
-            value={filters.category}
+            value={filters.Category || ""}
             onChange={(e) =>
-              setFilters({ ...filters, category: e.target.value, page: 1 })
+              setFilters({ ...filters, Category: e.target.value, Page: 1 })
             }
             className="px-3 py-2 border rounded-md bg-white"
           >
@@ -59,12 +59,12 @@ export default function NewsListPage() {
             ))}
           </select>
           <select
-            value={filters.sortBy}
+            value={filters.SortBy || "newest"}
             onChange={(e) =>
               setFilters({
                 ...filters,
-                sortBy: e.target.value as "newest" | "popular" | "oldest",
-                page: 1,
+                SortBy: e.target.value as "newest" | "popular" | "oldest",
+                Page: 1,
               })
             }
             className="px-3 py-2 border rounded-md bg-white"
@@ -280,7 +280,7 @@ export default function NewsListPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  setFilters({ ...filters, page: filters.page + 1 })
+                  setFilters({ ...filters, Page: (filters.Page || 1) + 1 })
                 }
                 disabled={!newsData.hasNextPage}
                 className="flex items-center gap-2"
@@ -293,7 +293,7 @@ export default function NewsListPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() =>
-                    setFilters({ ...filters, page: filters.page - 1 })
+                    setFilters({ ...filters, Page: Math.max(1, (filters.Page || 1) - 1) })
                   }
                   disabled={!newsData.hasPreviousPage}
                 >
@@ -306,7 +306,7 @@ export default function NewsListPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() =>
-                    setFilters({ ...filters, page: filters.page + 1 })
+                    setFilters({ ...filters, Page: (filters.Page || 1) + 1 })
                   }
                   disabled={!newsData.hasNextPage}
                 >
