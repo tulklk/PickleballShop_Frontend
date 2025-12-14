@@ -8,7 +8,7 @@ import {
   Package,
   Activity,
   Circle,
-  Shoe,
+  Footprints,
   ShoppingBag,
   Shirt,
 } from "lucide-react";
@@ -34,7 +34,7 @@ const categoryIcons: Record<string, any> = {
 const productCategories = [
   { name: "Vợt Pickleball", icon: Activity, href: "/products?category=vot-pickleball" },
   { name: "Bóng Pickleball", icon: Circle, href: "/products?category=bong-pickleball" },
-  { name: "Giày Pickleball", icon: Shoe, href: "/products?category=giay-pickleball" },
+  { name: "Giày Pickleball", icon: Footprints, href: "/products?category=giay-pickleball" },
   { name: "Phụ kiện Pickleball", icon: ShoppingBag, href: "/products?category=phu-kien-pickleball" },
   { name: "Trang phục Pickleball", icon: Shirt, href: "/products?category=trang-phuc-pickleball" },
 ];
