@@ -1060,8 +1060,13 @@ export function useNews(params?: {
   return useQuery({
     queryKey: ["news", params],
     queryFn: () => apiClient.getNews(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutes - News ít thay đổi, cache lâu hơn
+    gcTime: 60 * 60 * 1000, // 60 minutes - Giữ cache 1 giờ để navigate mượt mà
+    refetchOnMount: false, // Không refetch khi mount lại nếu data còn fresh
+    refetchOnWindowFocus: false, // Không refetch khi focus window
+    placeholderData: (previousData) => previousData, // Giữ data cũ khi loading data mới (UX mượt mà)
+    retry: 1,
+    retryOnMount: false,
   });
 }
 
@@ -1070,8 +1075,12 @@ export function useNewsDetail(idOrSlug: string) {
     queryKey: ["news", "detail", idOrSlug],
     queryFn: () => apiClient.getNewsDetail(idOrSlug),
     enabled: !!idOrSlug,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 15 * 60 * 1000, // 15 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutes - News detail ít thay đổi
+    gcTime: 60 * 60 * 1000, // 60 minutes - Giữ cache 1 giờ
+    refetchOnMount: false, // Không refetch khi mount lại
+    refetchOnWindowFocus: false, // Không refetch khi focus window
+    placeholderData: (previousData) => previousData, // Giữ data cũ khi loading
+    retry: 1,
   });
 }
 
@@ -1079,8 +1088,12 @@ export function useNewsCategories() {
   return useQuery({
     queryKey: ["news", "categories"],
     queryFn: () => apiClient.getNewsCategories(),
-    staleTime: 30 * 60 * 1000, // 30 minutes - Categories ít thay đổi
-    gcTime: 60 * 60 * 1000, // 60 minutes
+    staleTime: 60 * 60 * 1000, // 60 minutes - Categories rất ít thay đổi
+    gcTime: 120 * 60 * 1000, // 120 minutes - Giữ cache 2 giờ
+    refetchOnMount: false, // Không refetch khi mount lại
+    refetchOnWindowFocus: false, // Không refetch khi focus window
+    retry: 1,
+    retryOnMount: false,
   });
 }
 

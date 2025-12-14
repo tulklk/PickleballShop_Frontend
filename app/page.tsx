@@ -4,12 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight, Star, Clock, Truck, Phone, Mail } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useQueries } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
 import { useProducts, useCategories } from "@/lib/api/hooks";
+import { apiClient } from "@/lib/api/client";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
@@ -30,6 +33,40 @@ import banner10 from "@/app/img/homepage_img/6.jpg";
 import banner12 from "@/app/img/homepage_img/12.jpg";
 
 export default function HomePage() {
+  const queryClient = useQueryClient();
+  
+  // Fetch all data needed for homepage - these will be used by child components
+  const { data: categories, isLoading: isLoadingCategories } = useCategories();
+  const { data: allProductsData, isLoading: isLoadingAllProducts } = useProducts({ PageSize: 50 });
+  const { data: flashSaleProductsData, isLoading: isLoadingFlashSale } = useProducts({ PageSize: 20 });
+
+  // Prefetch category-specific products when categories are loaded
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      const categoryConfigs = [
+        { searchKey: "vợt" },
+        { searchKey: "giày" },
+        { searchKey: "phụ kiện" },
+        { searchKey: "bóng" },
+      ];
+
+      categoryConfigs.forEach((config) => {
+        const category = categories.find((c) =>
+          c.name?.toLowerCase().includes(config.searchKey.toLowerCase())
+        );
+        if (category?.id) {
+          // Prefetch in background
+          queryClient.prefetchQuery({
+            queryKey: ["products", { PageSize: 8, CategoryId: category.id }],
+            queryFn: () => apiClient.getProducts({ PageSize: 8, CategoryId: category.id }),
+            staleTime: 15 * 60 * 1000,
+            gcTime: 45 * 60 * 1000,
+          });
+        }
+      });
+    }
+  }, [categories, queryClient]);
+
   // Generate structured data (JSON-LD) for SEO
   const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com");
   
@@ -77,19 +114,19 @@ export default function HomePage() {
       <PromotionBanners />
 
       {/* Flash Sale Section */}
-      <FlashSaleSection />
+      <FlashSaleSection sharedProductsData={flashSaleProductsData} isLoading={isLoadingFlashSale} />
 
       {/* New Products Section */}
-      <NewProductsSection />
+      <NewProductsSection sharedProductsData={allProductsData} isLoading={isLoadingAllProducts} />
 
       {/* Category Sections */}
-      <CategoryProductsSection />
+      <CategoryProductsSection sharedCategories={categories} isLoadingCategories={isLoadingCategories} />
 
       {/* Trending & Popular Section */}
-      <TrendingSection />
+      <TrendingSection sharedProductsData={allProductsData} isLoading={isLoadingAllProducts} />
 
       {/* Category Links Grid */}
-      <CategoryLinksGrid />
+      <CategoryLinksGrid sharedCategories={categories} isLoading={isLoadingCategories} />
 
       {/* Newsletter & Contact */}
       <NewsletterSection />
@@ -120,7 +157,7 @@ function HeroBannerSlider() {
           {banners.map((banner, idx) => (
             <div
               key={idx}
-              className={`absolute inset-0 transition-opacity duration-700 ${
+              className={`absolute inset-0 ${
                 idx === currentSlide ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -136,13 +173,13 @@ function HeroBannerSlider() {
           
           {/* Navigation Arrows */}
           <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10 transition-all duration-300 hover:scale-110 hover-glow"
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
             onClick={() => setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length)}
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10 transition-all duration-300 hover:scale-110 hover-glow"
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
             onClick={() => setCurrentSlide((prev) => (prev + 1) % banners.length)}
           >
             <ChevronRight className="h-6 w-6" />
@@ -153,8 +190,8 @@ function HeroBannerSlider() {
             {banners.map((_, idx) => (
               <button
                 key={idx}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  idx === currentSlide ? "bg-emerald-500 w-8" : "bg-white/60 hover:bg-white/80 hover:scale-125"
+                className={`w-3 h-3 rounded-full ${
+                  idx === currentSlide ? "bg-emerald-500 w-8" : "bg-white/60 hover:bg-white/80"
                 }`}
                 onClick={() => setCurrentSlide(idx)}
               />
@@ -164,27 +201,27 @@ function HeroBannerSlider() {
 
         {/* Side Banners */}
         <div className="hidden lg:flex flex-col w-1/3 gap-2 pl-2">
-          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group shimmer-on-hover">
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group">
             <Image
               src={banner5}
               alt="Side Banner 1"
               fill
-              className="object-cover group-hover:scale-110 transition-transform duration-500"
+              className="object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent flex items-end p-4">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 hover:scale-105">XEM NGAY</Button>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">XEM NGAY</Button>
             </div>
           </Link>
-          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group bg-white shimmer-on-hover">
+          <Link href="/products" className="relative h-[224px] overflow-hidden rounded-lg group bg-white">
             <Image
               src={banner11}
               alt="JOOLA Pro IV New Colorway Vietnam Edition"
               fill
-              className="object-cover group-hover:scale-110 transition-transform duration-500"
+              className="object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 z-10">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl px-8 py-2.5 text-sm font-bold tracking-wide transition-all duration-300 hover:scale-105">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-xl px-8 py-2.5 text-sm font-bold tracking-wide">
                 XEM NGAY
               </Button>
             </div>
@@ -202,28 +239,27 @@ function FeatureBanners() {
         {/* Big left banner - Sản phẩm mới */}
         <Link
           href="/products"
-          className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black hover-lift shimmer-on-hover"
+          className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black"
         >
           <Image
             src={banner10}
             alt="Sản phẩm mới Pickleball"
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-90"
+            className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-between p-6 md:p-8">
             <div className="space-y-2">
-              <p className="text-xs md:text-sm font-semibold tracking-[0.2em] text-white/70 slide-left-right">
+              <p className="text-xs md:text-sm font-semibold tracking-[0.2em] text-white/70">
                 SẢN PHẨM MỚI
               </p>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-white fade-in-scale">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white">
                 JOOLA 3S DUAL
               </h2>
-              <p className="text-sm md:text-base text-white/80 fade-in-up">ĐÃ CÓ MẶT TẠI IKA SPORT</p>
+              <p className="text-sm md:text-base text-white/80">ĐÃ CÓ MẶT TẠI IKA SPORT</p>
             </div>
-            <div className="mt-4 slide-in-bottom">
-              <Button className="bg-white text-black hover:bg-primary hover:text-white px-6 font-semibold transition-all duration-300 hover:scale-105 hover:shadow-lg relative overflow-hidden group">
-                <span className="relative z-10">XEM NGAY</span>
-                <span className="absolute inset-0 bg-black/10 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+            <div className="mt-4">
+              <Button className="bg-white text-black hover:bg-primary hover:text-white px-6 font-semibold">
+                XEM NGAY
               </Button>
             </div>
           </div>
@@ -232,31 +268,30 @@ function FeatureBanners() {
         {/* Right banner - Tiêu điểm tháng */}
         <Link
           href="/products"
-          className="relative overflow-hidden rounded-2xl group bg-black hover-lift shimmer-on-hover"
+          className="relative overflow-hidden rounded-2xl group bg-black"
         >
           <Image
             src={banner9}
             alt="Tiêu điểm tháng - sản phẩm nổi bật"
             fill
-            className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-90"
+            className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-black/70 flex flex-col justify-between p-6">
             <div className="space-y-1">
               <p className="text-xs font-semibold tracking-[0.2em] text-emerald-400">
                 TIÊU ĐIỂM
               </p>
-              <h3 className="text-lg md:text-xl font-bold text-white fade-in-scale">THÁNG NÀY</h3>
-              <p className="text-sm text-white/80 fade-in-up">
+              <h3 className="text-lg md:text-xl font-bold text-white">THÁNG NÀY</h3>
+              <p className="text-sm text-white/80">
                 Bộ sưu tập vợt nổi bật được nhiều vận động viên lựa chọn.
               </p>
             </div>
             <div className="mt-4">
               <Button
                 variant="outline"
-                className="border-white text-white hover:bg-white hover:text-black px-4 text-sm font-semibold transition-all duration-300 hover:scale-110 hover:shadow-lg relative overflow-hidden group"
+                className="border-white text-white hover:bg-white hover:text-black px-4 text-sm font-semibold"
               >
-                <span className="relative z-10">XEM NGAY</span>
-                <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                XEM NGAY
               </Button>
             </div>
           </div>
@@ -271,7 +306,7 @@ function PromotionBanners() {
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Banner 1 - Trao đổi vợt cũ */}
-        <div className="bg-linear-to-r from-amber-50 to-amber-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-2 hover:scale-105 border border-amber-200/50 hover-glow shimmer-on-hover cursor-pointer group">
+        <div className="bg-linear-to-r from-amber-50 to-amber-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg border border-amber-200/50 cursor-pointer group">
           <div className="flex-1">
             <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">TRAO ĐỔI VỢT CŨ</h3>
             <p className="text-sm font-semibold text-emerald-600 mb-3">TIẾT KIỆM NHẤT</p>
@@ -283,12 +318,12 @@ function PromotionBanners() {
           </div>
           <div className="text-right ml-4 shrink-0">
             <p className="text-xs text-gray-500 mb-1">CHI PHÍ</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-none group-hover:scale-110 transition-transform duration-300">THẤP</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-none">THẤP</p>
           </div>
         </div>
 
         {/* Banner 2 - Thay đế giày */}
-        <div className="bg-linear-to-r from-orange-50 to-orange-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-2 hover:scale-105 border border-orange-200/50 hover-glow shimmer-on-hover cursor-pointer group">
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg border border-orange-200/50 cursor-pointer group">
           <div className="flex-1">
             <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">THAY ĐẾ GIÀY PICKLEBALL</h3>
             <p className="text-sm text-gray-700 mb-3">GIỮ NGUYÊN CẤU TRÚC</p>
@@ -300,12 +335,12 @@ function PromotionBanners() {
           </div>
           <div className="text-right ml-4 shrink-0">
             <p className="text-xs text-gray-500 mb-1">CHUẨN</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none group-hover:scale-110 transition-transform duration-300">100%</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none">100%</p>
           </div>
         </div>
 
         {/* Banner 3 - Sửa vợt */}
-        <div className="bg-linear-to-r from-lime-50 to-lime-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg transition-all duration-300 hover:-translate-y-2 hover:scale-105 border border-lime-200/50 hover-glow shimmer-on-hover cursor-pointer group">
+        <div className="bg-linear-to-r from-lime-50 to-lime-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg border border-lime-200/50 cursor-pointer group">
           <div className="flex-1">
             <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">SỬA VỢT PICKLEBALL</h3>
             <p className="text-sm text-gray-700 mb-3">CHI PHÍ THẤP NHẤT</p>
@@ -317,7 +352,7 @@ function PromotionBanners() {
           </div>
           <div className="text-right ml-4 shrink-0">
             <p className="text-xs text-gray-500 mb-1">KHÔI PHỤC</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none group-hover:scale-110 transition-transform duration-300">99%</p>
+            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none">99%</p>
           </div>
         </div>
       </div>
@@ -325,15 +360,24 @@ function PromotionBanners() {
   );
 }
 
-function FlashSaleSection() {
+function FlashSaleSection({ 
+  sharedProductsData, 
+  isLoading 
+}: { 
+  sharedProductsData?: any;
+  isLoading?: boolean;
+}) {
   const [timeLeft, setTimeLeft] = useState({ hours: 22, minutes: 37, seconds: 39 });
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: productsData, isLoading } = useProducts({ PageSize: 20 });
+  // Use shared data if provided, otherwise fetch independently
+  const { data: productsData, isLoading: localIsLoading } = useProducts({ PageSize: 20 });
+  const finalProductsData = sharedProductsData || productsData;
+  const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
 
   // Get products with discount
-  const saleProducts = productsData?.items?.filter(
-    (p) => p.originalPrice && p.originalPrice > p.price
+  const saleProducts = finalProductsData?.items?.filter(
+    (p: any) => p.originalPrice && p.originalPrice > p.price
   ).slice(0, 10) || [];
 
   useEffect(() => {
@@ -354,24 +398,54 @@ function FlashSaleSection() {
     }
   };
 
-  if (isLoading || saleProducts.length === 0) return null;
+  // Show skeleton while loading
+  if (isLoading) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
+        <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
+          <div className="lg:w-1/3 bg-white rounded-xl border p-4 md:p-6">
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="aspect-square bg-gray-200 rounded-lg mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+            <div className="h-10 bg-gray-200 rounded"></div>
+          </div>
+          <div className="lg:w-2/3 bg-linear-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
+            <div className="h-8 bg-white/20 rounded mb-4"></div>
+            <div className="flex gap-4 overflow-x-auto">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="shrink-0 w-[200px] bg-white rounded-lg p-3">
+                  <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+  
+  // Only hide if no sale products after loading
+  if (saleProducts.length === 0) return null;
 
   return (
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
       <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
         {/* Deal of the day */}
-        <div className="lg:w-1/3 bg-white rounded-xl border p-4 md:p-6 hover-lift">
-          <h3 className="text-xl font-bold text-gray-900 mb-2 gradient-text">CHỈ CÓ TRONG HÔM NAY</h3>
+        <div className="lg:w-1/3 bg-white rounded-xl border p-4 md:p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-2">CHỈ CÓ TRONG HÔM NAY</h3>
           {saleProducts[0] && (
             <>
               <div className="relative aspect-square mb-4 overflow-hidden rounded-lg group">
                 {saleProducts[0].primaryImageUrl?.includes("cloudinary") ? (
-                  <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                  <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain" />
                 ) : (
-                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill className="object-contain group-hover:scale-110 transition-transform duration-500" />
+                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill className="object-contain" />
                 )}
                 {saleProducts[0].originalPrice && (
-                  <span className="absolute top-2 right-2 bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded pulse-animation shadow-lg">
+                  <span className="absolute top-2 right-2 bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg">
                     -{Math.round((1 - saleProducts[0].price / saleProducts[0].originalPrice) * 100)}%
                   </span>
                 )}
@@ -379,7 +453,7 @@ function FlashSaleSection() {
               <h4 className="font-medium text-gray-900 line-clamp-2 mb-2">{saleProducts[0].name}</h4>
               <div className="flex items-center gap-1 mb-2">
                 {[1,2,3,4,5].map(s => (
-                  <Star key={s} className={`h-4 w-4 ${s <= (saleProducts[0].averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
+                  <Star key={s} className={`h-4 w-4 ${s <= (saleProducts[0].averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
                 ))}
               </div>
               <div className="flex items-center gap-2 mb-4">
@@ -391,24 +465,23 @@ function FlashSaleSection() {
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Đặt mua ngay! Ưu đãi sẽ kết thúc sau:</p>
                 <div className="flex gap-2">
-                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200 hover:scale-110 transition-transform duration-300">
-                    <span className="text-2xl font-bold text-emerald-600 number-counter">{String(timeLeft.hours).padStart(2, '0')}</span>
+                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200">
+                    <span className="text-2xl font-bold text-emerald-600">{String(timeLeft.hours).padStart(2, '0')}</span>
                     <p className="text-xs text-gray-500">GIỜ</p>
                   </div>
-                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200 hover:scale-110 transition-transform duration-300">
-                    <span className="text-2xl font-bold text-emerald-600 number-counter">{String(timeLeft.minutes).padStart(2, '0')}</span>
+                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200">
+                    <span className="text-2xl font-bold text-emerald-600">{String(timeLeft.minutes).padStart(2, '0')}</span>
                     <p className="text-xs text-gray-500">PHÚT</p>
                   </div>
-                  <div className="bg-linear-to-br from-red-50 to-red-100 rounded px-3 py-2 text-center border border-red-200 hover:scale-110 transition-transform duration-300 pulse-animation">
-                    <span className="text-2xl font-bold text-red-600 number-counter">{String(timeLeft.seconds).padStart(2, '0')}</span>
+                  <div className="bg-linear-to-br from-red-50 to-red-100 rounded px-3 py-2 text-center border border-red-200">
+                    <span className="text-2xl font-bold text-red-600">{String(timeLeft.seconds).padStart(2, '0')}</span>
                     <p className="text-xs text-gray-500">GIÂY</p>
                   </div>
                 </div>
               </div>
               <Link href={getProductUrl(saleProducts[0])}>
-                <Button className="w-full hover:scale-105 transition-all duration-300 hover:shadow-lg hover:bg-emerald-600 relative overflow-hidden group">
-                  <span className="relative z-10">CHỌN MUA</span>
-                  <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                <Button className="w-full hover:shadow-lg hover:bg-emerald-600">
+                  CHỌN MUA
                 </Button>
               </Link>
             </>
@@ -419,37 +492,37 @@ function FlashSaleSection() {
         <div className="lg:w-2/3 bg-linear-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h3 className="text-lg md:text-2xl font-bold text-white flex items-center gap-2">
-              <span className="text-yellow-300 float-animation">⚡</span> FLASH SALE GIÁ SỐC
+              <span className="text-yellow-300">⚡</span> FLASH SALE GIÁ SỐC
             </h3>
             <div className="flex gap-2">
-          <button onClick={() => scroll("left")} className="bg-white/20 hover:bg-white/40 rounded-full p-2 transition-all duration-300 hover:scale-110 hover:rotate-[-5deg] active:scale-95">
+          <button onClick={() => scroll("left")} className="bg-white/20 hover:bg-white/40 rounded-full p-2">
             <ChevronLeft className="h-5 w-5 text-white" />
           </button>
-          <button onClick={() => scroll("right")} className="bg-white/20 hover:bg-white/40 rounded-full p-2 transition-all duration-300 hover:scale-110 hover:rotate-[5deg] active:scale-95">
+          <button onClick={() => scroll("right")} className="bg-white/20 hover:bg-white/40 rounded-full p-2">
             <ChevronRight className="h-5 w-5 text-white" />
           </button>
             </div>
           </div>
 
           <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
-            {saleProducts.slice(1).map((product, index) => (
+            {saleProducts.slice(1).map((product: any, index: number) => (
               <Link 
                 key={product.id} 
                 href={getProductUrl(product)} 
                 className="shrink-0 w-[200px]"
               >
-                <Card className="bg-white hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:scale-105 shimmer-on-hover group">
+                <Card className="bg-white hover:shadow-xl group">
                   <CardContent className="p-3">
                     <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
                       {product.primaryImageUrl?.includes("cloudinary") ? (
-                        <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                        <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
                       ) : product.primaryImageUrl ? (
-                        <Image src={product.primaryImageUrl} alt="" fill className="object-contain group-hover:scale-110 transition-transform duration-500" />
+                        <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
                       ) : (
                         <div className="w-full h-full bg-gray-100" />
                       )}
                       {product.originalPrice && (
-                        <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded pulse-animation shadow-md">
+                        <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-md">
                           -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                         </span>
                       )}
@@ -463,7 +536,7 @@ function FlashSaleSection() {
                     )}
                     <div className="flex mt-1">
                       {[1,2,3,4,5].map(s => (
-                        <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
+                        <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
                       ))}
                     </div>
                   </CardContent>
@@ -477,19 +550,52 @@ function FlashSaleSection() {
   );
 }
 
-function NewProductsSection() {
-  const { data: productsData, isLoading } = useProducts({ PageSize: 50 });
-  const products = productsData?.items?.slice(0, 8) || [];
+function NewProductsSection({ 
+  sharedProductsData, 
+  isLoading 
+}: { 
+  sharedProductsData?: any;
+  isLoading?: boolean;
+}) {
+  // Use shared data if provided, otherwise fetch independently
+  const { data: productsData, isLoading: localIsLoading } = useProducts({ PageSize: 50 });
+  const finalProductsData = sharedProductsData || productsData;
+  const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
+  const products = finalProductsData?.items?.slice(0, 8) || [];
 
-  if (isLoading) return <ProductGridSkeleton count={8} />;
-  if (products.length === 0) return null;
+  if (finalIsLoading) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <div className="h-8 w-48 bg-gray-200 rounded"></div>
+          <div className="h-6 w-24 bg-gray-200 rounded"></div>
+        </div>
+        <ProductGridSkeleton count={8} />
+      </section>
+    );
+  }
+  
+  // Show section even if no products, but with message
+  if (products.length === 0) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">SẢN PHẨM MỚI</h2>
+          <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+            Xem tất cả <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <p className="text-gray-500 text-center py-8">Chưa có sản phẩm mới.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900">SẢN PHẨM MỚI</h2>
-        <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 group hover:gap-2 transition-all duration-300">
-          Xem tất cả <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+        <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+          Xem tất cả <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -503,17 +609,8 @@ function NewProductsSection() {
 
         {/* Products Grid */}
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {products.map((product, index) => (
-            <div 
-              key={product.id}
-              className="animate-fade-in-up"
-              style={{ 
-                animationDelay: `${index * 0.1}s`,
-                animationFillMode: 'both'
-              }}
-            >
-              <ProductCard product={product} />
-            </div>
+          {products.map((product: any) => (
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       </div>
@@ -521,8 +618,17 @@ function NewProductsSection() {
   );
 }
 
-function CategoryProductsSection() {
-  const { data: categories } = useCategories();
+function CategoryProductsSection({ 
+  sharedCategories, 
+  isLoadingCategories 
+}: { 
+  sharedCategories?: any;
+  isLoadingCategories?: boolean;
+}) {
+  // Use shared categories if provided, otherwise fetch independently
+  const { data: categories, isLoading: localIsLoadingCategories } = useCategories();
+  const finalCategories = sharedCategories || categories;
+  const finalIsLoadingCategories = isLoadingCategories !== undefined ? isLoadingCategories : localIsLoadingCategories;
 
   // Category configurations with banner images
   const categoryConfigs = [
@@ -568,15 +674,48 @@ function CategoryProductsSection() {
     }
   ];
 
+  // Show skeleton while loading categories
+  if (finalIsLoadingCategories) {
+    return (
+      <>
+        {categoryConfigs.map((config) => (
+          <section key={config.name} className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+            <div className="h-8 w-64 bg-gray-200 rounded mb-6"></div>
+            <div className="flex gap-4">
+              <div className="hidden lg:block w-1/4 h-[600px] bg-gray-200 rounded-xl"></div>
+              <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <div key={i} className="bg-white rounded-lg p-3">
+                    <div className="aspect-square bg-gray-200 rounded-lg mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       {categoryConfigs.map((config) => {
-        const category = categories?.find(c => 
+        const category = finalCategories?.find((c: any) => 
           c.name?.toLowerCase().includes(config.searchKey.toLowerCase())
         );
 
-        // Only render section if category is found
-        if (!category) return null;
+        // Render section even if category not found, but with loading state
+        if (!category) {
+          return (
+            <CategoryProductSection 
+              key={config.name}
+              config={config}
+              category={null}
+            />
+          );
+        }
 
         return (
           <CategoryProductSection 
@@ -604,18 +743,72 @@ function CategoryProductSection({
       subtitle: string;
     };
   };
-  category: { id: string; name: string | null };
+  category: { id: string; name: string | null } | null;
 }) {
   // Fetch products by categoryId to ensure accurate filtering
   const { data: productsData, isLoading } = useProducts({ 
     PageSize: 8,
-    CategoryId: category.id 
+    CategoryId: category?.id 
   });
 
   const displayProducts = productsData?.items || [];
 
-  if (isLoading) return null;
-  if (displayProducts.length === 0) return null;
+  // Show skeleton while loading
+  if (isLoading) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-8 w-64 bg-gray-200 rounded"></div>
+          <div className="h-6 w-24 bg-gray-200 rounded"></div>
+        </div>
+        <div className="flex gap-4">
+          <div className="hidden lg:block w-1/4 h-[600px] bg-gray-200 rounded-xl"></div>
+          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="bg-white rounded-lg p-3">
+                <div className="aspect-square bg-gray-200 rounded-lg mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // If no category found, show section with message
+  if (!category) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
+          <Link href="/products" className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+            Xem tất cả <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <p className="text-gray-500 text-center py-8">Đang tải sản phẩm...</p>
+      </section>
+    );
+  }
+
+  // Show section even if no products, but with message
+  if (displayProducts.length === 0) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
+          <Link 
+            href={`/products${category ? `?categoryId=${category.id}` : ""}`} 
+            className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
+          >
+            Xem tất cả <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <p className="text-gray-500 text-center py-8">Chưa có sản phẩm trong danh mục này.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
@@ -623,9 +816,9 @@ function CategoryProductSection({
         <h2 className="text-2xl font-bold text-gray-900">{config.name}</h2>
         <Link 
           href={`/products${category ? `?categoryId=${category.id}` : ""}`} 
-          className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 group hover:gap-2 transition-all duration-300"
+          className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
         >
-          Xem tất cả <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+          Xem tất cả <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -663,27 +856,27 @@ function CategoryProductSection({
 
         {/* Products Grid - 2 rows x 4 columns */}
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayProducts.map((product) => (
+          {displayProducts.map((product: any) => (
             <Link 
               key={product.id} 
               href={getProductUrl(product)} 
               className="group"
             >
-              <Card className="bg-white hover:shadow-lg transition-all hover:-translate-y-1 h-full">
+              <Card className="bg-white hover:shadow-lg h-full">
                 <CardContent className="p-3">
                   <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
                     {product.primaryImageUrl?.includes("cloudinary") ? (
                       <img 
                         src={product.primaryImageUrl} 
                         alt={product.name || ""} 
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform" 
+                        className="w-full h-full object-contain" 
                       />
                     ) : product.primaryImageUrl ? (
                       <Image 
                         src={product.primaryImageUrl} 
                         alt={product.name || ""} 
                         fill 
-                        className="object-contain group-hover:scale-105 transition-transform" 
+                        className="object-contain" 
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
@@ -692,19 +885,18 @@ function CategoryProductSection({
                     )}
                     {/* Discount Badge */}
                     {product.originalPrice && product.originalPrice > product.price && (
-                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded pulse-animation shadow-lg">
+                      <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
                         -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                       </span>
                     )}
                     {/* Hover Button */}
-                    <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm hover:scale-105 transition-transform duration-300 relative overflow-hidden group/btn">
-                        <span className="relative z-10">CHỌN</span>
-                        <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-300 origin-left"></span>
+                    <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100">
+                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
+                        CHỌN
                       </Button>
                     </div>
                   </div>
-                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors">
+                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-emerald-600">
                     {product.name}
                   </h4>
                   {/* Star Rating */}
@@ -714,7 +906,7 @@ function CategoryProductSection({
                               key={s} 
                               className={`h-4 w-4 ${
                                 s <= (product.averageRating || 5) 
-                                  ? "fill-emerald-500 text-emerald-500" 
+                                  ? "fill-yellow-500 text-yellow-500" 
                                   : "text-gray-300"
                               }`} 
                             />
@@ -739,22 +931,78 @@ function CategoryProductSection({
   );
 }
 
-function TrendingSection() {
-  const { data: productsData } = useProducts({ PageSize: 50 });
+function TrendingSection({ 
+  sharedProductsData, 
+  isLoading 
+}: { 
+  sharedProductsData?: any;
+  isLoading?: boolean;
+}) {
+  // Use shared data if provided, otherwise fetch independently
+  const { data: productsData, isLoading: localIsLoading } = useProducts({ PageSize: 50 });
+  const finalProductsData = sharedProductsData || productsData;
+  const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
   
-  const trendingProducts = [...(productsData?.items || [])]
+  const trendingProducts = [...(finalProductsData?.items || [])]
     .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
     .slice(0, 6);
 
-  const viewedProducts = [...(productsData?.items || [])]
+  const viewedProducts = [...(finalProductsData?.items || [])]
     .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
     .slice(0, 6);
 
-  const boughtProducts = [...(productsData?.items || [])]
+  const boughtProducts = [...(finalProductsData?.items || [])]
     .filter(p => p.originalPrice && p.originalPrice > p.price)
     .slice(0, 6);
 
-  if (!productsData?.items?.length) return null;
+  // Show skeleton while loading
+  if (finalIsLoading) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5, 6].map((j) => (
+                  <div key={j} className="flex gap-3">
+                    <div className="w-20 h-20 bg-gray-200 rounded-lg"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2 mt-2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Show section even if no products
+  if (!finalProductsData?.items?.length) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">ĐANG TRENDING</h3>
+            <p className="text-gray-500 text-sm">Chưa có sản phẩm.</p>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG XEM</h3>
+            <p className="text-gray-500 text-sm">Chưa có sản phẩm.</p>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">MỌI NGƯỜI ĐANG MUA</h3>
+            <p className="text-gray-500 text-sm">Chưa có sản phẩm.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
@@ -776,7 +1024,7 @@ function TrendingSection() {
                     <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
                   ) : null}
                   {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded pulse-animation shadow-md">
+                    <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded shadow-md">
                       -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                     </span>
                   )}
@@ -785,7 +1033,7 @@ function TrendingSection() {
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
                   <div className="flex mt-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
                     ))}
                   </div>
                   <p className="text-red-600 font-bold text-sm mt-1">{formatCurrency(product.price)}</p>
@@ -816,7 +1064,7 @@ function TrendingSection() {
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
                   <div className="flex mt-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
                     ))}
                   </div>
                   <p className="text-red-600 font-bold text-sm mt-1">{formatCurrency(product.price)}</p>
@@ -852,7 +1100,7 @@ function TrendingSection() {
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600">{product.name}</h4>
                   <div className="flex mt-1">
                     {[1,2,3,4,5].map(s => (
-                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-emerald-500 text-emerald-500" : "text-gray-300"}`} />
+                      <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
                     ))}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
@@ -871,8 +1119,17 @@ function TrendingSection() {
   );
 }
 
-function CategoryLinksGrid() {
-  const { data: categories } = useCategories();
+function CategoryLinksGrid({ 
+  sharedCategories, 
+  isLoading 
+}: { 
+  sharedCategories?: any;
+  isLoading?: boolean;
+} = {} as { sharedCategories?: any; isLoading?: boolean }) {
+  // Use shared categories if provided, otherwise fetch independently
+  const { data: categories, isLoading: localIsLoading } = useCategories();
+  const finalCategories = sharedCategories || categories;
+  const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
 
   const categoryIcons: { [key: string]: string } = {
     "vợt": "🏸",
@@ -890,16 +1147,44 @@ function CategoryLinksGrid() {
     return "📦";
   };
 
-  if (!categories?.length) return null;
+  // Show skeleton while loading
+  if (isLoading) {
+    return (
+      <section className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white border rounded-xl p-4">
+              <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto"></div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Show section even if no categories
+  if (!finalCategories?.length) {
+    return (
+      <section className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          <div className="bg-white border rounded-xl p-4 text-center">
+            <p className="text-gray-500">Chưa có danh mục</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-        {categories.slice(0, 5).map((category) => (
+        {finalCategories.slice(0, 5).map((category: any) => (
           <Link
             key={category.id}
             href={`/products?categoryId=${category.id}`}
-            className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 transition-all group"
+            className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 group"
           >
             <div className="text-center">
               <span className="text-4xl">{getIcon(category.name || "")}</span>
@@ -910,7 +1195,7 @@ function CategoryLinksGrid() {
         ))}
         <Link
           href="/products"
-          className="bg-linear-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg transition-all hover-scale"
+          className="bg-linear-to-br from-emerald-500 to-lime-400 rounded-xl p-4 flex items-center justify-center hover:shadow-lg"
         >
           <span className="text-white font-bold text-lg">Xem tất cả</span>
         </Link>
@@ -928,18 +1213,18 @@ function NewsletterSection() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           {/* Contact Info */}
           <div className="flex gap-8">
-            <div className="flex items-center gap-3 hover:scale-105 transition-transform duration-300 cursor-pointer group">
-              <Phone className="h-8 w-8 text-emerald-600 float-animation group-hover:text-emerald-700 transition-colors" />
+            <div className="flex items-center gap-3 cursor-pointer group">
+              <Phone className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700" />
               <div>
                 <p className="font-semibold text-gray-900">Hotline</p>
-                <p className="text-emerald-600 font-bold group-hover:text-emerald-700 transition-colors">0824.01.01.88</p>
+                <p className="text-emerald-600 font-bold group-hover:text-emerald-700">0824.01.01.88</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 hover:scale-105 transition-transform duration-300 cursor-pointer group">
-              <Mail className="h-8 w-8 text-emerald-600 float-animation-slow group-hover:text-emerald-700 transition-colors" />
+            <div className="flex items-center gap-3 cursor-pointer group">
+              <Mail className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700" />
               <div>
                 <p className="font-semibold text-gray-900">Email</p>
-                <p className="text-emerald-600 group-hover:text-emerald-700 transition-colors">support@ikasport.com</p>
+                <p className="text-emerald-600 group-hover:text-emerald-700">support@ikasport.com</p>
               </div>
             </div>
           </div>
@@ -956,10 +1241,10 @@ function NewsletterSection() {
                 placeholder="Nhập Email của bạn"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 transition-all duration-300 focus:scale-105 focus:shadow-lg"
+                className="flex-1"
               />
               <Button
-                className="bg-gray-900 hover:bg-gray-800 text-white px-6 hover:scale-105 transition-all duration-300 hover:shadow-lg relative overflow-hidden group"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-6 hover:shadow-lg"
                 onClick={() => {
                   if (email) {
                     toast.success("Đăng ký thành công!");
@@ -967,8 +1252,7 @@ function NewsletterSection() {
                   }
                 }}
               >
-                <span className="relative z-10">ĐĂNG KÝ</span>
-                <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                ĐĂNG KÝ
               </Button>
             </div>
           </div>
@@ -991,9 +1275,9 @@ function TrustBadges() {
         {badges.map((badge) => (
           <div 
             key={badge.title} 
-            className="flex items-center gap-4 justify-center hover:scale-105 transition-all duration-300 cursor-pointer group hover:shadow-lg rounded-lg p-4"
+            className="flex items-center gap-4 justify-center cursor-pointer group hover:shadow-lg rounded-lg p-4"
           >
-            <badge.icon className="h-12 w-12 text-emerald-600 float-animation group-hover:text-emerald-700 transition-colors" />
+            <badge.icon className="h-12 w-12 text-emerald-600 group-hover:text-emerald-700" />
             <div>
               <h4 className="font-bold text-gray-900">{badge.title}</h4>
               <p className="text-sm text-gray-600">{badge.desc}</p>

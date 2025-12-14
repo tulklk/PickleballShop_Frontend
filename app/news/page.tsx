@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useNews, useNewsCategories } from "@/lib/api/hooks";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Clock, Eye } from "lucide-react";
+import { Search, Clock, Eye, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils/formatDate";
 import Image from "next/image";
 
@@ -14,9 +14,11 @@ import Image from "next/image";
 function CategoryNewsSection({
   category,
   searchTerm,
+  index = 0,
 }: {
   category: string;
   searchTerm: string;
+  index?: number;
 }) {
   const { data: newsData, isLoading } = useNews({
     Category: category,
@@ -24,6 +26,21 @@ function CategoryNewsSection({
     SortBy: category === "Nổi bật" ? "popular" : "newest",
     SearchTerm: searchTerm || undefined,
   });
+
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  // Only trigger animation after data is loaded
+  useEffect(() => {
+    if (!isLoading && newsData?.items && newsData.items.length > 0) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        setShouldAnimate(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      setShouldAnimate(false);
+    }
+  }, [isLoading, newsData]);
 
   const newsItems = newsData?.items || [];
   if (newsItems.length === 0 && !isLoading) return null;
@@ -47,14 +64,39 @@ function CategoryNewsSection({
     );
   }
 
+  // Create slug for category URL
+  const categorySlug = category
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
   return (
-    <div className="mb-12">
-      {/* Category Heading with Green Underline */}
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-black mb-2">
-          {category.toUpperCase()}
-        </h2>
-        <div className="h-1 w-24 bg-brand-green-500 rounded"></div>
+    <div 
+      className="mb-12 animate-fade-in" 
+      style={{ 
+        animationDelay: `${0.2 + index * 0.15}s`,
+        opacity: 0 
+      }}
+    >
+      {/* Category Heading with Green Underline and "Xem thêm" link */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-black mb-2">
+            {category.toUpperCase()}
+          </h2>
+          <div className="h-1 w-24 bg-brand-green-500 rounded"></div>
+        </div>
+        <Link
+          href={`/news/category/${categorySlug}`}
+          className="flex items-center gap-1 text-brand-green-500 hover:text-brand-green-600 transition-colors font-medium"
+        >
+          <span>Xem thêm</span>
+          <ChevronRight className="h-4 w-4" />
+        </Link>
       </div>
 
       {/* News Layout: 1 Large + 4 Small (2x2) */}
@@ -63,7 +105,11 @@ function CategoryNewsSection({
         {featuredArticle && (
           <Link
             href={`/news/${featuredArticle.slug}`}
-            className="lg:col-span-2 group"
+            className={`lg:col-span-2 group ${shouldAnimate ? 'animate-fade-in' : ''}`}
+            style={shouldAnimate ? {
+              animationDelay: "0.1s",
+              opacity: 0,
+            } : {}}
           >
             <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow h-full">
               {/* Large Green Background Block with Title */}
@@ -73,7 +119,7 @@ function CategoryNewsSection({
                     {featuredArticle.title.toUpperCase()}
                   </h2>
                 </div>
-                <div className="hidden md:block w-56 h-56 ml-4 relative flex-shrink-0">
+                <div className="hidden md:block w-56 h-56 ml-4 relative shrink-0">
                   {featuredArticle.thumbnailUrl.includes("cloudinary.com") ||
                   featuredArticle.thumbnailUrl.startsWith("http") ? (
                     <img
@@ -131,11 +177,15 @@ function CategoryNewsSection({
 
         {/* 4 Small Articles - Right (1/3 width, 2x2 grid) */}
         <div className="lg:col-span-1 grid grid-cols-2 gap-4">
-          {smallArticles.map((item) => (
+          {smallArticles.map((item, itemIndex) => (
             <Link
               key={item.id}
               href={`/news/${item.slug}`}
-              className="group"
+              className={`group ${shouldAnimate ? 'animate-fade-in' : ''}`}
+              style={shouldAnimate ? {
+                animationDelay: `${0.3 + itemIndex * 0.1}s`,
+                opacity: 0,
+              } : {}}
             >
               <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
                 {/* Image with Green Background and Logo */}
@@ -184,7 +234,16 @@ function CategoryNewsSection({
 
 export default function NewsListPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [shouldAnimateHeader, setShouldAnimateHeader] = useState(false);
   const { data: categories = [] } = useNewsCategories();
+
+  // Trigger header animation after component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldAnimateHeader(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Define category order - "Nổi bật" first, then others
   const orderedCategories = useMemo(() => {
@@ -195,10 +254,24 @@ export default function NewsListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 bg-white min-h-screen">
-      <h1 className="text-4xl font-bold mb-6">Tin tức Pickleball</h1>
+      <h1 
+        className={`text-4xl font-bold mb-6 ${shouldAnimateHeader ? 'animate-fade-in' : ''}`}
+        style={shouldAnimateHeader ? {
+          animationDelay: "0s",
+          opacity: 0,
+        } : {}}
+      >
+        Tin tức Pickleball
+      </h1>
 
       {/* Search Bar */}
-      <div className="mb-8 bg-white rounded-lg p-4 shadow-sm">
+      <div 
+        className={`mb-8 bg-white rounded-lg p-4 shadow-sm ${shouldAnimateHeader ? 'animate-fade-in' : ''}`}
+        style={shouldAnimateHeader ? {
+          animationDelay: "0.1s",
+          opacity: 0,
+        } : {}}
+      >
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
@@ -212,11 +285,12 @@ export default function NewsListPage() {
 
       {/* News by Categories */}
       <div className="space-y-12">
-        {orderedCategories.map((category) => (
+        {orderedCategories.map((category, index) => (
           <CategoryNewsSection
             key={category}
             category={category}
             searchTerm={searchTerm}
+            index={index}
           />
         ))}
       </div>

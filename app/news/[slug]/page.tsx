@@ -49,7 +49,7 @@ export default function NewsDetailPage() {
       <div className="flex gap-8">
         {/* Left Sidebar */}
         <aside className="hidden lg:block shrink-0">
-          <NewsSidebar />
+          <NewsSidebar activeCategory={news.category} />
         </aside>
 
         {/* Main Content */}

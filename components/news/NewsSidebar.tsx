@@ -39,7 +39,11 @@ const productCategories = [
   { name: "Trang phục Pickleball", icon: Shirt, href: "/products?category=trang-phuc-pickleball" },
 ];
 
-function NewsSidebar() {
+export interface NewsSidebarProps {
+  activeCategory?: string;
+}
+
+function NewsSidebar({ activeCategory }: NewsSidebarProps) {
   const { data: categories = [], isLoading, error } = useNewsCategories();
   
   if (error) {
@@ -49,6 +53,17 @@ function NewsSidebar() {
   const getIcon = (categoryName: string) => {
     const IconComponent = categoryIcons[categoryName];
     return IconComponent && typeof IconComponent === 'function' ? IconComponent : FileText;
+  };
+
+  const categoryToSlug = (category: string) => {
+    return category
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   };
 
   return (
@@ -61,14 +76,29 @@ function NewsSidebar() {
           const Icon = getIcon(category);
           if (!Icon) return null;
           
+          const isActive = activeCategory === category;
+          const categorySlug = categoryToSlug(category);
+          
           return (
             <Link
               key={category}
-              href={`/news?category=${encodeURIComponent(category)}`}
-              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-emerald-50 transition-colors group"
+              href={`/news/category/${categorySlug}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors group ${
+                isActive
+                  ? "bg-brand-green-50 text-brand-green-700"
+                  : "hover:bg-brand-green-50 text-gray-700"
+              }`}
             >
-              <Icon className="h-4 w-4 text-emerald-600 group-hover:text-emerald-700" />
-              <span className="text-sm text-gray-700 group-hover:text-emerald-600">
+              <Icon className={`h-4 w-4 ${
+                isActive
+                  ? "text-brand-green-600"
+                  : "text-brand-green-500 group-hover:text-brand-green-600"
+              }`} />
+              <span className={`text-sm ${
+                isActive
+                  ? "text-brand-green-700 font-semibold"
+                  : "group-hover:text-brand-green-500"
+              }`}>
                 {category}
               </span>
             </Link>
@@ -88,7 +118,7 @@ function NewsSidebar() {
 
         <Link
           href="/news?category=Khuyến mãi"
-          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-emerald-50 transition-colors group"
+          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-brand-green-50 transition-colors group"
         >
           <Star className="h-4 w-4 text-brand-green-500 group-hover:text-brand-green-600" />
           <span className="text-sm text-gray-700 group-hover:text-brand-green-500">
@@ -98,7 +128,7 @@ function NewsSidebar() {
 
         <Link
           href="/news"
-          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-emerald-50 transition-colors group"
+          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-brand-green-50 transition-colors group"
         >
           <Package className="h-4 w-4 text-brand-green-500 group-hover:text-brand-green-600" />
           <span className="text-sm text-gray-700 group-hover:text-brand-green-500">
@@ -132,8 +162,8 @@ function NewsSidebar() {
           href="/news"
               className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-brand-green-50 transition-colors group"
         >
-          <FileText className="h-4 w-4 text-emerald-600 group-hover:text-emerald-700" />
-          <span className="text-sm text-gray-700 group-hover:text-emerald-600">
+          <FileText className="h-4 w-4 text-brand-green-500 group-hover:text-brand-green-600" />
+          <span className="text-sm text-gray-700 group-hover:text-brand-green-500">
             Tin tức Pickleball
           </span>
         </Link>

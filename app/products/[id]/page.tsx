@@ -515,8 +515,8 @@ export default function ProductDetailPage() {
                         <Star
                           className={`h-10 w-10 transition-colors ${
                             star <= reviewRating
-                              ? "fill-emerald-500 text-emerald-500"
-                              : "text-gray-300 hover:text-emerald-300"
+                              ? "fill-yellow-500 text-yellow-500"
+                              : "text-gray-300 hover:text-yellow-300"
                           }`}
                         />
                       </button>
