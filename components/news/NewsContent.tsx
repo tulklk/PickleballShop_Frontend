@@ -16,6 +16,14 @@ export function NewsContent({ content, className = "" }: NewsContentProps) {
       // Set HTML content
       contentRef.current.innerHTML = content;
 
+      // Add IDs to headings for table of contents
+      const headings = contentRef.current.querySelectorAll("h1, h2, h3");
+      headings.forEach((heading, index) => {
+        const text = heading.textContent || "";
+        const id = `heading-${index}-${text.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}`;
+        heading.id = id;
+      });
+
       // Process all images in the content to use Next.js Image component
       const images = contentRef.current.querySelectorAll("img");
       images.forEach((img) => {

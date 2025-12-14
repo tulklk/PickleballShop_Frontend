@@ -50,6 +50,19 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // Custom brand green color matching IKA SPORT logo and AI chat box
+        "brand-green": {
+          50: "#e8f5e9",
+          100: "#c8e6c9",
+          200: "#a5d6a7",
+          300: "#81c784",
+          400: "#66bb6a",
+          500: "#1e9d56", // Main brand green color (IKA SPORT logo)
+          600: "#1a8a4a",
+          700: "#16773e",
+          800: "#126432",
+          900: "#0e5126",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

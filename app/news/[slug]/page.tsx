@@ -6,9 +6,12 @@ import { useNewsDetail, useNews } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, Clock, Facebook, Twitter, Mail, Linkedin, Share2 } from "lucide-react";
 import { formatDate } from "@/lib/utils/formatDate";
 import { NewsContent } from "@/components/news/NewsContent";
+import NewsSidebar from "@/components/news/NewsSidebar";
+import { TableOfContents } from "@/components/news/TableOfContents";
+import { NewsComments } from "@/components/news/NewsComments";
 import Image from "next/image";
 
 export default function NewsDetailPage() {
@@ -42,126 +45,221 @@ export default function NewsDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Back button */}
-      <Link href="/news">
-        <Button variant="outline" className="mb-6">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Quay lại danh sách
-        </Button>
-      </Link>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex gap-8">
+        {/* Left Sidebar */}
+        <aside className="hidden lg:block shrink-0">
+          <NewsSidebar />
+        </aside>
 
-      {/* Thumbnail */}
-      <div className="relative h-96 w-full mb-6 rounded-lg overflow-hidden">
-        {news.thumbnailUrl.includes("cloudinary.com") ||
-        news.thumbnailUrl.startsWith("http") ? (
-          <img
-            src={news.thumbnailUrl}
-            alt={news.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <Image
-            src={news.thumbnailUrl}
-            alt={news.title}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-        )}
-      </div>
+        {/* Main Content */}
+        <main className="flex-1 max-w-4xl">
+          {/* Back button */}
+          <Link href="/news">
+            <Button variant="ghost" className="mb-6 text-gray-600 hover:text-brand-green-500">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="text-sm">{news.title}</span>
+            </Button>
+          </Link>
 
-      {/* Meta info */}
-      <div className="flex flex-wrap items-center gap-4 mb-4 text-sm text-gray-500">
-        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full">
-          {news.category}
-        </span>
-        <span>{formatDate(news.publishedAt || news.createdAt)}</span>
-        <span>•</span>
-        <span>{news.authorName}</span>
-        <span>•</span>
-        <span className="flex items-center gap-1">
-          <Eye className="h-4 w-4" />
-          {news.viewCount} lượt xem
-        </span>
-      </div>
+          {/* Hero Section with Green Background */}
+          <div className="relative mb-6 rounded-lg overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+              {/* Green Background with Title */}
+              <div className="lg:col-span-2 bg-brand-green-500 p-6 md:p-8 min-h-[200px] flex items-center">
+                <div className="flex-1 z-10">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="px-3 py-1 bg-brand-green-600 text-white rounded-full text-xs font-semibold">
+                      {news.category}
+                    </span>
+                    {news.tags && news.tags.split(",").slice(0, 1).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-white text-gray-800 rounded-full text-xs font-semibold"
+                      >
+                        {tag.trim()}
+                      </span>
+                    ))}
+                  </div>
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4">
+                    {news.title.toUpperCase()}
+                  </h1>
+                </div>
+              </div>
 
-      {/* Title */}
-      <h1 className="text-4xl font-bold mb-4">{news.title}</h1>
+              {/* Image on Right */}
+              <div className="lg:col-span-1 relative h-64 lg:h-auto bg-white">
+                {news.thumbnailUrl.includes("cloudinary.com") ||
+                news.thumbnailUrl.startsWith("http") ? (
+                  <img
+                    src={news.thumbnailUrl}
+                    alt={news.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={news.thumbnailUrl}
+                    alt={news.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    priority
+                  />
+                )}
+              </div>
+            </div>
+          </div>
 
-      {/* Summary */}
-      {news.summary && (
-        <p className="text-xl text-gray-600 mb-6 italic">{news.summary}</p>
-      )}
+          {/* Meta info */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+              <span className="font-semibold">{news.authorName}</span>
+              <span>•</span>
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                <span>{formatDate(news.publishedAt || news.createdAt)}</span>
+              </div>
+            </div>
+          </div>
 
-      {/* Content */}
-      <Card className="mb-8">
-        <CardContent className="p-6">
-          <NewsContent content={news.content} />
-        </CardContent>
-      </Card>
+          {/* Summary/Introduction */}
+          {news.summary && (
+            <div className="mb-6 text-gray-700 leading-relaxed">
+              <div
+                className="prose prose-lg max-w-none"
+                dangerouslySetInnerHTML={{ __html: news.summary }}
+              />
+            </div>
+          )}
 
-      {/* Tags */}
-      {news.tags && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-3">Tags:</h3>
-          <div className="flex flex-wrap gap-2">
-            {news.tags.split(",").map((tag, index) => (
-              <span
-                key={index}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+          {/* Table of Contents */}
+          <TableOfContents content={news.content} />
+
+          {/* Content */}
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <NewsContent content={news.content} />
+            </CardContent>
+          </Card>
+
+          {/* Social Sharing */}
+          <div className="mb-8 flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">Chia sẻ:</span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 hover:border-emerald-600 hover:text-emerald-600"
+                onClick={() => {
+                  const url = window.location.href;
+                  window.open(
+                    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+                    "_blank"
+                  );
+                }}
               >
-                #{tag.trim()}
-              </span>
-            ))}
+                <Facebook className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 hover:border-emerald-600 hover:text-emerald-600"
+                onClick={() => {
+                  const url = window.location.href;
+                  const text = news.title;
+                  window.open(
+                    `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+                    "_blank"
+                  );
+                }}
+              >
+                <Twitter className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 hover:border-emerald-600 hover:text-emerald-600"
+                onClick={() => {
+                  const url = window.location.href;
+                  const subject = news.title;
+                  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(url)}`;
+                }}
+              >
+                <Mail className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0 hover:border-emerald-600 hover:text-emerald-600"
+                onClick={() => {
+                  const url = window.location.href;
+                  window.open(
+                    `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+                    "_blank"
+                  );
+                }}
+              >
+                <Linkedin className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Related News */}
-      {relatedNews && relatedNews.items.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6">Tin tức liên quan</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {relatedNews.items
-              .filter((item) => item.id !== news.id)
-              .slice(0, 3)
-              .map((item) => (
-                <Link key={item.id} href={`/news/${item.slug}`}>
-                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                    <div className="relative h-32 w-full">
-                      {item.thumbnailUrl.includes("cloudinary.com") ||
-                      item.thumbnailUrl.startsWith("http") ? (
-                        <img
-                          src={item.thumbnailUrl}
-                          alt={item.title}
-                          className="w-full h-full object-cover rounded-t-lg"
-                        />
-                      ) : (
-                        <Image
-                          src={item.thumbnailUrl}
-                          alt={item.title}
-                          fill
-                          className="object-cover rounded-t-lg"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      )}
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold line-clamp-2 hover:text-emerald-600">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-2">
-                        {formatDate(item.publishedAt || item.createdAt)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-          </div>
-        </div>
-      )}
+          {/* Comments Section */}
+          <NewsComments newsId={news.id} slug={news.slug} />
+
+          {/* Related News */}
+          {relatedNews && relatedNews.items.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold mb-6">Bài viết liên quan</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {relatedNews.items
+                  .filter((item) => item.id !== news.id)
+                  .slice(0, 3)
+                  .map((item) => (
+                    <Link key={item.id} href={`/news/${item.slug}`}>
+                      <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
+                        <div className="relative h-40 w-full bg-brand-green-50">
+                          {item.thumbnailUrl.includes("cloudinary.com") ||
+                          item.thumbnailUrl.startsWith("http") ? (
+                            <img
+                              src={item.thumbnailUrl}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Image
+                              src={item.thumbnailUrl}
+                              alt={item.title}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 33vw"
+                            />
+                          )}
+                        </div>
+                        <CardContent className="p-4">
+                          <div className="mb-2">
+                            <div className="bg-brand-green-500 text-white text-xs px-2 py-1 rounded inline-block mb-2">
+                              {item.category}
+                            </div>
+                          </div>
+                          <h3 className="font-bold text-base mb-2 line-clamp-2 hover:text-brand-green-500">
+                            {item.title.toUpperCase()}
+                          </h3>
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                            {item.summary}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(item.publishedAt || item.createdAt)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
