@@ -14,11 +14,11 @@ interface NewsItem {
   title: string;
   thumbnailUrl: string;
   category: string;
-  publishedAt?: string;
+  publishedAt?: string | null;
   createdAt: string;
   authorName: string;
   viewCount: number;
-  summary?: string;
+  summary?: string | null;
 }
 
 interface FeaturedCarouselProps {
