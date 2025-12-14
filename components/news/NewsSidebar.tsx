@@ -25,7 +25,7 @@ const categoryIcons: Record<string, any> = {
   "Có gì mới": Package,
   "Vợt Pickleball": Activity,
   "Bóng Pickleball": Circle,
-  "Giày Pickleball": Shoe,
+  "Giày Pickleball": Footprints,
   "Phụ kiện Pickleball": ShoppingBag,
   "Trang phục Pickleball": Shirt,
   "Tin tức Pickleball": FileText,
