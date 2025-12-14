@@ -6,7 +6,7 @@ import {
   FileText,
   Star,
   Package,
-  Racket,
+  Activity,
   Circle,
   Shoe,
   ShoppingBag,
@@ -23,7 +23,7 @@ const categoryIcons: Record<string, any> = {
   "Khuyến mãi": FileText,
   "Chỉ có trong hôm nay": Star,
   "Có gì mới": Package,
-  "Vợt Pickleball": Racket,
+  "Vợt Pickleball": Activity,
   "Bóng Pickleball": Circle,
   "Giày Pickleball": Shoe,
   "Phụ kiện Pickleball": ShoppingBag,
@@ -32,7 +32,7 @@ const categoryIcons: Record<string, any> = {
 };
 
 const productCategories = [
-  { name: "Vợt Pickleball", icon: Racket, href: "/products?category=vot-pickleball" },
+  { name: "Vợt Pickleball", icon: Activity, href: "/products?category=vot-pickleball" },
   { name: "Bóng Pickleball", icon: Circle, href: "/products?category=bong-pickleball" },
   { name: "Giày Pickleball", icon: Shoe, href: "/products?category=giay-pickleball" },
   { name: "Phụ kiện Pickleball", icon: ShoppingBag, href: "/products?category=phu-kien-pickleball" },
