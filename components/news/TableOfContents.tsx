@@ -66,15 +66,15 @@ export function TableOfContents({ content, className = "" }: TableOfContentsProp
   if (tocItems.length === 0) return null;
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 mb-6 ${className}`}>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-lg flex items-center gap-2">
-          <List className="h-5 w-5" />
+    <div className={`bg-white border border-gray-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6 ${className}`}>
+      <div className="flex items-center justify-between mb-2 md:mb-3">
+        <h3 className="font-bold text-base md:text-lg flex items-center gap-2">
+          <List className="h-4 w-4 md:h-5 md:w-5" />
           Mục lục
         </h3>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-500 hover:text-gray-700 transition-colors"
+          className="text-gray-500 hover:text-gray-700 transition-colors p-1"
           aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
         >
           {isExpanded ? (
@@ -86,16 +86,16 @@ export function TableOfContents({ content, className = "" }: TableOfContentsProp
       </div>
 
       {isExpanded && (
-        <ol className="space-y-2 list-decimal list-inside">
-          {tocItems.map((item, index) => (
+        <ol className="space-y-1.5 md:space-y-2 list-decimal list-inside">
+          {tocItems.map((item) => (
             <li
               key={item.id}
-              className={`cursor-pointer hover:text-brand-green-500 transition-colors text-sm ${
+              className={`cursor-pointer hover:text-brand-green-500 transition-colors text-xs md:text-sm ${
                 item.level === 1
                   ? "font-semibold"
                   : item.level === 2
-                  ? "ml-4 font-medium"
-                  : "ml-8"
+                  ? "ml-3 md:ml-4 font-medium"
+                  : "ml-6 md:ml-8"
               }`}
               onClick={() => scrollToHeading(item.id)}
             >

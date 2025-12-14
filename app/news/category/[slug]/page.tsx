@@ -70,9 +70,9 @@ export default function NewsCategoryPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex gap-8">
-        {/* Left Sidebar */}
+    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="flex gap-6 md:gap-8">
+        {/* Left Sidebar - Hidden on mobile */}
         <aside className="hidden lg:block shrink-0">
           <NewsSidebar activeCategory={categoryName} />
         </aside>
@@ -80,11 +80,11 @@ export default function NewsCategoryPage() {
         {/* Main Content */}
         <main className="flex-1">
           {/* Category Heading */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-black mb-2">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold text-black mb-1 md:mb-2">
               DANH MỤC TIN TỨC {categoryName.toUpperCase()}
             </h1>
-            <div className="h-1 w-24 bg-brand-green-500 rounded"></div>
+            <div className="h-1 w-16 md:w-24 bg-brand-green-500 rounded"></div>
           </div>
 
           {/* 1. Nổi bật nhất - Carousel */}
@@ -92,33 +92,33 @@ export default function NewsCategoryPage() {
             <FeaturedCarousel articles={featuredData.items.slice(0, 5)} />
           )}
 
-          {/* 2. Tin tức cập nhật & 3. Xem nhiều nhất - Side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Tin tức cập nhật - Left (2/3 width) */}
+          {/* 2. Tin tức cập nhật & 3. Xem nhiều nhất - Side by side on desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            {/* Tin tức cập nhật - Left (2/3 width on desktop) */}
             <div className="lg:col-span-2">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-black mb-2">TIN TỨC CẬP NHẬT</h2>
-                <div className="h-1 w-24 bg-brand-green-500 rounded"></div>
+              <div className="mb-4 md:mb-6">
+                <h2 className="text-lg md:text-2xl font-bold text-black mb-1 md:mb-2">TIN TỨC CẬP NHẬT</h2>
+                <div className="h-1 w-16 md:w-24 bg-brand-green-500 rounded"></div>
               </div>
 
               {isLoadingLatest ? (
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex gap-4">
-                      <Skeleton className="w-32 h-32 shrink-0" />
+                    <div key={i} className="flex gap-3 md:gap-4">
+                      <Skeleton className="w-20 h-20 md:w-32 md:h-32 shrink-0 rounded" />
                       <div className="flex-1 space-y-2">
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-4 md:h-6 w-3/4" />
+                        <Skeleton className="h-3 md:h-4 w-full" />
+                        <Skeleton className="h-3 md:h-4 w-2/3 hidden md:block" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : latestData?.items.length === 0 ? (
-                <p className="text-gray-500">Không có tin tức mới.</p>
+                <p className="text-gray-500 text-sm md:text-base">Không có tin tức mới.</p>
               ) : (
                 <>
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-6">
                     {latestData?.items.map((item, index) => (
                       <Link 
                         key={item.id} 
@@ -129,9 +129,9 @@ export default function NewsCategoryPage() {
                           opacity: 0,
                         }}
                       >
-                        <div className="flex gap-4">
+                        <div className="flex gap-3 md:gap-4">
                           {/* Thumbnail */}
-                          <div className="relative w-32 h-32 shrink-0 bg-brand-green-50">
+                          <div className="relative w-20 h-20 md:w-32 md:h-32 shrink-0 rounded overflow-hidden">
                             {item.thumbnailUrl.includes("cloudinary.com") ||
                             item.thumbnailUrl.startsWith("http") ? (
                               <img
@@ -145,30 +145,30 @@ export default function NewsCategoryPage() {
                                 alt={item.title}
                                 fill
                                 className="object-cover"
-                                sizes="128px"
+                                sizes="(max-width: 768px) 80px, 128px"
                               />
                             )}
                           </div>
 
                           {/* Content */}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                              <span className="px-2 py-1 bg-brand-green-100 text-brand-green-800 rounded-full">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-1 md:gap-2 text-[10px] md:text-xs text-gray-500 mb-1 md:mb-2">
+                              <span className="px-1.5 md:px-2 py-0.5 md:py-1 bg-brand-green-100 text-brand-green-800 rounded-full">
                                 {item.category}
                               </span>
-                              <span>•</span>
+                              <span className="hidden md:inline">•</span>
                               <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
+                                <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
                                 <span>
                                   {formatDate(item.publishedAt || item.createdAt)}
                                 </span>
                               </div>
                             </div>
-                            <h3 className="text-lg font-bold mb-2 group-hover:text-brand-green-500 transition-colors line-clamp-2">
-                              {item.title.toUpperCase()}
+                            <h3 className="text-sm md:text-lg font-bold mb-1 md:mb-2 group-hover:text-brand-green-500 transition-colors line-clamp-2">
+                              {item.title}
                             </h3>
                             {item.summary && (
-                              <p className="text-sm text-gray-600 line-clamp-2">
+                              <p className="text-xs md:text-sm text-gray-600 line-clamp-2 hidden md:block">
                                 {item.summary}
                               </p>
                             )}
@@ -190,30 +190,30 @@ export default function NewsCategoryPage() {
               )}
             </div>
 
-            {/* Xem nhiều nhất - Right (1/3 width) */}
+            {/* Xem nhiều nhất - Right (1/3 width on desktop) */}
             <div className="lg:col-span-1">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-black mb-2">XEM NHIỀU NHẤT</h2>
-                <div className="h-1 w-24 bg-brand-green-500 rounded"></div>
+              <div className="mb-4 md:mb-6">
+                <h2 className="text-lg md:text-2xl font-bold text-black mb-1 md:mb-2">XEM NHIỀU NHẤT</h2>
+                <div className="h-1 w-16 md:w-24 bg-brand-green-500 rounded"></div>
               </div>
 
               {isLoadingMostViewed ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                    <div key={i} className="flex gap-3">
-                      <Skeleton className="w-20 h-20 shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
+                <div className="space-y-2 md:space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex gap-2 md:gap-3">
+                      <Skeleton className="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded" />
+                      <div className="flex-1 space-y-1 md:space-y-2">
+                        <Skeleton className="h-3 md:h-4 w-full" />
+                        <Skeleton className="h-3 md:h-4 w-3/4" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : mostViewedData?.items.length === 0 ? (
-                <p className="text-gray-500 text-sm">Không có tin tức.</p>
+                <p className="text-gray-500 text-xs md:text-sm">Không có tin tức.</p>
               ) : (
-                <div className="space-y-3">
-                  {mostViewedData?.items.map((item, index) => (
+                <div className="space-y-2 md:space-y-3">
+                  {mostViewedData?.items.slice(0, 5).map((item, index) => (
                     <Link 
                       key={item.id} 
                       href={`/news/${item.slug}`} 
@@ -223,9 +223,9 @@ export default function NewsCategoryPage() {
                         opacity: 0,
                       }}
                     >
-                      <div className="flex gap-3">
+                      <div className="flex gap-2 md:gap-3">
                         {/* Small Thumbnail */}
-                        <div className="relative w-20 h-20 shrink-0 bg-brand-green-50">
+                        <div className="relative w-16 h-16 md:w-20 md:h-20 shrink-0 rounded overflow-hidden">
                           {item.thumbnailUrl.includes("cloudinary.com") ||
                           item.thumbnailUrl.startsWith("http") ? (
                             <img
@@ -239,13 +239,13 @@ export default function NewsCategoryPage() {
                               alt={item.title}
                               fill
                               className="object-cover"
-                              sizes="80px"
+                              sizes="(max-width: 768px) 64px, 80px"
                             />
                           )}
                         </div>
                         {/* Title Only */}
-                        <div className="flex-1 flex items-center">
-                          <h3 className="text-sm font-bold group-hover:text-brand-green-500 transition-colors line-clamp-2">
+                        <div className="flex-1 flex items-center min-w-0">
+                          <h3 className="text-xs md:text-sm font-bold group-hover:text-brand-green-500 transition-colors line-clamp-2">
                             {item.title}
                           </h3>
                         </div>

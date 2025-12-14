@@ -4,9 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useNews, useNewsCategories } from "@/lib/api/hooks";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Clock, Eye, ChevronRight } from "lucide-react";
+import { Search, Clock, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils/formatDate";
 import Image from "next/image";
 
@@ -52,11 +51,22 @@ function CategoryNewsSection({
     return (
       <div>
         <Skeleton className="h-8 w-48 mb-6" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-96 lg:col-span-2" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Featured skeleton */}
+          <div>
+            <Skeleton className="aspect-4/3 w-full rounded-lg mb-4" />
+            <Skeleton className="h-6 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2 mb-2" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+          {/* Small articles skeleton */}
           <div className="grid grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((j) => (
-              <Skeleton key={j} className="h-48" />
+              <div key={j}>
+                <Skeleton className="aspect-4/3 w-full rounded-lg mb-3" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
             ))}
           </div>
         </div>
@@ -76,107 +86,87 @@ function CategoryNewsSection({
 
   return (
     <div 
-      className="mb-12 animate-fade-in" 
+      className="mb-8 md:mb-12 animate-fade-in" 
       style={{ 
         animationDelay: `${0.2 + index * 0.15}s`,
         opacity: 0 
       }}
     >
       {/* Category Heading with Green Underline and "Xem thêm" link */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 md:mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-black mb-2">
+          <h2 className="text-xl md:text-3xl font-bold text-black mb-1 md:mb-2">
             {category.toUpperCase()}
           </h2>
-          <div className="h-1 w-24 bg-brand-green-500 rounded"></div>
+          <div className="h-1 w-16 md:w-24 bg-brand-green-500 rounded"></div>
         </div>
         <Link
           href={`/news/category/${categorySlug}`}
-          className="flex items-center gap-1 text-brand-green-500 hover:text-brand-green-600 transition-colors font-medium"
+          className="flex items-center gap-1 text-brand-green-500 hover:text-brand-green-600 transition-colors font-medium text-sm md:text-base"
         >
           <span>Xem thêm</span>
           <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
 
-      {/* News Layout: 1 Large + 4 Small (2x2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Featured Article - Left (2/3 width) */}
+      {/* News Layout: 2 Equal Columns - Featured + 4 Small (2x2) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Featured Article - Left Column (50% width) */}
         {featuredArticle && (
           <Link
             href={`/news/${featuredArticle.slug}`}
-            className={`lg:col-span-2 group ${shouldAnimate ? 'animate-fade-in' : ''}`}
+            className={`group ${shouldAnimate ? 'animate-fade-in' : ''}`}
             style={shouldAnimate ? {
               animationDelay: "0.1s",
               opacity: 0,
             } : {}}
           >
-            <div className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow h-full">
-              {/* Large Green Background Block with Title */}
-              <div className="relative bg-gradient-to-br from-brand-green-400 to-brand-green-500 p-6 md:p-8 min-h-[250px] flex items-center">
-                <div className="flex-1 z-10 pr-4">
-                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4 line-clamp-4">
-                    {featuredArticle.title.toUpperCase()}
-                  </h2>
-                </div>
-                <div className="hidden md:block w-56 h-56 ml-4 relative shrink-0">
-                  {featuredArticle.thumbnailUrl.includes("cloudinary.com") ||
-                  featuredArticle.thumbnailUrl.startsWith("http") ? (
-                    <img
-                      src={featuredArticle.thumbnailUrl}
-                      alt={featuredArticle.title}
-                      className="w-full h-full object-cover rounded-lg shadow-lg"
-                    />
-                  ) : (
-                    <Image
-                      src={featuredArticle.thumbnailUrl}
-                      alt={featuredArticle.title}
-                      fill
-                      className="object-cover rounded-lg shadow-lg"
-                      sizes="224px"
-                    />
-                  )}
-                </div>
+            <div className="h-full flex flex-col">
+              {/* Image Only - No Green Background */}
+              <div className="relative w-full aspect-video md:aspect-4/3 rounded-lg overflow-hidden mb-3 md:mb-4">
+                {featuredArticle.thumbnailUrl.includes("cloudinary.com") ||
+                featuredArticle.thumbnailUrl.startsWith("http") ? (
+                  <img
+                    src={featuredArticle.thumbnailUrl}
+                    alt={featuredArticle.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <Image
+                    src={featuredArticle.thumbnailUrl}
+                    alt={featuredArticle.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                )}
               </div>
 
-              {/* Article Details Below Green Block */}
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                  <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs">
-                    {featuredArticle.category}
-                  </span>
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      {formatDate(
-                        featuredArticle.publishedAt || featuredArticle.createdAt
-                      )}
-                    </span>
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold mb-3 group-hover:text-brand-green-500 transition-colors text-black">
+              {/* Article Details Below - No Card Background */}
+              <div className="flex-1">
+                <h3 className="text-base md:text-xl font-bold mb-2 group-hover:text-brand-green-500 transition-colors text-brand-green-500">
                   {featuredArticle.title}
                 </h3>
+                <div className="flex items-center gap-2 text-xs md:text-sm text-gray-500 mb-2">
+                  <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                  <span>
+                    {formatDate(
+                      featuredArticle.publishedAt || featuredArticle.createdAt
+                    )}
+                  </span>
+                </div>
                 {featuredArticle.summary && (
-                  <p className="text-gray-600 mb-4 line-clamp-3">
+                  <p className="text-gray-600 line-clamp-2 md:line-clamp-3 text-sm md:text-base">
                     {featuredArticle.summary}
                   </p>
                 )}
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>{featuredArticle.authorName}</span>
-                  <div className="flex items-center gap-1">
-                    <Eye className="h-4 w-4" />
-                    <span>{featuredArticle.viewCount} lượt xem</span>
-                  </div>
-                </div>
-              </CardContent>
+              </div>
             </div>
           </Link>
         )}
 
-        {/* 4 Small Articles - Right (1/3 width, 2x2 grid) */}
-        <div className="lg:col-span-1 grid grid-cols-2 gap-4">
+        {/* 4 Small Articles - Right Column (50% width, 2x2 grid) */}
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
           {smallArticles.map((item, itemIndex) => (
             <Link
               key={item.id}
@@ -187,43 +177,40 @@ function CategoryNewsSection({
                 opacity: 0,
               } : {}}
             >
-              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
-                {/* Image with Green Background and Logo */}
-                <div className="relative">
-                  <div className="absolute top-2 right-2 z-10 bg-brand-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                    <span className="font-semibold text-[10px]">IKA Sport</span>
-                  </div>
-                  <div className="relative h-40 w-full bg-brand-green-50">
-                    {item.thumbnailUrl.includes("cloudinary.com") ||
-                    item.thumbnailUrl.startsWith("http") ? (
-                      <img
-                        src={item.thumbnailUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Image
-                        src={item.thumbnailUrl}
-                        alt={item.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 1024px) 50vw, 33vw"
-                      />
-                    )}
-                  </div>
+              {/* No Card Background - Direct Content */}
+              <div className="h-full flex flex-col">
+                {/* Image */}
+                <div className="relative aspect-4/3 w-full rounded-lg overflow-hidden mb-2 md:mb-3">
+                  {item.thumbnailUrl.includes("cloudinary.com") ||
+                  item.thumbnailUrl.startsWith("http") ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <Image
+                      src={item.thumbnailUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  )}
                 </div>
-                <CardContent className="p-3">
-                  <h3 className="font-bold text-sm mb-2 line-clamp-2 group-hover:text-brand-green-500 transition-colors">
+                {/* Content */}
+                <div className="flex-1">
+                  <h3 className="font-bold text-xs md:text-sm mb-1 md:mb-2 line-clamp-2 group-hover:text-brand-green-500 transition-colors text-black">
                     {item.title}
                   </h3>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Clock className="h-3 w-3" />
+                  <div className="flex items-center gap-1 text-[10px] md:text-xs text-gray-500">
+                    <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
                     <span>
                       {formatDate(item.publishedAt || item.createdAt)}
                     </span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </Link>
           ))}
         </div>
@@ -253,9 +240,9 @@ export default function NewsListPage() {
   }, [categories]);
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-white min-h-screen">
+    <div className="container mx-auto px-3 md:px-4 py-6 md:py-8 bg-white min-h-screen">
       <h1 
-        className={`text-4xl font-bold mb-6 ${shouldAnimateHeader ? 'animate-fade-in' : ''}`}
+        className={`text-2xl md:text-4xl font-bold mb-4 md:mb-6 ${shouldAnimateHeader ? 'animate-fade-in' : ''}`}
         style={shouldAnimateHeader ? {
           animationDelay: "0s",
           opacity: 0,
@@ -266,13 +253,13 @@ export default function NewsListPage() {
 
       {/* Search Bar */}
       <div 
-        className={`mb-8 bg-white rounded-lg p-4 shadow-sm ${shouldAnimateHeader ? 'animate-fade-in' : ''}`}
+        className={`mb-6 md:mb-8 bg-white rounded-lg p-3 md:p-4 shadow-sm ${shouldAnimateHeader ? 'animate-fade-in' : ''}`}
         style={shouldAnimateHeader ? {
           animationDelay: "0.1s",
           opacity: 0,
         } : {}}
       >
-        <div className="relative max-w-md">
+        <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Tìm kiếm tin tức..."

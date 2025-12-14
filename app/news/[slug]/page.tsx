@@ -45,28 +45,72 @@ export default function NewsDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex gap-8">
-        {/* Left Sidebar */}
+    <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+      <div className="flex gap-6 md:gap-8">
+        {/* Left Sidebar - Hidden on mobile */}
         <aside className="hidden lg:block shrink-0">
           <NewsSidebar activeCategory={news.category} />
         </aside>
 
         {/* Main Content */}
         <main className="flex-1 max-w-4xl">
-          {/* Back button */}
+          {/* Back button - simplified on mobile */}
           <Link href="/news">
-            <Button variant="ghost" className="mb-6 text-gray-600 hover:text-brand-green-500">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              <span className="text-sm">{news.title}</span>
+            <Button variant="ghost" className="mb-4 md:mb-6 text-gray-600 hover:text-brand-green-500 px-0 md:px-4">
+              <ArrowLeft className="h-4 w-4 mr-2 shrink-0" />
+              <span className="text-sm line-clamp-1">{news.title}</span>
             </Button>
           </Link>
 
-          {/* Hero Section with Green Background */}
-          <div className="relative mb-6 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
+          {/* Hero Section - Stack on mobile, side by side on desktop */}
+          <div className="relative mb-4 md:mb-6 rounded-lg overflow-hidden">
+            {/* Mobile: Image first, then title */}
+            <div className="block lg:hidden">
+              {/* Image */}
+              <div className="relative w-full aspect-video">
+                {news.thumbnailUrl.includes("cloudinary.com") ||
+                news.thumbnailUrl.startsWith("http") ? (
+                  <img
+                    src={news.thumbnailUrl}
+                    alt={news.title}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                ) : (
+                  <Image
+                    src={news.thumbnailUrl}
+                    alt={news.title}
+                    fill
+                    className="object-cover rounded-lg"
+                    sizes="100vw"
+                    priority
+                  />
+                )}
+              </div>
+              {/* Tags and Title below image on mobile */}
+              <div className="mt-4">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <span className="px-2 py-1 bg-brand-green-500 text-white rounded-full text-xs font-semibold">
+                    {news.category}
+                  </span>
+                  {news.tags && news.tags.split(",").slice(0, 1).map((tag, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold"
+                    >
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
+                <h1 className="text-xl font-bold text-black">
+                  {news.title}
+                </h1>
+              </div>
+            </div>
+
+            {/* Desktop: Green background with title + image side by side */}
+            <div className="hidden lg:grid lg:grid-cols-3 gap-0">
               {/* Green Background with Title */}
-              <div className="lg:col-span-2 bg-brand-green-500 p-6 md:p-8 min-h-[200px] flex items-center">
+              <div className="lg:col-span-2 bg-brand-green-500 p-8 min-h-[200px] flex items-center">
                 <div className="flex-1 z-10">
                   <div className="flex flex-wrap gap-2 mb-4">
                     <span className="px-3 py-1 bg-brand-green-600 text-white rounded-full text-xs font-semibold">
@@ -81,14 +125,14 @@ export default function NewsDetailPage() {
                       </span>
                     ))}
                   </div>
-                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-white mb-4">
                     {news.title.toUpperCase()}
                   </h1>
                 </div>
               </div>
 
               {/* Image on Right */}
-              <div className="lg:col-span-1 relative h-64 lg:h-auto bg-white">
+              <div className="lg:col-span-1 relative h-auto bg-white">
                 {news.thumbnailUrl.includes("cloudinary.com") ||
                 news.thumbnailUrl.startsWith("http") ? (
                   <img
@@ -102,7 +146,7 @@ export default function NewsDetailPage() {
                     alt={news.title}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    sizes="33vw"
                     priority
                   />
                 )}
@@ -111,12 +155,12 @@ export default function NewsDetailPage() {
           </div>
 
           {/* Meta info */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+          <div className="mb-3 md:mb-4">
+            <div className="flex items-center gap-2 text-xs md:text-sm text-gray-600 mb-2">
               <span className="font-semibold">{news.authorName}</span>
               <span>•</span>
               <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-3 w-3 md:h-4 md:w-4" />
                 <span>{formatDate(news.publishedAt || news.createdAt)}</span>
               </div>
             </div>
@@ -124,9 +168,9 @@ export default function NewsDetailPage() {
 
           {/* Summary/Introduction */}
           {news.summary && (
-            <div className="mb-6 text-gray-700 leading-relaxed">
+            <div className="mb-4 md:mb-6 text-gray-700 leading-relaxed">
               <div
-                className="prose prose-lg max-w-none"
+                className="prose prose-sm md:prose-lg max-w-none"
                 dangerouslySetInnerHTML={{ __html: news.summary }}
               />
             </div>
@@ -136,15 +180,15 @@ export default function NewsDetailPage() {
           <TableOfContents content={news.content} />
 
           {/* Content */}
-          <Card className="mb-8">
-            <CardContent className="p-6">
+          <Card className="mb-6 md:mb-8">
+            <CardContent className="p-3 md:p-6">
               <NewsContent content={news.content} />
             </CardContent>
           </Card>
 
           {/* Social Sharing */}
-          <div className="mb-8 flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700">Chia sẻ:</span>
+          <div className="mb-6 md:mb-8 flex flex-wrap items-center gap-2 md:gap-4">
+            <span className="text-xs md:text-sm font-medium text-gray-700">Chia sẻ:</span>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -209,50 +253,50 @@ export default function NewsDetailPage() {
 
           {/* Related News */}
           {relatedNews && relatedNews.items.length > 0 && (
-            <div className="mt-12">
-              <h2 className="text-2xl font-bold mb-6">Bài viết liên quan</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mt-8 md:mt-12">
+              <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Bài viết liên quan</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {relatedNews.items
                   .filter((item) => item.id !== news.id)
                   .slice(0, 3)
                   .map((item) => (
-                    <Link key={item.id} href={`/news/${item.slug}`}>
-                      <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
-                        <div className="relative h-40 w-full bg-brand-green-50">
+                    <Link key={item.id} href={`/news/${item.slug}`} className="group">
+                      <div className="h-full">
+                        <div className="relative aspect-video w-full rounded-lg overflow-hidden mb-3">
                           {item.thumbnailUrl.includes("cloudinary.com") ||
                           item.thumbnailUrl.startsWith("http") ? (
                             <img
                               src={item.thumbnailUrl}
                               alt={item.title}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
                           ) : (
                             <Image
                               src={item.thumbnailUrl}
                               alt={item.title}
                               fill
-                              className="object-cover"
-                              sizes="(max-width: 768px) 100vw, 33vw"
+                              className="object-cover group-hover:scale-105 transition-transform"
+                              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                             />
                           )}
                         </div>
-                        <CardContent className="p-4">
+                        <div>
                           <div className="mb-2">
-                            <div className="bg-brand-green-500 text-white text-xs px-2 py-1 rounded inline-block mb-2">
+                            <span className="bg-brand-green-500 text-white text-[10px] md:text-xs px-2 py-0.5 rounded">
                               {item.category}
-                            </div>
+                            </span>
                           </div>
-                          <h3 className="font-bold text-base mb-2 line-clamp-2 hover:text-brand-green-500">
-                            {item.title.toUpperCase()}
+                          <h3 className="font-bold text-sm md:text-base mb-2 line-clamp-2 group-hover:text-brand-green-500 transition-colors">
+                            {item.title}
                           </h3>
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                          <p className="text-xs md:text-sm text-gray-600 line-clamp-2 mb-2 hidden sm:block">
                             {item.summary}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-[10px] md:text-xs text-gray-500">
                             {formatDate(item.publishedAt || item.createdAt)}
                           </p>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     </Link>
                   ))}
               </div>

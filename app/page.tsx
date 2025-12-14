@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight, Star, Clock, Truck, Phone, Mail } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight, Star, Clock, Truck, Phone, Mail, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
-import { useProducts, useCategories } from "@/lib/api/hooks";
+import { useProducts, useCategories, useNews } from "@/lib/api/hooks";
 import { apiClient } from "@/lib/api/client";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatDate } from "@/lib/utils/formatDate";
 import { toast } from "sonner";
 import { getProductUrl } from "@/lib/utils/productUrl";
 
@@ -110,9 +111,6 @@ export default function HomePage() {
       {/* Feature Banners under hero (image-based like reference) */}
       <FeatureBanners />
 
-      {/* Promotion Banners */}
-      <PromotionBanners />
-
       {/* Flash Sale Section */}
       <FlashSaleSection sharedProductsData={flashSaleProductsData} isLoading={isLoadingFlashSale} />
 
@@ -127,6 +125,9 @@ export default function HomePage() {
 
       {/* Category Links Grid */}
       <CategoryLinksGrid sharedCategories={categories} isLoading={isLoadingCategories} />
+
+      {/* Latest News Section */}
+      <LatestNewsSection />
 
       {/* Newsletter & Contact */}
       <NewsletterSection />
@@ -296,65 +297,6 @@ function FeatureBanners() {
             </div>
           </div>
         </Link>
-      </div>
-    </section>
-  );
-}
-
-function PromotionBanners() {
-  return (
-    <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* Banner 1 - Trao đổi vợt cũ */}
-        <div className="bg-linear-to-r from-amber-50 to-amber-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg border border-amber-200/50 cursor-pointer group">
-          <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">TRAO ĐỔI VỢT CŨ</h3>
-            <p className="text-sm font-semibold text-emerald-600 mb-3">TIẾT KIỆM NHẤT</p>
-            <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-600">
-              <span className="px-2 py-1 bg-white/50 rounded">ĐỔI MỚI</span>
-              <span className="px-2 py-1 bg-white/50 rounded">KÍ GỬI</span>
-              <span className="px-2 py-1 bg-white/50 rounded">ĐỔI CÂY CŨ KHÁC</span>
-            </div>
-          </div>
-          <div className="text-right ml-4 shrink-0">
-            <p className="text-xs text-gray-500 mb-1">CHI PHÍ</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-none">THẤP</p>
-          </div>
-        </div>
-
-        {/* Banner 2 - Thay đế giày */}
-        <div className="bg-linear-to-r from-orange-50 to-orange-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg border border-orange-200/50 cursor-pointer group">
-          <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">THAY ĐẾ GIÀY PICKLEBALL</h3>
-            <p className="text-sm text-gray-700 mb-3">GIỮ NGUYÊN CẤU TRÚC</p>
-            <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-600">
-              <span className="px-2 py-1 bg-white/50 rounded">ASICS</span>
-              <span className="px-2 py-1 bg-white/50 rounded">NIKE</span>
-              <span className="px-2 py-1 bg-white/50 rounded">ADIDAS...</span>
-            </div>
-          </div>
-          <div className="text-right ml-4 shrink-0">
-            <p className="text-xs text-gray-500 mb-1">CHUẨN</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none">100%</p>
-          </div>
-        </div>
-
-        {/* Banner 3 - Sửa vợt */}
-        <div className="bg-linear-to-r from-lime-50 to-lime-100 rounded-xl p-6 md:p-8 flex items-center justify-between hover:shadow-lg border border-lime-200/50 cursor-pointer group">
-          <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-1">SỬA VỢT PICKLEBALL</h3>
-            <p className="text-sm text-gray-700 mb-3">CHI PHÍ THẤP NHẤT</p>
-            <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-600">
-              <span className="px-2 py-1 bg-white/50 rounded">KHÔNG LỆCH</span>
-              <span className="px-2 py-1 bg-white/50 rounded">THẨM MỸ CAO</span>
-              <span className="px-2 py-1 bg-white/50 rounded">BẢO HÀNH</span>
-            </div>
-          </div>
-          <div className="text-right ml-4 shrink-0">
-            <p className="text-xs text-gray-500 mb-1">KHÔI PHỤC</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-emerald-600 leading-none">99%</p>
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -1204,24 +1146,185 @@ function CategoryLinksGrid({
   );
 }
 
+function LatestNewsSection() {
+  const { data: newsData, isLoading } = useNews({
+    Page: 1,
+    PageSize: 6,
+    SortBy: "newest",
+  });
+
+  if (isLoading) {
+    return (
+      <section className="container mx-auto px-3 md:px-4 py-8 md:py-12">
+        <div className="text-center mb-8">
+          <div className="h-8 w-48 bg-gray-200 rounded mx-auto mb-4"></div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <div className="h-96 bg-gray-200 rounded"></div>
+          </div>
+          <div className="lg:col-span-1 space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex gap-3">
+                <div className="w-20 h-20 bg-gray-200 rounded shrink-0"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!newsData?.items || newsData.items.length === 0) {
+    return null;
+  }
+
+  const featuredArticle = newsData.items[0];
+  const smallArticles = newsData.items.slice(1, 6);
+
+  return (
+    <section className="container mx-auto px-3 md:px-4 py-8 md:py-12">
+      {/* Section Title */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-black mb-1 md:mb-2">TIN TỨC MỚI</h2>
+        <div className="h-1 w-16 md:w-20 bg-brand-green-500 rounded"></div>
+      </div>
+
+      {/* Main Content: Featured + Small Articles - 2 Equal Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Featured Article - Left Column (50% width) */}
+        <div>
+          <Link href={`/news/${featuredArticle.slug}`} className="block group h-full">
+            <div className="flex flex-col h-full">
+              {/* Image */}
+              <div className="relative w-full aspect-4/3 rounded-lg overflow-hidden mb-4">
+                {featuredArticle.thumbnailUrl.includes("cloudinary.com") ||
+                featuredArticle.thumbnailUrl.startsWith("http") ? (
+                  <img
+                    src={featuredArticle.thumbnailUrl}
+                    alt={featuredArticle.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <Image
+                    src={featuredArticle.thumbnailUrl}
+                    alt={featuredArticle.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                )}
+              </div>
+
+              {/* Article Details Below */}
+              <div className="flex-1">
+                <h4 className="text-lg font-bold text-brand-green-500 mb-2 group-hover:text-brand-green-600 transition-colors">
+                  {featuredArticle.title}
+                </h4>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    {formatDate(featuredArticle.publishedAt || featuredArticle.createdAt)}
+                  </span>
+                </div>
+                {featuredArticle.summary && (
+                  <p className="text-gray-600 line-clamp-4">
+                    {featuredArticle.summary}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Small Articles - Right Column (50% width) */}
+        <div className="flex flex-col justify-between space-y-3">
+          {smallArticles.map((article) => (
+            <Link
+              key={article.id}
+              href={`/news/${article.slug}`}
+              className="block group"
+            >
+              <div className="flex gap-4">
+                {/* Thumbnail */}
+                <div className="relative w-24 h-20 shrink-0 rounded overflow-hidden">
+                  {article.thumbnailUrl.includes("cloudinary.com") ||
+                  article.thumbnailUrl.startsWith("http") ? (
+                    <img
+                      src={article.thumbnailUrl}
+                      alt={article.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={article.thumbnailUrl}
+                      alt={article.title}
+                      fill
+                      className="object-cover"
+                      sizes="96px"
+                    />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="mb-1">
+                    <span className="px-2 py-0.5 bg-brand-green-100 text-brand-green-800 rounded-full text-[10px] font-medium uppercase">
+                      {article.category}
+                    </span>
+                  </div>
+                  <h5 className="text-sm font-bold text-black mb-1 group-hover:text-brand-green-500 transition-colors line-clamp-2">
+                    {article.title}
+                  </h5>
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      {formatDate(article.publishedAt || article.createdAt)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* View More Link */}
+      <div className="text-center">
+        <Link
+          href="/news"
+          className="inline-flex flex-col items-center gap-1 text-black hover:text-brand-green-500 transition-colors group"
+        >
+          <span className="text-sm font-medium">Xem thêm</span>
+          <ChevronDown className="h-4 w-4 group-hover:translate-y-1 transition-transform" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function NewsletterSection() {
   const [email, setEmail] = useState("");
 
   return (
-    <section className="bg-gray-50 py-12">
+    <section className="bg-gray-50 py-8 md:py-12">
       <div className="container mx-auto px-3 md:px-4">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-8">
           {/* Contact Info */}
-          <div className="flex gap-8">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
             <div className="flex items-center gap-3 cursor-pointer group">
-              <Phone className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700" />
+              <Phone className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700 shrink-0" />
               <div>
                 <p className="font-semibold text-gray-900">Hotline</p>
                 <p className="text-emerald-600 font-bold group-hover:text-emerald-700">0824.01.01.88</p>
               </div>
             </div>
             <div className="flex items-center gap-3 cursor-pointer group">
-              <Mail className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700" />
+              <Mail className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700 shrink-0" />
               <div>
                 <p className="font-semibold text-gray-900">Email</p>
                 <p className="text-emerald-600 group-hover:text-emerald-700">support@ikasport.com</p>
@@ -1230,9 +1333,9 @@ function NewsletterSection() {
           </div>
 
           {/* Newsletter */}
-          <div className="flex-1 max-w-xl">
-            <h3 className="font-bold text-gray-900 mb-2">Đăng ký nhận thông tin</h3>
-            <p className="text-sm text-gray-600 mb-3">
+          <div className="flex-1 w-full md:max-w-xl">
+            <h3 className="font-bold text-gray-900 mb-2 text-left">Đăng ký nhận thông tin</h3>
+            <p className="text-sm text-gray-600 mb-3 text-left">
               Nhận các chương trình khuyến mãi, thông báo sản phẩm mới và các ưu đãi khác.
             </p>
             <div className="flex gap-2">
@@ -1244,7 +1347,7 @@ function NewsletterSection() {
                 className="flex-1"
               />
               <Button
-                className="bg-gray-900 hover:bg-gray-800 text-white px-6 hover:shadow-lg"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-4 md:px-6 hover:shadow-lg shrink-0 whitespace-nowrap"
                 onClick={() => {
                   if (email) {
                     toast.success("Đăng ký thành công!");
@@ -1271,14 +1374,14 @@ function TrustBadges() {
 
   return (
     <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div className="flex flex-col md:grid md:grid-cols-3 gap-4 md:gap-6">
         {badges.map((badge) => (
           <div 
             key={badge.title} 
-            className="flex items-center gap-4 justify-center cursor-pointer group hover:shadow-lg rounded-lg p-4"
+            className="flex items-center gap-4 md:justify-center justify-start cursor-pointer group hover:shadow-lg rounded-lg p-4"
           >
-            <badge.icon className="h-12 w-12 text-emerald-600 group-hover:text-emerald-700" />
-            <div>
+            <badge.icon className="h-12 w-12 text-emerald-600 group-hover:text-emerald-700 shrink-0" />
+            <div className="text-left md:text-center">
               <h4 className="font-bold text-gray-900">{badge.title}</h4>
               <p className="text-sm text-gray-600">{badge.desc}</p>
             </div>
