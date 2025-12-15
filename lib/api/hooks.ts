@@ -8,6 +8,7 @@ import type {
   AddCartItemRequest,
   UpdateCartItemRequest,
   CreateOrderRequest,
+  CreateGuestOrderRequest,
   ProductCategory,
   Product,
   ChangePasswordRequest,
@@ -621,6 +622,49 @@ export function useOrder(id: string) {
 export function useCreatePayment() {
   return useMutation({
     mutationFn: (orderId: string) => apiClient.createPayment(orderId),
+  });
+}
+
+// Guest Orders hooks
+export function useCreateGuestOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateGuestOrderRequest) => apiClient.createGuestOrder(data),
+    onSuccess: () => {
+      // Invalidate orders queries
+      queryClient.invalidateQueries({ 
+        queryKey: ["orders"],
+        exact: false
+      });
+      // Clear guest cart after successful order
+      if (typeof window !== "undefined") {
+        const { clearGuestCart } = require("@/lib/utils/guestCart");
+        clearGuestCart();
+      }
+    },
+  });
+}
+
+export function useGuestOrder(id: string) {
+  return useQuery({
+    queryKey: ["guestOrder", id],
+    queryFn: () => apiClient.getGuestOrder(id),
+    enabled: !!id,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
+export function useLookupGuestOrder() {
+  return useMutation({
+    mutationFn: (params: { phoneNumber: string; orderNumber?: string }) => 
+      apiClient.lookupGuestOrder(params),
+  });
+}
+
+export function useCreateGuestPayment() {
+  return useMutation({
+    mutationFn: (orderId: string) => apiClient.createGuestPayment(orderId),
   });
 }
 

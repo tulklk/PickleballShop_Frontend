@@ -159,7 +159,7 @@ export default function ProductDetailPage() {
         productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
         unitPrice: displayPrice,
       });
-      toast.success("Đã thêm vào giỏ hàng! Đăng nhập để thanh toán.");
+      toast.success("Đã thêm vào giỏ hàng!");
       // Invalidate cart query to update cart count in navbar
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       return;

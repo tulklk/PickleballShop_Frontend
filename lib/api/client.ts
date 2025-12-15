@@ -17,6 +17,7 @@ import type {
   UpdateCartItemRequest,
   CartItemDto,
   CreateOrderRequest,
+  CreateGuestOrderRequest,
   CreateOrderResponse,
   OrderDto,
   Order,
@@ -692,6 +693,35 @@ class ApiClient {
 
   async createPayment(orderId: string): Promise<CreatePaymentResponse> {
     return this.request<CreatePaymentResponse>(`/api/Orders/${orderId}/payment`, {
+      method: "POST",
+    });
+  }
+
+  // Guest Orders endpoints
+  async createGuestOrder(data: CreateGuestOrderRequest): Promise<OrderDto | CreateOrderResponse> {
+    const response = await this.request<OrderDto | CreateOrderResponse>("/api/guest/orders", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    console.log("API createGuestOrder raw response:", response);
+    return response;
+  }
+
+  async getGuestOrder(id: string): Promise<OrderDto> {
+    return this.request<OrderDto>(`/api/guest/orders/${id}`);
+  }
+
+  async lookupGuestOrder(params: { phoneNumber: string; orderNumber?: string }): Promise<OrderDto[]> {
+    const searchParams = new URLSearchParams();
+    searchParams.append("phoneNumber", params.phoneNumber);
+    if (params.orderNumber) {
+      searchParams.append("orderNumber", params.orderNumber);
+    }
+    return this.request<OrderDto[]>(`/api/guest/orders/lookup?${searchParams.toString()}`);
+  }
+
+  async createGuestPayment(orderId: string): Promise<CreatePaymentResponse> {
+    return this.request<CreatePaymentResponse>(`/api/guest/orders/${orderId}/payment`, {
       method: "POST",
     });
   }

@@ -15,6 +15,7 @@ function PayOSReturnContent() {
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
+  const [isGuestOrder, setIsGuestOrder] = useState<boolean>(false);
 
   useEffect(() => {
     const processPayment = () => {
@@ -53,6 +54,12 @@ function PayOSReturnContent() {
       }
       setOrderCode(orderCodeParam);
 
+      // Check if this is a guest order
+      const guestOrderId = sessionStorage.getItem("guest_orderId");
+      if (guestOrderId && guestOrderId === finalOrderId) {
+        setIsGuestOrder(true);
+      }
+
       // XỬ LÝ TRẠNG THÁI - ƯU TIÊN SUCCESS TRƯỚC
       const isSuccess =
         (code === "00" && statusParam === "PAID") ||
@@ -71,6 +78,7 @@ function PayOSReturnContent() {
         setStatus("success");
         if (finalOrderId) {
           sessionStorage.removeItem("payos_orderId");
+          sessionStorage.removeItem("guest_orderId");
         }
         return;
       }
@@ -162,21 +170,43 @@ function PayOSReturnContent() {
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <Button
-                onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
-                className="bg-emerald-600 hover:bg-emerald-700 w-full"
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Xem đơn hàng
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/")}
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full"
-              >
-                <Home className="mr-2 h-4 w-4" />
-                Về trang chủ
-              </Button>
+              {isGuestOrder ? (
+                <>
+                  <Button
+                    onClick={() => router.push("/")}
+                    className="bg-emerald-600 hover:bg-emerald-700 w-full"
+                  >
+                    <Home className="mr-2 h-4 w-4" />
+                    Về trang chủ
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/products")}
+                    className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full"
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    Tiếp tục mua sắm
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
+                    className="bg-emerald-600 hover:bg-emerald-700 w-full"
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    Xem đơn hàng
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/")}
+                    className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 w-full"
+                  >
+                    <Home className="mr-2 h-4 w-4" />
+                    Về trang chủ
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         );
@@ -207,7 +237,7 @@ function PayOSReturnContent() {
               </div>
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-              {orderId && (
+              {!isGuestOrder && orderId && (
                 <Button
                   onClick={() => router.push(`/account/orders/${orderId}`)}
                   className="bg-yellow-600 hover:bg-yellow-700"
@@ -216,7 +246,7 @@ function PayOSReturnContent() {
                   Xem đơn hàng
                 </Button>
               )}
-              {!orderId && (
+              {!isGuestOrder && !orderId && (
                 <Button
                   onClick={() => router.push("/account/orders")}
                   className="bg-yellow-600 hover:bg-yellow-700"
@@ -263,7 +293,7 @@ function PayOSReturnContent() {
               </div>
             )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-              {orderId && (
+              {!isGuestOrder && orderId && (
                 <Button
                   onClick={() => router.push(`/account/orders/${orderId}`)}
                   className="bg-red-600 hover:bg-red-700"
@@ -272,7 +302,7 @@ function PayOSReturnContent() {
                   Xem đơn hàng
                 </Button>
               )}
-              {!orderId && (
+              {!isGuestOrder && !orderId && (
                 <Button
                   onClick={() => router.push("/account/orders")}
                   className="bg-red-600 hover:bg-red-700"

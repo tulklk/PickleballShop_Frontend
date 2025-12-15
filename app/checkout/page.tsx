@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCart, useCreateOrder, useCreatePayment, useUserMe } from "@/lib/api/hooks";
+import { useCart, useCreateOrder, useCreatePayment, useCreateGuestOrder, useCreateGuestPayment, useUserMe } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectItem } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
-import { RequireAuth } from "@/lib/auth/guards";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentMethod } from "@/lib/api/types";
 import Image from "next/image";
@@ -25,16 +24,19 @@ import {
   ShoppingBag, 
   ArrowRight,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Mail
 } from "lucide-react";
 import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from "@/lib/utils/provinces";
 import momoIcon from "@/app/img/momo_icon.png";
 import vnpayLogo from "@/app/img/Logo-VNPAY-QR-350x65.png";
 import { Building2 } from "lucide-react";
 
+// Base schema - email is optional, will be validated conditionally
 const checkoutSchema = z.object({
   fullName: z.string().min(2, "Vui lòng nhập họ tên"),
   phoneNumber: z.string().min(10, "Số điện thoại phải có ít nhất 10 số"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   addressLine: z.string().min(5, "Vui lòng nhập địa chỉ"),
   ward: z.string().min(1, "Vui lòng nhập phường/xã"),
   district: z.string().min(1, "Vui lòng nhập quận/huyện"),
@@ -45,11 +47,7 @@ const checkoutSchema = z.object({
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
-  return (
-    <RequireAuth>
-      <CheckoutContent />
-    </RequireAuth>
-  );
+  return <CheckoutContent />;
 }
 
 function CheckoutContent() {
@@ -57,7 +55,9 @@ function CheckoutContent() {
   const { data: cart, isLoading: isCartLoading } = useCart();
   const createOrder = useCreateOrder();
   const createPayment = useCreatePayment();
-  const { user } = useAuth();
+  const createGuestOrder = useCreateGuestOrder();
+  const createGuestPayment = useCreateGuestPayment();
+  const { user, isAuthenticated } = useAuth();
   const { data: userMe } = useUserMe();
 
   const {
@@ -225,7 +225,7 @@ function CheckoutContent() {
   // Auto-fill user information when user data is available
   // Only fill if the fields are empty to avoid overwriting user input
   useEffect(() => {
-    if (user) {
+    if (user && isAuthenticated) {
       const currentFullName = getValues("fullName");
       const currentPhoneNumber = getValues("phoneNumber");
       
@@ -236,86 +236,191 @@ function CheckoutContent() {
         setValue("phoneNumber", user.phoneNumber);
       }
     }
-  }, [user, setValue, getValues]);
+  }, [user, isAuthenticated, setValue, getValues]);
 
   const onSubmit = async (data: CheckoutFormData) => {
     try {
-      // Create order
-      const orderResponse = await createOrder.mutateAsync({
-        shippingAddress: {
-          fullName: data.fullName,
-          phoneNumber: data.phoneNumber,
-          addressLine: data.addressLine,
-          ward: data.ward,
-          district: data.district,
-          city: data.city,
-        },
-        paymentMethod: data.paymentMethod,
-      });
-
-      // Log response for debugging
-      console.log("Create order response:", orderResponse);
-
-      // Handle different response structures from backend
-      // Backend might return { order: {...}, payment: {...} } or just OrderDto
-      const orderData = (orderResponse as any)?.order || orderResponse;
-      const paymentData = (orderResponse as any)?.payment;
-      const orderId = orderData?.id;
-
-      if (!orderId) {
-        console.error("Order ID is undefined. Response:", orderResponse);
-        toast.error("Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
-        return;
+      // Validate email for guests
+      if (!isAuthenticated) {
+        if (!data.email || data.email.trim() === "") {
+          toast.error("Vui lòng nhập email để tiếp tục đặt hàng.");
+          setValue("email", "", { shouldValidate: true });
+          return;
+        }
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(data.email.trim())) {
+          toast.error("Email không hợp lệ. Vui lòng kiểm tra lại.");
+          setValue("email", data.email, { shouldValidate: true });
+          return;
+        }
       }
 
-      // If payment method is COD, show success message and redirect
-      if (data.paymentMethod === PaymentMethod.COD) {
-        const userEmail = userMe?.email || user?.email || "";
-        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.", {
-          description: userEmail ? `Email xác nhận đã được gửi đến ${userEmail}. Vui lòng kiểm tra hộp thư đến và spam folder.` : "Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư đến và spam folder.",
-          duration: 5000,
+      let orderResponse: any;
+      let orderId: string;
+      let paymentData: any;
+
+      if (isAuthenticated) {
+        // Create order for authenticated user
+        orderResponse = await createOrder.mutateAsync({
+          shippingAddress: {
+            fullName: data.fullName,
+            phoneNumber: data.phoneNumber,
+            addressLine: data.addressLine,
+            ward: data.ward,
+            district: data.district,
+            city: data.city,
+          },
+          paymentMethod: data.paymentMethod,
         });
+
+        // Log response for debugging
+        console.log("Create order response:", orderResponse);
+
+        // Handle different response structures from backend
+        const orderData = (orderResponse as any)?.order || orderResponse;
+        paymentData = (orderResponse as any)?.payment;
+        orderId = orderData?.id;
+
+        if (!orderId) {
+          console.error("Order ID is undefined. Response:", orderResponse);
+          toast.error("Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
+          return;
+        }
+
+        // If payment method is COD, show success message and redirect
+        if (data.paymentMethod === PaymentMethod.COD) {
+          const userEmail = userMe?.email || user?.email || "";
+          toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.", {
+            description: userEmail ? `Email xác nhận đã được gửi đến ${userEmail}. Vui lòng kiểm tra hộp thư đến và spam folder.` : "Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư đến và spam folder.",
+            duration: 5000,
+          });
+          router.push(`/account/orders/${orderId}`);
+          return;
+        }
+
+        // If backend already returned payment info (PayOS case)
+        if (paymentData?.success && paymentData?.paymentUrl) {
+          sessionStorage.setItem("payos_orderId", orderId);
+          toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
+          window.location.href = paymentData.paymentUrl;
+          return;
+        }
+
+        // If payment method is not COD and no payment data, create payment
+        const paymentResponse = await createPayment.mutateAsync(orderId);
+        console.log("Create payment response:", paymentResponse);
+        
+        // Check if it's COD from response
+        if (paymentResponse.isCod) {
+          toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+          router.push(`/account/orders/${orderId}`);
+          return;
+        }
+        
+        // Check if it's PayOS (Bank Transfer)
+        if (paymentResponse.success && paymentResponse.paymentUrl) {
+          sessionStorage.setItem("payos_orderId", orderId);
+          toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
+          window.location.href = paymentResponse.paymentUrl;
+          return;
+        }
+        
+        // For MoMo, VNPay - redirect to payment URL
+        if (paymentResponse.paymentUrl) {
+          window.location.href = paymentResponse.paymentUrl;
+          return;
+        }
+
+        toast.success("Đặt hàng thành công!");
         router.push(`/account/orders/${orderId}`);
-        return;
-      }
+      } else {
+        // Create guest order - need to include cart items since guest cart is client-side
+        const guestCartItems = cart?.items?.map(item => ({
+          productId: item.productId,
+          productVariantId: item.productVariantId || null,
+          quantity: item.quantity,
+        })) || [];
 
-      // If backend already returned payment info (PayOS case)
-      if (paymentData?.success && paymentData?.paymentUrl) {
-        // Lưu orderId vào sessionStorage để dùng khi confirm payment
-        sessionStorage.setItem("payos_orderId", orderId);
-        toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
-        window.location.href = paymentData.paymentUrl;
-        return;
-      }
+        if (guestCartItems.length === 0) {
+          toast.error("Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi đặt hàng.");
+          return;
+        }
 
-      // If payment method is not COD and no payment data, create payment
-      const paymentResponse = await createPayment.mutateAsync(orderId);
-      console.log("Create payment response:", paymentResponse);
-      
-      // Check if it's COD from response
-      if (paymentResponse.isCod) {
-        toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
-        router.push(`/account/orders/${orderId}`);
-        return;
-      }
-      
-      // Check if it's PayOS (Bank Transfer)
-      if (paymentResponse.success && paymentResponse.paymentUrl) {
-        // Lưu orderId vào sessionStorage để dùng khi confirm payment
-        sessionStorage.setItem("payos_orderId", orderId);
-        toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
-        window.location.href = paymentResponse.paymentUrl;
-        return;
-      }
-      
-      // For MoMo, VNPay - redirect to payment URL
-      if (paymentResponse.paymentUrl) {
-        window.location.href = paymentResponse.paymentUrl;
-        return;
-      }
+        orderResponse = await createGuestOrder.mutateAsync({
+          email: data.email!,
+          fullName: data.fullName,
+          shippingAddress: {
+            fullName: data.fullName,
+            phoneNumber: data.phoneNumber,
+            addressLine: data.addressLine,
+            ward: data.ward,
+            district: data.district,
+            city: data.city,
+          },
+          paymentMethod: Number(data.paymentMethod), // 0=COD, 1=MoMo, 2=VNPay, 3=PayOS
+          items: guestCartItems,
+        });
 
-      toast.success("Đặt hàng thành công!");
-      router.push(`/account/orders/${orderId}`);
+        console.log("Create guest order response:", orderResponse);
+
+        const orderData = (orderResponse as any)?.order || orderResponse;
+        paymentData = (orderResponse as any)?.payment;
+        orderId = orderData?.id;
+
+        if (!orderId) {
+          console.error("Order ID is undefined. Response:", orderResponse);
+          toast.error("Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
+          return;
+        }
+
+        // If payment method is COD, show success message and redirect to guest success page
+        if (data.paymentMethod === PaymentMethod.COD) {
+          toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+          // Redirect to guest order success page
+          router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
+          return;
+        }
+
+        // If backend already returned payment info (PayOS case)
+        if (paymentData?.success && paymentData?.paymentUrl) {
+          sessionStorage.setItem("payos_orderId", orderId);
+          sessionStorage.setItem("guest_orderId", orderId);
+          toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
+          window.location.href = paymentData.paymentUrl;
+          return;
+        }
+
+        // If payment method is not COD and no payment data, create guest payment
+        const paymentResponse = await createGuestPayment.mutateAsync(orderId);
+        console.log("Create guest payment response:", paymentResponse);
+        
+        // Check if it's COD from response
+        if (paymentResponse.isCod) {
+          toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
+          router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
+          return;
+        }
+        
+        // Check if it's PayOS (Bank Transfer)
+        if (paymentResponse.success && paymentResponse.paymentUrl) {
+          sessionStorage.setItem("payos_orderId", orderId);
+          sessionStorage.setItem("guest_orderId", orderId);
+          toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
+          window.location.href = paymentResponse.paymentUrl;
+          return;
+        }
+        
+        // For MoMo, VNPay - redirect to payment URL
+        if (paymentResponse.paymentUrl) {
+          sessionStorage.setItem("guest_orderId", orderId);
+          window.location.href = paymentResponse.paymentUrl;
+          return;
+        }
+
+        toast.success("Đặt hàng thành công!");
+        router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
+      }
     } catch (error: any) {
       console.error("Checkout error:", error);
       toast.error(error?.data?.message || error?.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
@@ -415,6 +520,39 @@ function CheckoutContent() {
                     )}
                   </div>
                 </div>
+
+                {/* Email field - only show for guests */}
+                {!isAuthenticated && (
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2 text-emerald-900">
+                      <Mail className="h-4 w-4" />
+                      Email <span className="text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      id="email" 
+                      type="email"
+                      {...register("email", { 
+                        required: !isAuthenticated ? "Vui lòng nhập email" : false,
+                        validate: (value) => {
+                          if (!isAuthenticated && (!value || value.trim() === "")) {
+                            return "Email là bắt buộc cho khách hàng";
+                          }
+                          if (value && value.trim() !== "" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                            return "Email không hợp lệ";
+                          }
+                          return true;
+                        }
+                      })} 
+                      placeholder="example@email.com"
+                      className="border-emerald-200 focus:border-emerald-500"
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                        {errors.email.message}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="addressLine" className="flex items-center gap-2 text-emerald-900">
@@ -712,9 +850,9 @@ function CheckoutContent() {
                   type="submit"
                   className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg shadow-emerald-500/30"
                   size="lg"
-                  disabled={createOrder.isPending || createPayment.isPending}
+                  disabled={createOrder.isPending || createPayment.isPending || createGuestOrder.isPending || createGuestPayment.isPending}
                 >
-                  {createOrder.isPending || createPayment.isPending ? (
+                  {createOrder.isPending || createPayment.isPending || createGuestOrder.isPending || createGuestPayment.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Đang xử lý...

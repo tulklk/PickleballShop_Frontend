@@ -101,11 +101,6 @@ function CartContent() {
   };
 
   const handleCheckout = () => {
-    if (!isAuthenticated) {
-      toast.error("Vui lòng đăng nhập để thanh toán");
-      router.push("/login");
-      return;
-    }
     router.push("/checkout");
   };
 
@@ -176,7 +171,7 @@ function CartContent() {
                 size="lg"
                 onClick={handleCheckout}
               >
-                {isAuthenticated ? "Thanh toán" : "Đăng nhập để thanh toán"}
+                Thanh toán
               </Button>
             </CardContent>
           </Card>

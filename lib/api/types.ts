@@ -265,6 +265,29 @@ export interface CreateOrderRequest {
   paymentMethod: PaymentMethod;
 }
 
+export interface GuestOrderItem {
+  productId: string;
+  productVariantId?: string | null;
+  quantity: number;
+}
+
+export interface GuestShippingAddress {
+  fullName: string;
+  phoneNumber: string;
+  addressLine: string;
+  ward: string;
+  district: string;
+  city: string;
+}
+
+export interface CreateGuestOrderRequest {
+  email: string;
+  fullName: string;
+  shippingAddress: GuestShippingAddress;
+  paymentMethod: number; // 0=COD, 1=MoMo, 2=VNPay, 3=PayOS
+  items: GuestOrderItem[];
+}
+
 export interface OrderDto {
   id: string;
   orderNumber: string | null;

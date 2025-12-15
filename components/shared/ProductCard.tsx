@@ -38,7 +38,7 @@ export function ProductCard({ product }: ProductCardProps) {
         productImageUrl: product.primaryImageUrl || (isProductDto(product) ? product.imageUrls?.[0] : undefined) || undefined,
         unitPrice: product.price,
       });
-      toast.success("Đã thêm vào giỏ hàng! Đăng nhập để thanh toán.");
+      toast.success("Đã thêm vào giỏ hàng!");
       // Invalidate cart query to update cart count in navbar
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       return;
