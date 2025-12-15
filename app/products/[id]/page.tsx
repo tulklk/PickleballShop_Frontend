@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail, Heart } from "lucide-react";
+import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle, Send, Mail, Heart, Home } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
@@ -665,6 +665,43 @@ export default function ProductDetailPage() {
           )}
         </div>
       )}
+
+      {/* Breadcrumb Navigation */}
+      <nav className="mb-4 md:mb-6">
+        <ol className="flex items-center flex-wrap gap-1 text-sm">
+          <li className="flex items-center">
+            <Link 
+              href="/" 
+              className="text-gray-500 hover:text-emerald-600 transition-colors flex items-center gap-1"
+            >
+              Trang chủ
+            </Link>
+          </li>
+          {product.categoryName && (
+            <>
+              <li className="flex items-center text-gray-400">
+                <ChevronRight className="h-4 w-4" />
+              </li>
+              <li className="flex items-center">
+                <Link 
+                  href={`/products?categoryId=${product.categoryId}`}
+                  className="text-gray-500 hover:text-emerald-600 transition-colors"
+                >
+                  {product.categoryName}
+                </Link>
+              </li>
+            </>
+          )}
+          <li className="flex items-center text-gray-400">
+            <ChevronRight className="h-4 w-4" />
+          </li>
+          <li className="flex items-center">
+            <span className="text-emerald-600 font-medium line-clamp-1">
+              {product.name}
+            </span>
+          </li>
+        </ol>
+      </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
         {/* Product Images */}

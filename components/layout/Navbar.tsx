@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart, FileSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
-import { useCart, useCategories, useUserMe, useLogout } from "@/lib/api/hooks";
-import type { ProductListDto, ProductListDtoPagedResultDto } from "@/lib/api/types";
+import { useCart, useCategories, useUserMe, useLogout, useProducts } from "@/lib/api/hooks";
+import type { ProductListDto, ProductListDtoPagedResultDto, CategoryDto } from "@/lib/api/types";
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
@@ -26,6 +26,89 @@ const poppins = Poppins({
   subsets: ["latin"],
   display: "swap",
 });
+
+// Component to display products under each category in mega menu
+function CategoryMenuItems({ 
+  category, 
+  onClose 
+}: { 
+  category: CategoryDto; 
+  onClose: () => void;
+}) {
+  const { data: productsData } = useProducts({
+    CategoryId: category.id,
+    PageSize: 8,
+    Page: 1,
+  });
+
+  const products = productsData?.items || [];
+
+  // If category has subcategories, show them
+  if (category.subCategories && category.subCategories.length > 0) {
+    return (
+      <div className="space-y-1">
+        {category.subCategories.slice(0, 8).map((sub) => (
+          <Link
+            key={sub.id}
+            href={`/products?categoryId=${sub.id}`}
+            className="block text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+            onClick={onClose}
+          >
+            {sub.name}
+          </Link>
+        ))}
+        {category.subCategories.length > 8 && (
+          <Link
+            href={`/products?categoryId=${category.id}`}
+            className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            onClick={onClose}
+          >
+            Xem thêm →
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  // Otherwise show products
+  if (products.length > 0) {
+    return (
+      <div className="space-y-1">
+        {products.slice(0, 8).map((product) => (
+          <Link
+            key={product.id}
+            href={`/products/${product.slug || product.id}`}
+            className="block text-sm text-gray-600 hover:text-emerald-600 transition-colors truncate"
+            onClick={onClose}
+            title={product.name || ""}
+          >
+            {product.name}
+          </Link>
+        ))}
+        {(category.productCount || 0) > 8 && (
+          <Link
+            href={`/products?categoryId=${category.id}`}
+            className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            onClick={onClose}
+          >
+            Xem thêm →
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  // Loading/empty state
+  return (
+    <Link
+      href={`/products?categoryId=${category.id}`}
+      className="block text-sm text-emerald-600 hover:text-emerald-700"
+      onClick={onClose}
+    >
+      Xem {category.productCount || 0} sản phẩm →
+    </Link>
+  );
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -60,6 +143,8 @@ export function Navbar() {
   const [suggestions, setSuggestions] = useState<ProductListDto[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update guest cart count when not authenticated
@@ -103,6 +188,9 @@ export function Navbar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setShowSearchOverlay(false);
+      setShowSuggestions(false);
+      setIsMobileMenuOpen(false);
       router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
     }
   };
@@ -148,11 +236,40 @@ export function Navbar() {
 
   const handleSelectSuggestion = (product: ProductListDto) => {
     setShowSuggestions(false);
+    setShowSearchOverlay(false);
     setSearchQuery("");
     setSuggestions([]);
     // Use slug URL for SEO, fallback to ID
     const productUrl = getProductUrl(product);
     router.push(productUrl);
+  };
+
+  // Focus search input when overlay opens
+  useEffect(() => {
+    if (showSearchOverlay && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearchOverlay]);
+
+  // Close search overlay on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showSearchOverlay) {
+        setShowSearchOverlay(false);
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showSearchOverlay]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setShowSearchOverlay(false);
+      setShowSuggestions(false);
+      router.push(`/products?search=${encodeURIComponent(searchQuery)}`);
+    }
   };
 
   const cartItemCount = isAuthenticated ? (cart?.totalItems || 0) : guestCartCount;
@@ -288,169 +405,176 @@ export function Navbar() {
                   <ChevronDown className={`h-4 w-4 transition-transform ${showProductDropdown ? "rotate-180" : ""}`} />
                 </Link>
 
-                {/* Dropdown Menu */}
+                {/* Mega Menu Dropdown */}
                 {showProductDropdown && (
                   <div
-                    className="absolute left-0 top-full pt-2 z-50"
+                    className="fixed left-0 right-0 top-16 z-50"
                     onMouseEnter={handleProductMouseEnter}
                     onMouseLeave={handleProductMouseLeave}
                   >
-                    <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-4 md:p-6 min-w-[300px] md:min-w-[800px] animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="flex gap-8">
-                        {/* Categories Grid */}
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-x-4 md:gap-x-8 gap-y-4">
-                          {/* Column 1 */}
-                          <div className="space-y-3">
-                            <Link href="/products?search=vợt" className="block text-sm font-semibold text-gray-900 hover:text-emerald-600">
-                              VỢT PICKLEBALL
-                            </Link>
-                            <Link href="/products?search=giày" className="block text-sm font-semibold text-gray-900 hover:text-emerald-600">
-                              GIÀY PICKLEBALL
-                            </Link>
-                            <Link href="/products?search=bóng" className="block text-sm font-semibold text-gray-900 hover:text-emerald-600">
-                              BÓNG PICKLEBALL
-                            </Link>
+                    <div className="bg-white shadow-xl border-t border-gray-200 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="container mx-auto px-4 py-6">
+                        {/* Dynamic Categories Grid */}
+                        {categories && categories.length > 0 ? (
+                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                            {categories.map((category) => (
+                              <div key={category.id} className="space-y-2">
+                                {/* Category Header */}
+                                <Link
+                                  href={`/products?categoryId=${category.id}`}
+                                  className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-wide"
+                                  onClick={() => setShowProductDropdown(false)}
+                                >
+                                  {category.name}
+                                </Link>
+                                
+                                {/* Products List */}
+                                <CategoryMenuItems 
+                                  category={category} 
+                                  onClose={() => setShowProductDropdown(false)} 
+                                />
+                              </div>
+                            ))}
                           </div>
-
-                          {/* Column 2 */}
-                          <div className="space-y-3">
-                            <Link href="/products?search=máy" className="block text-sm font-semibold text-gray-900 hover:text-emerald-600">
-                              MÁY BẮN BÓNG PICKLEBALL
-                            </Link>
-                            <Link href="/products?search=quần áo" className="block text-sm font-semibold text-gray-900 hover:text-emerald-600">
-                              QUẦN ÁO TRANG PHỤC
-                            </Link>
-                          </div>
-
-                          {/* Column 3 - PHỤ KIỆN with sub-items */}
-                          <div className="space-y-2">
-                            <p className="text-sm font-semibold text-gray-900">PHỤ KIỆN</p>
-                            <div className="space-y-1 pl-2 border-l-2 border-emerald-200">
-                              <Link href="/products?search=balo túi" className="block text-sm text-gray-600 hover:text-emerald-600">
-                                Balo & Túi Pickleball
+                        ) : (
+                          /* Fallback Static Categories */
+                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                            <div className="space-y-2">
+                              <Link href="/products?search=vợt" className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase" onClick={() => setShowProductDropdown(false)}>
+                                VỢT PICKLEBALL
                               </Link>
-                              <Link href="/products?search=dụng cụ" className="block text-sm text-gray-600 hover:text-emerald-600">
-                                Dụng Cụ & Thiết Bị Hỗ Trợ
+                              <div className="space-y-1">
+                                <Link href="/products?search=vợt joola" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Vợt Pickleball Joola</Link>
+                                <Link href="/products?search=vợt head" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Vợt Pickleball Head</Link>
+                                <Link href="/products?search=vợt selkirk" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Vợt Pickleball Selkirk</Link>
+                                <Link href="/products?search=vợt" className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium" onClick={() => setShowProductDropdown(false)}>Xem thêm →</Link>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Link href="/products?search=giày" className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase" onClick={() => setShowProductDropdown(false)}>
+                                GIÀY PICKLEBALL
                               </Link>
-                              <Link href="/products?search=luyện tập" className="block text-sm text-gray-600 hover:text-emerald-600">
-                                Trợ Luyện Tập Pickleball
+                              <div className="space-y-1">
+                                <Link href="/products?search=giày yonex" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Giày Pickleball Yonex</Link>
+                                <Link href="/products?search=giày asics" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Giày Pickleball Asics</Link>
+                                <Link href="/products?search=giày adidas" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Giày Pickleball Adidas</Link>
+                                <Link href="/products?search=giày" className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium" onClick={() => setShowProductDropdown(false)}>Xem thêm →</Link>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Link href="/products?search=bóng" className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase" onClick={() => setShowProductDropdown(false)}>
+                                BÓNG PICKLEBALL
                               </Link>
-                              <Link href="/products?search=vỏ vợt" className="block text-sm text-gray-600 hover:text-emerald-600">
-                                Vỏ Vợt Pickleball
+                              <div className="space-y-1">
+                                <Link href="/products?search=bóng joola" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Bóng Pickleball Joola</Link>
+                                <Link href="/products?search=bóng franklin" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Bóng Pickleball Franklin</Link>
+                                <Link href="/products?search=bóng onix" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Bóng Pickleball Onix</Link>
+                                <Link href="/products?search=bóng" className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium" onClick={() => setShowProductDropdown(false)}>Xem thêm →</Link>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Link href="/products?search=trang phục" className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase" onClick={() => setShowProductDropdown(false)}>
+                                TRANG PHỤC
                               </Link>
+                              <div className="space-y-1">
+                                <Link href="/products?search=áo" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Áo Pickleball</Link>
+                                <Link href="/products?search=quần" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Quần Pickleball</Link>
+                                <Link href="/products?search=váy" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Váy Pickleball</Link>
+                                <Link href="/products?search=trang phục" className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium" onClick={() => setShowProductDropdown(false)}>Xem thêm →</Link>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Link href="/products?search=túi" className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase" onClick={() => setShowProductDropdown(false)}>
+                                TÚI & BALO
+                              </Link>
+                              <div className="space-y-1">
+                                <Link href="/products?search=túi joola" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Túi Pickleball Joola</Link>
+                                <Link href="/products?search=túi selkirk" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Túi Pickleball Selkirk</Link>
+                                <Link href="/products?search=balo" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Balo Pickleball</Link>
+                                <Link href="/products?search=túi" className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium" onClick={() => setShowProductDropdown(false)}>Xem thêm →</Link>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Link href="/products?search=phụ kiện" className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase" onClick={() => setShowProductDropdown(false)}>
+                                PHỤ KIỆN
+                              </Link>
+                              <div className="space-y-1">
+                                <Link href="/products?search=grip" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Quấn cán vợt (Grip)</Link>
+                                <Link href="/products?search=lưới" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Lưới Pickleball</Link>
+                                <Link href="/products?search=phụ kiện" className="block text-sm text-gray-600 hover:text-emerald-600" onClick={() => setShowProductDropdown(false)}>Phụ kiện khác</Link>
+                                <Link href="/products" className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium" onClick={() => setShowProductDropdown(false)}>Xem tất cả →</Link>
+                              </div>
                             </div>
                           </div>
-
-                          {/* Additional Links */}
-                          <div className="col-span-2 pt-2 border-t border-gray-100 mt-2">
-                            <div className="flex gap-6">
-                              <Link href="/products?search=combo" className="text-sm font-semibold text-gray-900 hover:text-emerald-600">
-                                COMBO VỢT, BÓNG...
-                              </Link>
-                              <Link href="/products" className="text-sm font-semibold text-orange-500 hover:text-orange-600">
-                                DÀNH CHO NEWBIE
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Banner Image */}
-                        {showProductDropdown && (
-                          <div className="hidden lg:block w-[250px] h-[180px] relative rounded-lg overflow-hidden shrink-0">
-                          <Image
-                            src={bannerDropdown}
-                            alt="Pickleball Products"
-                            fill
-                            className="object-cover"
-                              loading="lazy"
-                              sizes="250px"
-                          />
-                        </div>
                         )}
+                        
+                        {/* Bottom Banner/Links */}
+                        <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
+                          <div className="flex gap-6">
+                            <Link 
+                              href="/products" 
+                              className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                              onClick={() => setShowProductDropdown(false)}
+                            >
+                              Xem tất cả sản phẩm →
+                            </Link>
+                            <Link 
+                              href="/products?sort=newest" 
+                              className="text-sm font-semibold text-orange-500 hover:text-orange-600"
+                              onClick={() => setShowProductDropdown(false)}
+                            >
+                              🔥 Sản phẩm mới nhất
+                            </Link>
+                            <Link 
+                              href="/products?discount=true" 
+                              className="text-sm font-semibold text-red-500 hover:text-red-600"
+                              onClick={() => setShowProductDropdown(false)}
+                            >
+                              💥 Đang giảm giá
+                            </Link>
+                          </div>
+                          <div className="hidden lg:block w-[200px] h-[60px] relative rounded-lg overflow-hidden">
+                            <Image
+                              src={bannerDropdown}
+                              alt="Pickleball Products"
+                              fill
+                              className="object-cover"
+                              loading="lazy"
+                              sizes="200px"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
+              
+              {/* Order Lookup Link */}
+              <Link
+                href="/order-lookup"
+                className={`text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+                  pathname?.startsWith("/order-lookup")
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+              >
+                <FileSearch className="h-4 w-4" />
+                Tra cứu đơn hàng
+              </Link>
             </div>
           </div>
 
-          {/* Search - Desktop */}
-          <form
-            onSubmit={handleSearch}
-            className="hidden md:flex flex-1 max-w-md mx-4"
-          >
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => {
-                  if (suggestions.length > 0) setShowSuggestions(true);
-                }}
-                className="pl-10"
-              />
-              {showSuggestions && (
-                <div className="absolute left-0 top-full mt-2 w-full bg-white border border-gray-200 shadow-lg rounded-lg z-50 max-h-80 overflow-y-auto">
-                  {isSearchLoading && (
-                    <div className="px-4 py-3 text-sm text-gray-500">Đang tìm kiếm...</div>
-                  )}
-                  {!isSearchLoading && suggestions.length === 0 && (
-                    <div className="px-4 py-3 text-sm text-gray-500">Không tìm thấy sản phẩm phù hợp</div>
-                  )}
-                  {!isSearchLoading &&
-                    suggestions.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSelectSuggestion(item)}
-                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors flex items-center gap-3"
-                      >
-                        <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100 shrink-0">
-                          {item.primaryImageUrl ? (
-                            <Image
-                              src={item.primaryImageUrl}
-                              alt={item.name ? `${item.name} - Sản phẩm Pickleball` : "Sản phẩm Pickleball"}
-                              fill
-                              className="object-cover"
-                              loading="lazy"
-                              sizes="48px"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-xs text-gray-400">
-                              No img
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 line-clamp-1">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-gray-500 line-clamp-1">
-                            {item.brand || "Sản phẩm"}
-                          </p>
-                          <div className="text-xs text-emerald-600 font-semibold">
-                            {formatCurrency(item.price)}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-          </form>
-
-          {/* Mobile Search Button - Hidden */}
-          {/* <Link href="/products" className="md:hidden">
-            <Button variant="ghost" size="icon">
+          <div className="flex items-center gap-2">
+            {/* Search Icon Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSearchOverlay(true)}
+              className="hover:bg-emerald-50"
+            >
               <Search className="h-5 w-5" />
             </Button>
-          </Link> */}
-
-          <div className="flex items-center gap-2">
             {/* Cart with Preview Dropdown */}
             <div
               ref={cartRef}
@@ -594,19 +718,18 @@ export function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-emerald-100 bg-white">
             <div className="px-4 py-4 space-y-4">
-              {/* Mobile Search */}
-              <form onSubmit={handleSearch} className="w-full">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    type="text"
-                    placeholder="Tìm kiếm sản phẩm..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </form>
+              {/* Mobile Search Button */}
+              <Button
+                variant="outline"
+                className="w-full justify-start text-muted-foreground"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setShowSearchOverlay(true);
+                }}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Tìm kiếm sản phẩm...
+              </Button>
 
               {/* Mobile Navigation Links */}
               <div className="space-y-2">
@@ -640,6 +763,18 @@ export function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Sản phẩm
+                </Link>
+                <Link
+                  href="/order-lookup"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    pathname?.startsWith("/order-lookup")
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <FileSearch className="h-4 w-4" />
+                  Tra cứu đơn hàng
                 </Link>
                 
                 {/* Mobile Categories */}
@@ -724,6 +859,110 @@ export function Navbar() {
           </div>
         )}
       </div>
+
+      {/* Search Overlay Dropdown */}
+      {showSearchOverlay && (
+        <>
+          {/* Background Overlay */}
+          <div
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={() => {
+              setShowSearchOverlay(false);
+              setShowSuggestions(false);
+            }}
+          />
+          
+          {/* Search Bar Container - White background like reference */}
+          <div className="fixed top-0 left-0 right-0 z-50 bg-gray-100 shadow-lg animate-in slide-in-from-top duration-200">
+            <div className="container mx-auto px-4 py-4">
+              <form onSubmit={handleSearchSubmit} className="flex items-center gap-4">
+                {/* Search Icon */}
+                <Search className="h-5 w-5 text-gray-500 shrink-0" />
+                
+                {/* Search Input Box */}
+                <div className="flex-1">
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Tìm kiếm sản phẩm..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => {
+                      if (suggestions.length > 0) setShowSuggestions(true);
+                    }}
+                    className="w-full h-10 bg-white border border-gray-300 rounded-sm text-gray-900 placeholder:text-gray-400 text-base focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+                  />
+                </div>
+                
+                {/* Close Button */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowSearchOverlay(false);
+                    setShowSuggestions(false);
+                    setSearchQuery("");
+                    setSuggestions([]);
+                  }}
+                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-200 shrink-0"
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </form>
+              
+              {/* Search Suggestions */}
+              {showSuggestions && (
+                <div className="mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-80 overflow-y-auto">
+                  {isSearchLoading && (
+                    <div className="px-4 py-3 text-sm text-gray-500">Đang tìm kiếm...</div>
+                  )}
+                  {!isSearchLoading && suggestions.length === 0 && searchQuery.trim().length >= 2 && (
+                    <div className="px-4 py-3 text-sm text-gray-500">Không tìm thấy sản phẩm phù hợp</div>
+                  )}
+                  {!isSearchLoading &&
+                    suggestions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectSuggestion(item)}
+                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 transition-colors flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100 shrink-0">
+                          {item.primaryImageUrl ? (
+                            <Image
+                              src={item.primaryImageUrl}
+                              alt={item.name ? `${item.name} - Sản phẩm Pickleball` : "Sản phẩm Pickleball"}
+                              fill
+                              className="object-cover"
+                              loading="lazy"
+                              sizes="48px"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center text-xs text-gray-400">
+                              No img
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 line-clamp-1">
+                            {item.name}
+                          </p>
+                          <p className="text-xs text-gray-500 line-clamp-1">
+                            {item.brand || "Sản phẩm"}
+                          </p>
+                          <div className="text-xs text-emerald-600 font-semibold">
+                            {formatCurrency(item.price)}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </nav>
   );
 }

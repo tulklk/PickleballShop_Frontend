@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Package, Home, ShoppingBag } from "lucide-react";
+import { CheckCircle2, Package, ShoppingBag } from "lucide-react";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -68,10 +68,10 @@ function SuccessContent() {
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/">
+              <Link href="/order-lookup">
                 <Button variant="outline" className="w-full sm:w-auto">
-                  <Home className="w-4 h-4 mr-2" />
-                  Về trang chủ
+                  <Package className="w-4 h-4 mr-2" />
+                  Tra cứu đơn hàng
                 </Button>
               </Link>
               <Link href="/products">
