@@ -83,9 +83,7 @@ export default function OrderLookupPage() {
 
     try {
       // Try to get order by order number using the status endpoint
-      const response = await apiClient.request<OrderDto>(
-        `/api/guest/orders/status/${encodeURIComponent(orderNumber.trim())}`
-      );
+      const response = await apiClient.getGuestOrderByNumber(orderNumber.trim());
       
       if (response) {
         setOrder(response);

@@ -720,6 +720,10 @@ class ApiClient {
     return this.request<OrderDto[]>(`/api/guest/orders/lookup?${searchParams.toString()}`);
   }
 
+  async getGuestOrderByNumber(orderNumber: string): Promise<OrderDto> {
+    return this.request<OrderDto>(`/api/guest/orders/status/${encodeURIComponent(orderNumber)}`);
+  }
+
   async createGuestPayment(orderId: string): Promise<CreatePaymentResponse> {
     return this.request<CreatePaymentResponse>(`/api/guest/orders/${orderId}/payment`, {
       method: "POST",
