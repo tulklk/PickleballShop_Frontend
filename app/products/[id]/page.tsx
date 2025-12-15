@@ -105,24 +105,27 @@ export default function ProductDetailPage() {
     setSelectedImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
   }, [allImages.length]);
 
-  // Auto-select first available variant if product has variants
-  useEffect(() => {
-    if (product?.hasVariants && product.variants && product.variants.length > 0) {
-      // Only auto-select if no variant is currently selected
-      if (!selectedVariant) {
-        // Prefer variant with stock, otherwise first active variant
-        const firstVariant = product.variants.find(v => v.isActive && v.stockQuantity > 0)
-          || product.variants.find(v => v.isActive)
-          || product.variants[0];
-        if (firstVariant) {
-          setSelectedVariant(firstVariant);
-        }
+  // Helper: determine current stock for "Tình trạng"
+  // - Nếu sản phẩm có variant:
+  //   + Khi đã chọn variant -> dùng stockQuantity của variant đó
+  //   + Khi chưa chọn variant -> dùng tổng stock của tất cả variant
+  // - Nếu sản phẩm không có variant -> dùng stockQuantity của product
+  const getCurrentStock = (): number => {
+    if (!product) return 0;
+
+    if (product.hasVariants && product.variants && product.variants.length > 0) {
+      if (selectedVariant) {
+        return selectedVariant.stockQuantity || 0;
       }
-    } else {
-      // Product doesn't have variants, clear selection
-      setSelectedVariant(null);
+
+      return product.variants.reduce(
+        (sum, v) => sum + (v.stockQuantity || 0),
+        0
+      );
     }
-  }, [product?.id, product?.hasVariants]);
+
+    return product.stockQuantity || 0;
+  };
 
   const handleAddToCart = async () => {
     if (!product) {
@@ -667,36 +670,37 @@ export default function ProductDetailPage() {
       )}
 
       {/* Breadcrumb Navigation */}
-      <nav className="mb-4 md:mb-6">
-        <ol className="flex items-center flex-wrap gap-1 text-sm">
-          <li className="flex items-center">
+      <nav className="mb-3 md:mb-6 overflow-x-auto">
+        <ol className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap min-w-0">
+          <li className="flex items-center shrink-0">
             <Link 
               href="/" 
               className="text-gray-500 hover:text-emerald-600 transition-colors flex items-center gap-1"
             >
-              Trang chủ
+              <Home className="h-3.5 w-3.5 sm:hidden" />
+              <span className="hidden sm:inline">Trang chủ</span>
             </Link>
           </li>
           {product.categoryName && (
             <>
-              <li className="flex items-center text-gray-400">
-                <ChevronRight className="h-4 w-4" />
+              <li className="flex items-center text-gray-400 shrink-0">
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </li>
-              <li className="flex items-center">
+              <li className="flex items-center shrink-0">
                 <Link 
                   href={`/products?categoryId=${product.categoryId}`}
-                  className="text-gray-500 hover:text-emerald-600 transition-colors"
+                  className="text-gray-500 hover:text-emerald-600 transition-colors max-w-[100px] sm:max-w-none truncate"
                 >
                   {product.categoryName}
                 </Link>
               </li>
             </>
           )}
-          <li className="flex items-center text-gray-400">
-            <ChevronRight className="h-4 w-4" />
+          <li className="flex items-center text-gray-400 shrink-0">
+            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </li>
-          <li className="flex items-center">
-            <span className="text-emerald-600 font-medium line-clamp-1">
+          <li className="flex items-center min-w-0">
+            <span className="text-emerald-600 font-medium truncate max-w-[150px] sm:max-w-none">
               {product.name}
             </span>
           </li>
@@ -785,8 +789,8 @@ export default function ProductDetailPage() {
 
         {/* Product Info */}
         <div>
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex-1">
+          <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 flex-1 leading-tight">
               {product.name}
             </h1>
             <button
@@ -931,11 +935,11 @@ export default function ProductDetailPage() {
             <div className="flex">
               <span className="text-gray-500 w-24">Tình trạng:</span>
               <span className={
-                (selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity) > 0 
+                getCurrentStock() > 0 
                   ? "text-green-600 font-medium" 
                   : "text-red-600 font-medium"
               }>
-                {(selectedVariant ? selectedVariant.stockQuantity : product.stockQuantity) > 0 
+                {getCurrentStock() > 0 
                   ? "Còn hàng" 
                   : "Hết hàng"}
               </span>

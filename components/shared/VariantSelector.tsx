@@ -3,13 +3,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductDto, ProductVariantDto } from "@/lib/api/types";
-import { Package } from "lucide-react";
+import { Package, CheckCircle, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 
 interface VariantSelectorProps {
   product: ProductDto;
   selectedVariant: ProductVariantDto | null;
-  onVariantSelect: (variant: ProductVariantDto) => void;
+  onVariantSelect: (variant: ProductVariantDto | null) => void;
 }
 
 export function VariantSelector({
@@ -99,9 +99,9 @@ export function VariantSelector({
   useEffect(() => {
     if (variants.length === 0) return;
 
-    // If we already have a selected variant, sync our state with it
+    // Nếu đã có selectedVariant từ ngoài truyền vào thì sync lại state local
     if (selectedVariant) {
-      const variantExists = variants.find(v => v.id === selectedVariant.id);
+      const variantExists = variants.find((v) => v.id === selectedVariant.id);
       if (variantExists) {
         setSelectedColor(selectedVariant.color || null);
         setSelectedSize(selectedVariant.size || null);
@@ -110,18 +110,12 @@ export function VariantSelector({
       }
     }
 
-    // Auto-select first available variant with stock, or first active variant
-    const firstVariant = variants.find(v => v.isActive && v.stockQuantity > 0) 
-      || variants.find(v => v.isActive) 
-      || variants[0];
-    
-    if (firstVariant && firstVariant.id !== selectedVariant?.id) {
-      onVariantSelect(firstVariant);
-      setSelectedColor(firstVariant.color || null);
-      setSelectedSize(firstVariant.size || null);
-      setSelectedSpec(firstVariant.spec || null);
-    }
-  }, [product.id, variants.length]); // Run when product or variants change
+    // Mặc định: không tự chọn biến thể nào, để user tự chọn
+    setSelectedColor(null);
+    setSelectedSize(null);
+    setSelectedSpec(null);
+    onVariantSelect(null);
+  }, [product.id, variants, selectedVariant?.id, onVariantSelect]); // Run when product or variants change
 
   // Sync state when selectedVariant changes externally (from parent)
   useEffect(() => {
@@ -135,6 +129,11 @@ export function VariantSelector({
   // Find matching variant when selections change
   useEffect(() => {
     if (variants.length === 0) return;
+
+    // Nếu không chọn màu, size, spec nào (sau khi bấm Xóa) thì không auto-chọn lại
+    if (!selectedColor && !selectedSize && !selectedSpec) {
+      return;
+    }
 
     // Find variant that matches all currently selected attributes
     const matchingVariant = variants.find((v) => {
@@ -224,13 +223,15 @@ export function VariantSelector({
                   type="button"
                   variant={selectedColor === color ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedColor(color)}
+                  onClick={() => {
+                    setSelectedColor(color);
+                  }}
                   disabled={!available || outOfStock}
                   className={`min-w-[80px] ${
                     selectedColor === color
                       ? "bg-emerald-600 text-white hover:bg-emerald-700"
                       : ""
-                  } ${outOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
+                  } ${outOfStock ? "opacity-60 cursor-not-allowed bg-gray-100 text-gray-400 line-through" : ""}`}
                 >
                   {color}
                   {outOfStock && " (Hết)"}
@@ -255,27 +256,30 @@ export function VariantSelector({
                 <button
                   key={size}
                   type="button"
-                  onClick={() => !outOfStock && setSelectedSize(size)}
+                  onClick={() => {
+                    if (outOfStock) return;
+                    setSelectedSize(size);
+                  }}
                   disabled={outOfStock}
                   className={`
                     relative min-w-[50px] h-10 px-4 rounded-md
                     border-2 transition-all
-                    ${isSelected 
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 font-semibold" 
+                    ${isSelected && !outOfStock
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 font-semibold"
                       : "border-gray-300 bg-white text-gray-700 hover:border-emerald-400"
                     }
                     ${outOfStock 
-                      ? "opacity-50 cursor-not-allowed bg-gray-100 border-gray-200" 
+                      ? "opacity-60 cursor-not-allowed bg-gray-100 border-gray-200 text-gray-400 line-through" 
                       : "cursor-pointer"
                     }
                   `}
                   style={outOfStock ? {
                     backgroundImage: `repeating-linear-gradient(
-                      45deg,
-                      transparent,
+                      135deg,
+                      rgba(0,0,0,0.06),
+                      rgba(0,0,0,0.06) 4px,
                       transparent 4px,
-                      rgba(0, 0, 0, 0.1) 4px,
-                      rgba(0, 0, 0, 0.1) 8px
+                      transparent 8px
                     )`
                   } : {}}
                 >
@@ -284,6 +288,8 @@ export function VariantSelector({
               );
             })}
           </div>
+
+          {/* Đã ẩn status "Còn hàng (x sản phẩm)" và nút "Xóa" cho size theo yêu cầu */}
         </div>
       )}
 
@@ -301,7 +307,9 @@ export function VariantSelector({
                   type="button"
                   variant={selectedSpec === spec ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedSpec(spec)}
+                  onClick={() => {
+                    setSelectedSpec(spec);
+                  }}
                   disabled={!available || outOfStock}
                   className={`min-w-[80px] ${
                     selectedSpec === spec
@@ -319,30 +327,7 @@ export function VariantSelector({
       )}
 
       {/* Selected Variant Info */}
-      {selectedVariant && (
-        <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-          <div className="flex items-start gap-2">
-            <Package className="h-5 w-5 text-emerald-600 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-emerald-900 mb-1">
-                Đã chọn: {selectedVariant.displayName || 
-                  [
-                    selectedVariant.color && `Màu: ${selectedVariant.color}`,
-                    selectedVariant.size && `Size: ${selectedVariant.size}`,
-                    selectedVariant.spec && `Thông số: ${selectedVariant.spec}`,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") || "Biến thể"}
-              </p>
-              <p className="text-xs text-emerald-700">
-                Tồn kho: {selectedVariant.stockQuantity > 0 
-                  ? `${selectedVariant.stockQuantity} sản phẩm`
-                  : "Hết hàng"}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Đã ẩn khung "Đã chọn: ..." và "Tồn kho: ... sản phẩm" theo yêu cầu */}
     </div>
   );
 }

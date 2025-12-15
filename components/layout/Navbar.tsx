@@ -714,150 +714,116 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-emerald-100 bg-white">
-            <div className="px-4 py-4 space-y-4">
-              {/* Mobile Search Button */}
-              <Button
-                variant="outline"
-                className="w-full justify-start text-muted-foreground"
+        {/* Mobile Menu Overlay */}
+        <div 
+          className={`fixed inset-0 bg-black/50 z-[99] md:hidden transition-opacity duration-300 ${
+            isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        
+        {/* Mobile Menu Slide-in Panel */}
+        <div 
+          className={`fixed top-0 left-0 h-screen w-[85%] max-w-[320px] bg-white z-[100] md:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
+            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          style={{ pointerEvents: isMobileMenuOpen ? 'auto' : 'none' }}
+        >
+          {/* Mobile Menu Content */}
+          <div className="flex flex-col h-full overflow-y-auto bg-white pb-4">
+            {/* Close Button Row */}
+            <div className="flex justify-end px-4 py-3 border-b border-gray-200">
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Đóng menu"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            {/* Mobile Search */}
+            <div className="p-4 border-b border-gray-100">
+              <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   setShowSearchOverlay(true);
                 }}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 rounded-lg text-gray-500 hover:bg-gray-200 transition-colors text-sm"
               >
-                <Search className="mr-2 h-4 w-4" />
-                Tìm kiếm sản phẩm...
-              </Button>
+                <Search className="h-5 w-5" />
+                <span>Tìm kiếm sản phẩm...</span>
+              </button>
+            </div>
 
-              {/* Mobile Navigation Links */}
-              <div className="space-y-2">
-                <Link
-                  href="/"
-                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === "/" ? "bg-emerald-50 text-emerald-600" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Trang chủ
-                </Link>
-                <Link
-                  href="/news"
-                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname?.startsWith("/news")
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Tin tức
-                </Link>
-                <Link
-                  href="/products"
-                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname?.startsWith("/products")
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Sản phẩm
-                </Link>
-                <Link
-                  href="/order-lookup"
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname?.startsWith("/order-lookup")
-                      ? "bg-emerald-50 text-emerald-600"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <FileSearch className="h-4 w-4" />
-                  Tra cứu đơn hàng
-                </Link>
-                
-                {/* Mobile Categories */}
-                <div className="pl-4 space-y-1 border-l-2 border-emerald-100">
-                  {menuCategories.map((category) => (
+            {/* Navigation Links */}
+            <div className="flex-1 py-2">
+              <Link
+                href="/"
+                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
+                  pathname === "/" ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                TRANG CHỦ
+                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+              </Link>
+              <Link
+                href="/products"
+                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
+                  pathname?.startsWith("/products") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                SẢN PHẨM
+                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+              </Link>
+              <Link
+                href="/news"
+                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
+                  pathname?.startsWith("/news") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                TIN TỨC
+                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+              </Link>
+              <Link
+                href="/order-lookup"
+                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
+                  pathname?.startsWith("/order-lookup") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                TRA CỨU ĐƠN HÀNG
+                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+              </Link>
+              
+              {/* Categories from API */}
+              {categories && categories.length > 0 && (
+                <div className="border-b border-gray-100">
+                  <div className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">
+                    Danh mục sản phẩm
+                  </div>
+                  {categories.map((category) => (
                     <Link
-                      key={category.key}
-                      href={category.href}
-                      className="block px-4 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-50 hover:text-emerald-600"
+                      key={category.id}
+                      href={`/products?categoryId=${category.id}`}
+                      className="flex items-center justify-between px-6 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       {category.name}
+                      <span className="text-[11px] text-gray-400">
+                        {category.productCount || 0}
+                      </span>
                     </Link>
                   ))}
                 </div>
-              </div>
-
-              {/* Mobile Auth Buttons - Hidden */}
-              {/* {!isAuthenticated && (
-                <div className="pt-4 border-t border-gray-100 space-y-2">
-                  <Link href="/login" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full">
-                      Đăng nhập
-                    </Button>
-                  </Link>
-                  <Link href="/register" className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full">Đăng ký</Button>
-                  </Link>
-                </div>
-              )} */}
-
-              {/* Mobile User Menu */}
-              {isAuthenticated && (
-                <div className="pt-4 border-t border-gray-100 space-y-2">
-                  <Link
-                    href="/account/profile"
-                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Settings className="h-4 w-4 text-emerald-600" />
-                    <span>Quản lý tài khoản</span>
-                  </Link>
-                  <Link
-                    href="/account/orders"
-                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Package className="h-4 w-4 text-emerald-600" />
-                    <span>Lịch sử đơn hàng</span>
-                  </Link>
-                  <Link
-                    href="/account/wishlist"
-                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Heart className="h-4 w-4 text-emerald-600" />
-                    <span>Sản phẩm yêu thích</span>
-                  </Link>
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 rounded-md"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <Settings className="h-4 w-4 text-emerald-600" />
-                      <span>Quản trị</span>
-                    </Link>
-                  )}
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Đăng xuất</span>
-                  </button>
-                </div>
               )}
             </div>
+
+            {/* Auth Section removed per request */}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Search Overlay Dropdown */}

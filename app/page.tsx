@@ -158,7 +158,7 @@ function HeroBannerSlider() {
           {banners.map((banner, idx) => (
             <div
               key={idx}
-              className={`absolute inset-0 ${
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
                 idx === currentSlide ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -407,17 +407,23 @@ function FlashSaleSection({
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Đặt mua ngay! Ưu đãi sẽ kết thúc sau:</p>
                 <div className="flex gap-2">
-                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200">
-                    <span className="text-2xl font-bold text-emerald-600">{String(timeLeft.hours).padStart(2, '0')}</span>
-                    <p className="text-xs text-gray-500">GIỜ</p>
+                  <div className="bg-gray-100 rounded px-4 py-3 text-center border border-gray-200">
+                    <span className="text-2xl font-bold text-black">
+                      {String(timeLeft.hours).padStart(2, "0")}
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">GIỜ</p>
                   </div>
-                  <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded px-3 py-2 text-center border border-emerald-200">
-                    <span className="text-2xl font-bold text-emerald-600">{String(timeLeft.minutes).padStart(2, '0')}</span>
-                    <p className="text-xs text-gray-500">PHÚT</p>
+                  <div className="bg-gray-100 rounded px-4 py-3 text-center border border-gray-200">
+                    <span className="text-2xl font-bold text-black">
+                      {String(timeLeft.minutes).padStart(2, "0")}
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">PHÚT</p>
                   </div>
-                  <div className="bg-linear-to-br from-red-50 to-red-100 rounded px-3 py-2 text-center border border-red-200">
-                    <span className="text-2xl font-bold text-red-600">{String(timeLeft.seconds).padStart(2, '0')}</span>
-                    <p className="text-xs text-gray-500">GIÂY</p>
+                  <div className="bg-gray-100 rounded px-4 py-3 text-center border border-gray-200">
+                    <span className="text-2xl font-bold text-black">
+                      {String(timeLeft.seconds).padStart(2, "0")}
+                    </span>
+                    <p className="text-xs text-gray-600 mt-1">GIÂY</p>
                   </div>
                 </div>
               </div>

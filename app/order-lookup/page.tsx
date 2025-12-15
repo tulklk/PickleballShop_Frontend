@@ -107,137 +107,145 @@ export default function OrderLookupPage() {
   const StatusIcon = statusConfig?.icon || Clock;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="text-center mb-8">
-        <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-          <FileSearch className="w-8 h-8 text-emerald-600" />
+    <div className="min-h-[calc(100vh-200px)] bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
+        {/* Header */}
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+            <FileSearch className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-600" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-emerald-900 mb-2">
+            Tra cứu đơn hàng
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 px-4">
+            Nhập mã đơn hàng để kiểm tra trạng thái đơn hàng của bạn
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-emerald-900 mb-2">
-          Tra cứu đơn hàng
-        </h1>
-        <p className="text-gray-600">
-          Nhập mã đơn hàng để kiểm tra trạng thái đơn hàng của bạn
-        </p>
-      </div>
 
-      {/* Search Form */}
-      <div className="max-w-md mx-auto mb-8">
-        <form onSubmit={handleLookup} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="orderNumber" className="flex items-center gap-2 text-emerald-900">
-              <Hash className="h-4 w-4" />
-              Mã đơn hàng <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="orderNumber"
-              value={orderNumber}
-              onChange={(e) => setOrderNumber(e.target.value)}
-              placeholder="Ví dụ: ORD-20251215-B832A195"
-              className="border-emerald-200 focus:border-emerald-500 h-12"
-            />
+        {/* Search Form */}
+        <div className="max-w-md mx-auto mb-6 sm:mb-8 px-2 sm:px-0">
+          <form onSubmit={handleLookup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="orderNumber" className="flex items-center gap-2 text-emerald-900 text-sm sm:text-base">
+                <Hash className="h-4 w-4" />
+                Mã đơn hàng <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="orderNumber"
+                value={orderNumber}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                placeholder="VD: ORD-20251215-B832A195"
+                className="border-emerald-200 focus:border-emerald-500 h-11 sm:h-12 text-sm sm:text-base"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 h-11 sm:h-12 text-sm sm:text-base"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang tra cứu...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Tra cứu đơn hàng
+                </>
+              )}
+            </Button>
+          </form>
+        </div>
+
+        {/* Not Found Message */}
+        {notFound && (
+          <div className="max-w-md mx-auto px-2 sm:px-0">
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-6 pb-6">
+                <div className="text-center">
+                  <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                    <XCircle className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-amber-900 mb-2">
+                    Không tìm thấy đơn hàng
+                  </h3>
+                  <p className="text-amber-700 text-xs sm:text-sm px-2">
+                    Mã đơn hàng &quot;{orderNumber}&quot; không tồn tại. Vui lòng kiểm tra lại mã đơn hàng trong email xác nhận.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        )}
 
-          <Button
-            type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 h-12"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Đang tra cứu...
-              </>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-                Tra cứu đơn hàng
-              </>
-            )}
-          </Button>
-        </form>
-      </div>
-
-      {/* Not Found Message */}
-      {notFound && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                <XCircle className="w-6 h-6 text-amber-600" />
+        {/* Order Details */}
+        {order && (
+          <div className="max-w-md mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
+            {/* Order Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+              {/* Order Header */}
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 text-emerald-900 mb-2">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="font-semibold text-sm sm:text-base">Đơn hàng: {order.orderNumber}</span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500 mb-4">
+                  Ngày đặt: {formatDateTime(order.createdAt)}
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Badge 
+                    className="text-xs sm:text-sm px-2 sm:px-3 py-1"
+                    style={{
+                      backgroundColor: statusConfig?.color === 'emerald' ? '#d1fae5' : 
+                                      statusConfig?.color === 'amber' ? '#fef3c7' :
+                                      statusConfig?.color === 'blue' ? '#dbeafe' :
+                                      statusConfig?.color === 'purple' ? '#f3e8ff' :
+                                      statusConfig?.color === 'red' ? '#fee2e2' : '#f3f4f6',
+                      color: statusConfig?.color === 'emerald' ? '#065f46' : 
+                             statusConfig?.color === 'amber' ? '#92400e' :
+                             statusConfig?.color === 'blue' ? '#1e40af' :
+                             statusConfig?.color === 'purple' ? '#6b21a8' :
+                             statusConfig?.color === 'red' ? '#991b1b' : '#374151'
+                    }}
+                  >
+                    <StatusIcon className="h-3 w-3 mr-1" />
+                    {statusConfig?.label}
+                  </Badge>
+                  <Badge 
+                    variant="outline"
+                    className="text-xs sm:text-sm px-2 sm:px-3 py-1"
+                    style={{
+                      backgroundColor: paymentConfig?.color === 'emerald' ? '#d1fae5' : 
+                                      paymentConfig?.color === 'amber' ? '#fef3c7' :
+                                      paymentConfig?.color === 'red' ? '#fee2e2' : '#f3f4f6',
+                      color: paymentConfig?.color === 'emerald' ? '#065f46' : 
+                             paymentConfig?.color === 'amber' ? '#92400e' :
+                             paymentConfig?.color === 'red' ? '#991b1b' : '#374151',
+                      borderColor: paymentConfig?.color === 'emerald' ? '#a7f3d0' : 
+                                   paymentConfig?.color === 'amber' ? '#fcd34d' :
+                                   paymentConfig?.color === 'red' ? '#fca5a5' : '#e5e7eb'
+                    }}
+                  >
+                    {paymentConfig?.label}
+                  </Badge>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-amber-900 mb-2">
-                Không tìm thấy đơn hàng
-              </h3>
-              <p className="text-amber-700 text-sm">
-                Mã đơn hàng &quot;{orderNumber}&quot; không tồn tại. Vui lòng kiểm tra lại mã đơn hàng trong email xác nhận.
-              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Order Details */}
-      {order && (
-        <div className="max-w-md mx-auto space-y-6">
-          {/* Order Header */}
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 text-emerald-900 mb-2">
-              <Package className="h-5 w-5" />
-              <span className="font-semibold">Đơn hàng: {order.orderNumber}</span>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">
-              Ngày đặt: {formatDateTime(order.createdAt)}
-            </p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <Badge 
-                style={{
-                  backgroundColor: statusConfig?.color === 'emerald' ? '#d1fae5' : 
-                                  statusConfig?.color === 'amber' ? '#fef3c7' :
-                                  statusConfig?.color === 'blue' ? '#dbeafe' :
-                                  statusConfig?.color === 'purple' ? '#f3e8ff' :
-                                  statusConfig?.color === 'red' ? '#fee2e2' : '#f3f4f6',
-                  color: statusConfig?.color === 'emerald' ? '#065f46' : 
-                         statusConfig?.color === 'amber' ? '#92400e' :
-                         statusConfig?.color === 'blue' ? '#1e40af' :
-                         statusConfig?.color === 'purple' ? '#6b21a8' :
-                         statusConfig?.color === 'red' ? '#991b1b' : '#374151'
-                }}
-              >
-                <StatusIcon className="h-3 w-3 mr-1" />
-                {statusConfig?.label}
-              </Badge>
-              <Badge 
-                variant="outline"
-                style={{
-                  backgroundColor: paymentConfig?.color === 'emerald' ? '#d1fae5' : 
-                                  paymentConfig?.color === 'amber' ? '#fef3c7' :
-                                  paymentConfig?.color === 'red' ? '#fee2e2' : '#f3f4f6',
-                  color: paymentConfig?.color === 'emerald' ? '#065f46' : 
-                         paymentConfig?.color === 'amber' ? '#92400e' :
-                         paymentConfig?.color === 'red' ? '#991b1b' : '#374151',
-                  borderColor: paymentConfig?.color === 'emerald' ? '#a7f3d0' : 
-                               paymentConfig?.color === 'amber' ? '#fcd34d' :
-                               paymentConfig?.color === 'red' ? '#fca5a5' : '#e5e7eb'
-                }}
-              >
-                {paymentConfig?.label}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Continue Shopping */}
-          <div className="pt-4 border-t border-gray-200">
+            {/* Continue Shopping */}
             <Button
               variant="outline"
               onClick={() => router.push("/products")}
-              className="w-full"
+              className="w-full h-11 sm:h-12 text-sm sm:text-base"
             >
               Tiếp tục mua sắm
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
