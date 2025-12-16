@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight, Star, Clock, Truck, Phone, Mail, ChevronDown } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
-import { useProducts, useCategories, useNews } from "@/lib/api/hooks";
+import { useProducts, useCategories, useCategoryTree, useNews } from "@/lib/api/hooks";
 import { apiClient } from "@/lib/api/client";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
@@ -575,6 +575,7 @@ function CategoryProductsSection({
 }) {
   // Use shared categories if provided, otherwise fetch independently
   const { data: categories, isLoading: localIsLoadingCategories } = useCategories();
+  const { data: categoryTree } = useCategoryTree();
   const finalCategories = sharedCategories || categories;
   const finalIsLoadingCategories = isLoadingCategories !== undefined ? isLoadingCategories : localIsLoadingCategories;
 
@@ -583,6 +584,7 @@ function CategoryProductsSection({
     { 
       name: "VỢT PICKLEBALL", 
       searchKey: "vợt",
+      exactName: "vợt pickleball", // Try exact match first
       banner: banner7,
       bannerText: { 
         badge: "NEW ARRIVAL",
@@ -593,6 +595,7 @@ function CategoryProductsSection({
     { 
       name: "GIÀY PICKLEBALL", 
       searchKey: "giày",
+      exactName: "giày pickleball", // Try exact match first
       banner: banner8,
       bannerText: {
         badge: "15% OFF",
@@ -647,12 +650,98 @@ function CategoryProductsSection({
     );
   }
 
+  // Helper function to find category in tree (including children)
+  // Priority: exact match > partial match in name
+  const findCategoryInTree = (searchKey: string, exactName?: string): { id: string; name: string | null } | null => {
+    if (!categoryTree || categoryTree.length === 0) {
+      // Fallback to flat categories
+      const flatCategory = finalCategories?.find((c: any) => {
+        const name = c.name?.toLowerCase() || "";
+        if (exactName) {
+          return name === exactName.toLowerCase() || name.includes(searchKey.toLowerCase());
+        }
+        return name.includes(searchKey.toLowerCase());
+      });
+      if (flatCategory) {
+        return { id: flatCategory.id, name: flatCategory.name };
+      }
+      return null;
+    }
+
+    // Search in tree (parent and children)
+    // Priority: exact match > starts with > contains
+    const searchInTree = (cats: any[]): { id: string; name: string | null } | null => {
+      let bestMatch: { id: string; name: string | null } | null = null;
+      const searchKeyLower = searchKey.toLowerCase();
+      const exactNameLower = exactName?.toLowerCase();
+      
+      for (const cat of cats) {
+        const catName = cat.name?.toLowerCase() || "";
+        
+        // Try exact match first if exactName provided
+        if (exactNameLower && catName === exactNameLower) {
+          return { id: cat.id || "", name: cat.name };
+        }
+        
+        // Check if current category matches searchKey
+        // Priority: exact match > starts with > contains
+        if (catName === searchKeyLower) {
+          return { id: cat.id || "", name: cat.name };
+        } else if (catName.startsWith(searchKeyLower) && !bestMatch) {
+          bestMatch = { id: cat.id || "", name: cat.name };
+        } else if (catName.includes(searchKeyLower) && !bestMatch) {
+          bestMatch = { id: cat.id || "", name: cat.name };
+        }
+        
+        // Search in children
+        if (cat.children && cat.children.length > 0) {
+          const found = searchInTree(cat.children);
+          if (found) {
+            // If found exact match in children, return immediately
+            const foundName = found.name?.toLowerCase() || "";
+            if (exactNameLower && foundName === exactNameLower) {
+              return found;
+            }
+            if (foundName === searchKeyLower) {
+              return found;
+            }
+            // Otherwise keep the best match
+            if (!bestMatch) {
+              bestMatch = found;
+            }
+          }
+        }
+      }
+      return bestMatch;
+    };
+
+    return searchInTree(categoryTree);
+  };
+
   return (
     <>
       {categoryConfigs.map((config) => {
-        const category = finalCategories?.find((c: any) => 
-          c.name?.toLowerCase().includes(config.searchKey.toLowerCase())
+        // First try to find in category tree (includes children)
+        // Use exactName if available for better matching
+        let category = findCategoryInTree(
+          config.searchKey, 
+          (config as any).exactName
         );
+        
+        // If not found in tree, try flat categories as fallback
+        if (!category && finalCategories) {
+          const flatCategory = finalCategories.find((c: any) => {
+            const name = c.name?.toLowerCase() || "";
+            if ((config as any).exactName) {
+              return name === (config as any).exactName.toLowerCase() || 
+                     name.includes(config.searchKey.toLowerCase());
+            }
+            return name.includes(config.searchKey.toLowerCase());
+          });
+          if (flatCategory) {
+            category = { id: flatCategory.id, name: flatCategory.name };
+          }
+        }
 
         // Render section even if category not found, but with loading state
         if (!category) {
@@ -693,13 +782,89 @@ function CategoryProductSection({
   };
   category: { id: string; name: string | null } | null;
 }) {
-  // Fetch products by categoryId to ensure accurate filtering
-  const { data: productsData, isLoading } = useProducts({ 
+  const { data: categoryTree } = useCategoryTree();
+  
+  // Find all child category IDs if this is a parent category
+  const allCategoryIds = useMemo(() => {
+    if (!category?.id || !categoryTree) return [category?.id].filter(Boolean);
+    
+    const findCategoryInTree = (cats: any[]): any | null => {
+      for (const cat of cats) {
+        if (cat.id === category.id) {
+          return cat;
+        }
+        if (cat.children && cat.children.length > 0) {
+          const found = findCategoryInTree(cat.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const foundCategory = findCategoryInTree(categoryTree);
+    if (!foundCategory) return [category.id];
+    
+    // If category has children, collect all child IDs
+    const childIds: string[] = [];
+    const collectChildIds = (cat: any) => {
+      if (cat.children && cat.children.length > 0) {
+        cat.children.forEach((child: any) => {
+          if (child.id) {
+            childIds.push(child.id);
+          }
+          collectChildIds(child);
+        });
+      }
+    };
+    
+    collectChildIds(foundCategory);
+    
+    // Return parent ID + all child IDs
+    return [category.id, ...childIds];
+  }, [category?.id, categoryTree]);
+
+  // Fetch products from parent category first
+  const { data: parentProductsData, isLoading: isLoadingParent } = useProducts({ 
     PageSize: 8,
     CategoryId: category?.id 
   });
 
-  const displayProducts = productsData?.items || [];
+  // If parent has children, fetch from each child category
+  const childQueries = useQueries({
+    queries: allCategoryIds.length > 1 
+      ? allCategoryIds.slice(1).map((childId) => ({
+          queryKey: ["products", { PageSize: 8, CategoryId: childId }],
+          queryFn: () => apiClient.getProducts({ PageSize: 8, CategoryId: childId }),
+          staleTime: 15 * 60 * 1000,
+        }))
+      : [],
+  });
+
+  // Combine products from parent and all children
+  const displayProducts = useMemo(() => {
+    const products: any[] = [];
+    
+    // Add parent products
+    if (parentProductsData?.items) {
+      products.push(...parentProductsData.items);
+    }
+    
+    // Add child products
+    childQueries.forEach((query) => {
+      if (query.data?.items) {
+        products.push(...query.data.items);
+      }
+    });
+    
+    // Remove duplicates by ID and limit to 8
+    const uniqueProducts = Array.from(
+      new Map(products.map((p) => [p.id, p])).values()
+    ).slice(0, 8);
+    
+    return uniqueProducts;
+  }, [parentProductsData?.items, childQueries]);
+
+  const isLoading = isLoadingParent || childQueries.some((q) => q.isLoading);
 
   // Show skeleton while loading
   if (isLoading) {

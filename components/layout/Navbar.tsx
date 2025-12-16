@@ -336,9 +336,8 @@ export function Navbar() {
                 onMouseEnter={handleProductMouseEnter}
                 onMouseLeave={handleProductMouseLeave}
               >
-                <Link
-                  href="/products"
-                  className={`text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+                <div
+                  className={`text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 cursor-pointer ${
                     pathname?.startsWith("/products")
                       ? "text-primary"
                       : "text-muted-foreground"
@@ -346,7 +345,7 @@ export function Navbar() {
                 >
                   Sản phẩm
                   <ChevronDown className={`h-4 w-4 transition-transform ${showProductDropdown ? "rotate-180" : ""}`} />
-                </Link>
+                </div>
 
                 {/* Mega Menu Dropdown */}
                 {showProductDropdown && (
@@ -688,16 +687,14 @@ export function Navbar() {
                 TRANG CHỦ
                 <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
               </Link>
-              <Link
-                href="/products"
-                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
+              <div
+                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 cursor-pointer ${
                   pathname?.startsWith("/products") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
                 }`}
-                onClick={() => setIsMobileMenuOpen(false)}
               >
                 SẢN PHẨM
                 <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
-              </Link>
+              </div>
               <Link
                 href="/news"
                 className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
