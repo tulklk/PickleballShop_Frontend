@@ -33,7 +33,7 @@ import {
 } from "@/lib/api/hooks";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
-import type { Product, Order, ProductCategory } from "@/lib/api/types";
+import type { Product, Order, CategoryTreeDto } from "@/lib/api/types";
 
 export default function AdminDashboard() {
   const { data: orders } = useAdminOrders();
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
   const stats = useMemo(() => {
     const orderList: Order[] = Array.isArray(orders) ? orders : [];
     const productList: Product[] = Array.isArray(products) ? products : [];
-    const categoryList: ProductCategory[] = Array.isArray(categories) ? categories : [];
+    const categoryList: CategoryTreeDto[] = Array.isArray(categories) ? categories : [];
 
     const totalRevenue = orderList.reduce(
       (sum, order) => sum + (order.totalAmount || 0),
