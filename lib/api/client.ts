@@ -44,6 +44,9 @@ import type {
   PagedNewsResponse,
   CreateNewsRequest,
   UpdateNewsRequest,
+  CategoryTreeDto,
+  AdminCreateCategoryRequest,
+  AdminUpdateCategoryRequest,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -505,6 +508,10 @@ class ApiClient {
     return this.request<CategoryDto[]>("/api/Categories");
   }
 
+  async getCategoryTree(): Promise<CategoryTreeDto[]> {
+    return this.request<CategoryTreeDto[]>("/api/categories/tree");
+  }
+
   async getCategoryById(id: string): Promise<CategoryDto> {
     return this.request<CategoryDto>(`/api/Categories/${id}`);
   }
@@ -731,33 +738,23 @@ class ApiClient {
   }
 
   // Admin endpoints
-  async adminGetCategories(): Promise<ProductCategory[]> {
-    // Use public Categories endpoint as admin endpoint doesn't have GET all
-    // This endpoint should work with admin authentication
-    try {
-      const result = await this.request<CategoryDto[]>("/api/Categories");
-      // Convert CategoryDto[] to ProductCategory[]
-      return result.map((cat) => ({
-        id: cat.id,
-        name: cat.name,
-        slug: cat.slug,
-        description: cat.description,
-        parentCategoryId: cat.parentCategoryId,
-      }));
-    } catch (error) {
-      console.error("Failed to fetch categories:", error);
-      throw error;
-    }
+  // Trả về cây danh mục: category gốc + children giống swagger /api/admin/AdminCategories
+  async adminGetCategories(): Promise<CategoryTreeDto[]> {
+    return this.request<CategoryTreeDto[]>("/api/admin/AdminCategories");
   }
 
-  async adminGetCategoryById(id: string): Promise<ProductCategory> {
-    return this.request<ProductCategory>(`/api/admin/AdminCategories/${id}`);
+  async adminGetCategoryById(id: string): Promise<CategoryTreeDto> {
+    return this.request<CategoryTreeDto>(`/api/admin/AdminCategories/${id}`);
   }
 
-  async adminCreateCategory(data: ProductCategory): Promise<ProductCategory> {
-    const payload = {
-      name: (data.name ?? "").trim(),
+  async adminCreateCategory(data: AdminCreateCategoryRequest): Promise<ProductCategory> {
+    const payload: AdminCreateCategoryRequest = {
+      name: data.name.trim(),
       description: data.description?.trim() || "",
+      children: data.children?.map((c) => ({
+        name: c.name.trim(),
+        description: c.description?.trim() || "",
+      })),
     };
 
     return this.request<ProductCategory>("/api/admin/AdminCategories", {
@@ -768,11 +765,15 @@ class ApiClient {
 
   async adminUpdateCategory(
     id: string,
-    data: ProductCategory
+    data: AdminUpdateCategoryRequest
   ): Promise<void> {
-    const payload = {
-      name: (data.name ?? "").trim(),
+    const payload: AdminUpdateCategoryRequest = {
+      name: data.name.trim(),
       description: data.description?.trim() || "",
+      children: data.children?.map((c) => ({
+        name: c.name.trim(),
+        description: c.description?.trim() || "",
+      })),
     };
 
     return this.request<void>(`/api/admin/AdminCategories/${id}`, {

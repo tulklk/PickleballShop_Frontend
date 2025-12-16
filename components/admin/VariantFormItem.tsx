@@ -207,21 +207,6 @@ export function VariantFormItem({
         </div>
       )}
 
-      {/* SKU */}
-      <div>
-        <Label className="text-sm font-semibold">
-          SKU: <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          type="text"
-          value={variant.sku}
-          onChange={(e) => onChange("sku", e.target.value)}
-          placeholder="Ví dụ: PADDLE-001-RED-13MM"
-          className="mt-1"
-          required
-        />
-      </div>
-
       {/* Price Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

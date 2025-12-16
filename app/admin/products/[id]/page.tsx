@@ -57,7 +57,6 @@ export default function AdminProductEditPage() {
       price: typeof values.price,
       originalPrice: typeof values.originalPrice,
       stockQuantity: typeof values.stockQuantity,
-      sku: typeof values.sku,
       brand: typeof values.brand,
       isActive: typeof values.isActive,
       imageUrls: typeof values.imageUrls,
@@ -93,7 +92,6 @@ export default function AdminProductEditPage() {
           ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
           : null,
         stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
-        sku: values.sku || null,
         brand: values.brand || null,
         isActive: Boolean(values.isActive),
         // Always include imageUrls as array of valid strings (even if empty)
@@ -125,7 +123,7 @@ export default function AdminProductEditPage() {
               price: v.price,
               originalPrice: v.originalPrice || null,
               stockQuantity: v.stockQuantity,
-              sku: v.sku,
+              sku: v.sku?.trim() || "",
               isActive: v.isActive,
             }));
           }
@@ -163,6 +161,9 @@ export default function AdminProductEditPage() {
       console.log("✅ UPDATE PRODUCT - SUCCESS");
       console.log("═══════════════════════════════════════════════════════");
       toast.success("Cập nhật sản phẩm thành công");
+      
+      // Wait a bit to ensure cache is updated before redirecting
+      await new Promise((resolve) => setTimeout(resolve, 300));
       router.push("/admin/products");
     } catch (error: any) {
       console.warn("❌ UPDATE PRODUCT - ERROR");

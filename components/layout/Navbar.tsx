@@ -7,9 +7,9 @@ import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Men
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
-import { useCart, useCategories, useUserMe, useLogout, useProducts } from "@/lib/api/hooks";
-import type { ProductListDto, ProductListDtoPagedResultDto, CategoryDto } from "@/lib/api/types";
-import { useState, useEffect, useRef } from "react";
+import { useCart, useUserMe, useLogout, useProducts, useCategoryTree } from "@/lib/api/hooks";
+import type { ProductListDto, ProductListDtoPagedResultDto, CategoryDto, CategoryTreeDto } from "@/lib/api/types";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
@@ -19,96 +19,12 @@ import { CartPreview } from "./CartPreview";
 import { getProductUrl } from "@/lib/utils/productUrl";
 
 import logo from "@/app/img/logopickleball.png";
-import bannerDropdown from "@/app/img/homepage_img/1.jpg";
 
 const poppins = Poppins({
   weight: ["600", "700"],
   subsets: ["latin"],
   display: "swap",
 });
-
-// Component to display products under each category in mega menu
-function CategoryMenuItems({ 
-  category, 
-  onClose 
-}: { 
-  category: CategoryDto; 
-  onClose: () => void;
-}) {
-  const { data: productsData } = useProducts({
-    CategoryId: category.id,
-    PageSize: 8,
-    Page: 1,
-  });
-
-  const products = productsData?.items || [];
-
-  // If category has subcategories, show them
-  if (category.subCategories && category.subCategories.length > 0) {
-    return (
-      <div className="space-y-1">
-        {category.subCategories.slice(0, 8).map((sub) => (
-          <Link
-            key={sub.id}
-            href={`/products?categoryId=${sub.id}`}
-            className="block text-sm text-gray-600 hover:text-emerald-600 transition-colors"
-            onClick={onClose}
-          >
-            {sub.name}
-          </Link>
-        ))}
-        {category.subCategories.length > 8 && (
-          <Link
-            href={`/products?categoryId=${category.id}`}
-            className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-            onClick={onClose}
-          >
-            Xem thêm →
-          </Link>
-        )}
-      </div>
-    );
-  }
-
-  // Otherwise show products
-  if (products.length > 0) {
-    return (
-      <div className="space-y-1">
-        {products.slice(0, 8).map((product) => (
-          <Link
-            key={product.id}
-            href={`/products/${product.slug || product.id}`}
-            className="block text-sm text-gray-600 hover:text-emerald-600 transition-colors truncate"
-            onClick={onClose}
-            title={product.name || ""}
-          >
-            {product.name}
-          </Link>
-        ))}
-        {(category.productCount || 0) > 8 && (
-          <Link
-            href={`/products?categoryId=${category.id}`}
-            className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-            onClick={onClose}
-          >
-            Xem thêm →
-          </Link>
-        )}
-      </div>
-    );
-  }
-
-  // Loading/empty state
-  return (
-    <Link
-      href={`/products?categoryId=${category.id}`}
-      className="block text-sm text-emerald-600 hover:text-emerald-700"
-      onClick={onClose}
-    >
-      Xem {category.productCount || 0} sản phẩm →
-    </Link>
-  );
-}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -118,7 +34,7 @@ export function Navbar() {
   // Get full user data with avatarUrl, enabled only when authenticated
   const { data: userMe } = useUserMe();
   const { data: cart } = useCart();
-  const { data: categories } = useCategories();
+  const { data: categoryTree } = useCategoryTree();
   const logoutMutation = useLogout();
   
   // Refetch userMe when authentication state changes
@@ -146,6 +62,33 @@ export function Navbar() {
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Map category tree (new API) to old CategoryDto shape for reuse in menu
+  const categories: CategoryDto[] | undefined = useMemo(() => {
+    if (!categoryTree) return undefined;
+
+    let fallbackId = 0;
+    const mapNode = (node: CategoryTreeDto): CategoryDto => {
+      const id = node.id || `tree-${fallbackId++}`;
+      return {
+        id,
+        name: node.name ?? "",
+        slug: null,
+        description: node.description ?? null,
+        parentCategoryId: null,
+        parentCategoryName: null,
+        subCategories: (node.children || [])?.map(mapNode) ?? [],
+        productCount: node.productCount ?? 0,
+      };
+    };
+
+    return categoryTree.map(mapNode);
+  }, [categoryTree]);
+
+  const getCategoryLink = (node: CategoryDto) =>
+    node.id
+      ? `/products?categoryId=${node.id}`
+      : `/products?search=${encodeURIComponent(node.name || "")}`;
 
   // Update guest cart count when not authenticated
   useEffect(() => {
@@ -414,25 +357,39 @@ export function Navbar() {
                   >
                     <div className="bg-white shadow-xl border-t border-gray-200 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="container mx-auto px-4 py-6">
-                        {/* Dynamic Categories Grid */}
+                        {/* Dynamic Categories Grid (new API tree) */}
                         {categories && categories.length > 0 ? (
                           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                             {categories.map((category) => (
                               <div key={category.id} className="space-y-2">
-                                {/* Category Header */}
                                 <Link
-                                  href={`/products?categoryId=${category.id}`}
+                                  href={getCategoryLink(category)}
                                   className="block text-sm font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-wide"
                                   onClick={() => setShowProductDropdown(false)}
                                 >
                                   {category.name}
                                 </Link>
-                                
-                                {/* Products List */}
-                                <CategoryMenuItems 
-                                  category={category} 
-                                  onClose={() => setShowProductDropdown(false)} 
-                                />
+                                <div className="space-y-1">
+                                  {(category.subCategories || []).slice(0, 8).map((child) => (
+                                    <Link
+                                      key={child.id || child.name}
+                                      href={getCategoryLink(child)}
+                                      className="block text-sm text-gray-600 hover:text-emerald-600 transition-colors"
+                                      onClick={() => setShowProductDropdown(false)}
+                                    >
+                                      {child.name}
+                                    </Link>
+                                  ))}
+                                  {(category.subCategories?.length || 0) > 8 && (
+                                    <Link
+                                      href={getCategoryLink(category)}
+                                      className="block text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                                      onClick={() => setShowProductDropdown(false)}
+                                    >
+                                      Xem thêm →
+                                    </Link>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -508,42 +465,6 @@ export function Navbar() {
                           </div>
                         )}
                         
-                        {/* Bottom Banner/Links */}
-                        <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between">
-                          <div className="flex gap-6">
-                            <Link 
-                              href="/products" 
-                              className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
-                              onClick={() => setShowProductDropdown(false)}
-                            >
-                              Xem tất cả sản phẩm →
-                            </Link>
-                            <Link 
-                              href="/products?sort=newest" 
-                              className="text-sm font-semibold text-orange-500 hover:text-orange-600"
-                              onClick={() => setShowProductDropdown(false)}
-                            >
-                              🔥 Sản phẩm mới nhất
-                            </Link>
-                            <Link 
-                              href="/products?discount=true" 
-                              className="text-sm font-semibold text-red-500 hover:text-red-600"
-                              onClick={() => setShowProductDropdown(false)}
-                            >
-                              💥 Đang giảm giá
-                            </Link>
-                          </div>
-                          <div className="hidden lg:block w-[200px] h-[60px] relative rounded-lg overflow-hidden">
-                            <Image
-                              src={bannerDropdown}
-                              alt="Pickleball Products"
-                              fill
-                              className="object-cover"
-                              loading="lazy"
-                              sizes="200px"
-                            />
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>

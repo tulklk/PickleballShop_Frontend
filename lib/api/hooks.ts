@@ -32,6 +32,8 @@ import type {
   PagedNewsResponse,
   CreateNewsRequest,
   UpdateNewsRequest,
+  AdminCreateCategoryRequest,
+  AdminUpdateCategoryRequest,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -215,6 +217,18 @@ export function useCategories() {
     queryFn: () => apiClient.getCategories(),
     staleTime: 30 * 60 * 1000, // 30 minutes - Categories ít thay đổi
     gcTime: 60 * 60 * 1000, // 60 minutes - Giữ cache lâu hơn
+    retry: 1,
+    retryOnMount: false,
+  });
+}
+
+// Categories tree for navigation dropdowns
+export function useCategoryTree() {
+  return useQuery({
+    queryKey: ["categories", "tree"],
+    queryFn: () => apiClient.getCategoryTree(),
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     retry: 1,
     retryOnMount: false,
   });
@@ -691,10 +705,13 @@ export function useAdminCategory(id: string) {
 export function useAdminCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: ProductCategory) => apiClient.adminCreateCategory(data),
-    onSuccess: () => {
+    mutationFn: (data: AdminCreateCategoryRequest) =>
+      apiClient.adminCreateCategory(data),
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
       queryClient.invalidateQueries({ queryKey: ["admin", "categories"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await queryClient.refetchQueries({ queryKey: ["admin", "categories"] });
     },
   });
 }
@@ -707,11 +724,14 @@ export function useAdminUpdateCategory() {
       data,
     }: {
       id: string;
-      data: ProductCategory;
+      data: AdminUpdateCategoryRequest;
     }) => apiClient.adminUpdateCategory(id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
       queryClient.invalidateQueries({ queryKey: ["admin", "categories"] });
       queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "category"] });
+      await queryClient.refetchQueries({ queryKey: ["admin", "categories"] });
     },
   });
 }
@@ -811,9 +831,19 @@ export function useAdminCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Product) => apiClient.adminCreateProduct(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ 
+        queryKey: ["admin", "products"],
+        refetchType: "active"
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ["products"],
+        refetchType: "active"
+      });
+      // Explicitly refetch to ensure data is updated
+      await queryClient.refetchQueries({ queryKey: ["admin", "products"] });
+      await queryClient.refetchQueries({ queryKey: ["products"] });
     },
   });
 }
@@ -823,9 +853,26 @@ export function useAdminUpdateProduct() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Product }) =>
       apiClient.adminUpdateProduct(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+    onSuccess: async (_, variables) => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ 
+        queryKey: ["admin", "products"],
+        refetchType: "active"
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ["products"],
+        refetchType: "active"
+      });
+      // Also invalidate the specific product
+      await queryClient.invalidateQueries({ 
+        queryKey: ["admin", "product", variables.id]
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ["product", variables.id]
+      });
+      // Explicitly refetch to ensure data is updated
+      await queryClient.refetchQueries({ queryKey: ["admin", "products"] });
+      await queryClient.refetchQueries({ queryKey: ["products"] });
     },
   });
 }

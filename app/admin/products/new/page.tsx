@@ -23,7 +23,6 @@ export default function AdminProductCreatePage() {
       price: typeof values.price,
       originalPrice: typeof values.originalPrice,
       stockQuantity: typeof values.stockQuantity,
-      sku: typeof values.sku,
       brand: typeof values.brand,
       isActive: typeof values.isActive,
       imageUrls: typeof values.imageUrls,
@@ -59,7 +58,6 @@ export default function AdminProductCreatePage() {
           ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
           : null,
         stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
-        sku: values.sku || null,
         brand: values.brand || null,
         isActive:
           typeof values.isActive === "string"
@@ -81,13 +79,7 @@ export default function AdminProductCreatePage() {
         } else {
           // Map variants to backend format (remove id if exists for create)
           // Ensure all required fields are present and valid
-          productData.variants = values.variants.map((v, index) => {
-            // Validate SKU - it's required in backend
-            const sku = v.sku?.trim() || "";
-            if (!sku) {
-              throw new Error(`Variant ${index + 1} phải có SKU`);
-            }
-            
+          productData.variants = values.variants.map((v) => {
             return {
               color: v.color?.trim() || null,
               size: v.size?.trim() || null,
@@ -97,7 +89,7 @@ export default function AdminProductCreatePage() {
                 ? (typeof v.originalPrice === "number" ? v.originalPrice : Number(v.originalPrice))
                 : null,
               stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : Number(v.stockQuantity) || 0,
-              sku: sku, // Ensure SKU is never empty
+              sku: v.sku?.trim() || "",
               isActive: Boolean(v.isActive),
             };
           });
@@ -134,6 +126,9 @@ export default function AdminProductCreatePage() {
       console.log("✅ CREATE PRODUCT - SUCCESS");
       console.log("═══════════════════════════════════════════════════════");
       toast.success("Tạo sản phẩm thành công");
+      
+      // Wait a bit to ensure cache is updated before redirecting
+      await new Promise((resolve) => setTimeout(resolve, 300));
       router.push("/admin/products");
     } catch (error: any) {
       console.warn("❌ CREATE PRODUCT - ERROR");

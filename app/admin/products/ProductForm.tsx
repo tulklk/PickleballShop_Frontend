@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
-import type { Product, ProductCategory, ProductVariantDto, ProductDto } from "@/lib/api/types";
+import type { Product, ProductCategory, ProductVariantDto, ProductDto, CategoryTreeDto } from "@/lib/api/types";
 import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { VariantFormItem, ProductVariantFormData } from "@/components/admin/VariantFormItem";
@@ -23,7 +23,6 @@ const productSchema = z.object({
   price: z.number().min(0, "Giá phải lớn hơn hoặc bằng 0"),
   originalPrice: z.number().nullable().optional(),
   stockQuantity: z.number().int().min(0, "Tồn kho phải lớn hơn hoặc bằng 0"),
-  sku: z.string().optional().nullable(),
   brand: z.string().optional().nullable(),
   isActive: z.boolean(),
   imageUrls: z.array(z.string().url("URL không hợp lệ")).optional(),
@@ -34,7 +33,7 @@ export type ProductFormValues = z.infer<typeof productSchema> & {
 };
 
 interface ProductFormProps {
-  categories: ProductCategory[] | undefined;
+  categories: CategoryTreeDto[] | undefined;
   initialData?: Product | ProductDto | null;
   onSubmit: (values: ProductFormValues & { variants?: ProductVariantFormData[] | null }) => Promise<void>;
   loading?: boolean;
@@ -62,16 +61,88 @@ export function ProductForm({
       price: 0,
       originalPrice: undefined,
       stockQuantity: 0,
-      sku: undefined,
       brand: undefined,
       isActive: true,
       imageUrls: [],
     },
   });
 
+  // Helper: only show top-level categories in main dropdown
+  const getTopLevelCategories = (categoryList: CategoryTreeDto[] | undefined): CategoryTreeDto[] => {
+    if (!categoryList || categoryList.length === 0) return [];
+
+    const childIds = new Set<string>();
+
+    const collectChildIds = (cats: CategoryTreeDto[]) => {
+      cats.forEach((cat) => {
+        if (cat.children && cat.children.length > 0) {
+          cat.children.forEach((child) => {
+            if (child.id) {
+              childIds.add(child.id);
+            }
+            if (child.children && child.children.length > 0) {
+              collectChildIds(child.children);
+            }
+          });
+        }
+      });
+    };
+
+    collectChildIds(categoryList);
+
+    // Top-level categories are ones that are not children of any other category
+    return categoryList.filter((cat) => cat.id && !childIds.has(cat.id as string));
+  };
+
+  const topLevelCategories = getTopLevelCategories(categories);
+
   // Watch form values for Select components
   const categoryId = watch("categoryId");
+  const brand = watch("brand");
   const watchedImageUrls = watch("imageUrls");
+  
+  // Get children categories (brands) based on selected category
+  const getBrandOptions = (): CategoryTreeDto[] => {
+    if (!categoryId || !categories || categories.length === 0) {
+      return [];
+    }
+    
+    // Find the selected category in the tree
+    const findCategory = (cats: CategoryTreeDto[]): CategoryTreeDto | null => {
+      for (const cat of cats) {
+        if (cat.id === categoryId) {
+          return cat;
+        }
+        if (cat.children && cat.children.length > 0) {
+          const found = findCategory(cat.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const selectedCategory = findCategory(categories);
+    return selectedCategory?.children || [];
+  };
+  
+  const brandOptions = getBrandOptions();
+  
+  // Reset brand when category changes
+  useEffect(() => {
+    if (categoryId) {
+      // When category changes, reset brand to allow user to select new brand
+      const currentBrand = brand;
+      const newBrandOptions = getBrandOptions();
+      // If current brand is not in new options, reset it
+      if (currentBrand && !newBrandOptions.some(b => b.name === currentBrand)) {
+        setValue("brand", null);
+      }
+    } else {
+      // If no category selected, clear brand
+      setValue("brand", null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId]);
   
   // Sync watched imageUrls with state when form values change externally
   useEffect(() => {
@@ -112,7 +183,6 @@ export function ProductForm({
       setValue("price", initialData.price);
       setValue("originalPrice", initialData.originalPrice ?? undefined);
       setValue("stockQuantity", initialData.stockQuantity);
-      setValue("sku", initialData.sku || "");
       setValue("brand", initialData.brand || "");
       setValue("isActive", initialData.isActive);
       
@@ -345,11 +415,6 @@ export function ProductForm({
         return `Variant ${i + 1} phải có ít nhất một thuộc tính (Color, Size, hoặc Spec)`;
       }
       
-      // SKU required
-      if (!variant.sku || variant.sku.trim() === "") {
-        return `Variant ${i + 1} phải có SKU`;
-      }
-      
       // Price must be > 0
       if (variant.price <= 0) {
         return `Variant ${i + 1} phải có giá lớn hơn 0`;
@@ -359,13 +424,6 @@ export function ProductForm({
       if (variant.stockQuantity < 0) {
         return `Variant ${i + 1} có số lượng tồn kho không hợp lệ`;
       }
-    }
-    
-    // Check duplicate SKUs
-    const skus = variants.map(v => v.sku.trim().toLowerCase()).filter(Boolean);
-    const uniqueSkus = new Set(skus);
-    if (skus.length !== uniqueSkus.size) {
-      return "Variant SKUs không được trùng nhau";
     }
     
     return null;
@@ -486,9 +544,9 @@ export function ProductForm({
             <SelectItem value="" disabled>
               Chọn danh mục
             </SelectItem>
-            {categories && categories.length > 0 ? (
-              categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
+            {topLevelCategories && topLevelCategories.length > 0 ? (
+              topLevelCategories.map((category) => (
+                <SelectItem key={category.id} value={category.id || ""}>
                   {category.name || category.id}
                 </SelectItem>
               ))
@@ -506,7 +564,22 @@ export function ProductForm({
         </div>
         <div>
           <Label>Thương hiệu</Label>
-          <Input {...register("brand")} />
+          <Select
+            value={brand || ""}
+            onValueChange={(value) => {
+              setValue("brand", value === "" ? null : value, { shouldValidate: true });
+            }}
+            disabled={!categoryId || brandOptions.length === 0}
+          >
+            <SelectItem value="">
+              {!categoryId ? "Chọn danh mục trước" : brandOptions.length === 0 ? "Không có thương hiệu" : "Chọn thương hiệu"}
+            </SelectItem>
+            {brandOptions.map((brandOption) => (
+              <SelectItem key={brandOption.id} value={brandOption.name || ""}>
+                {brandOption.name || brandOption.id}
+              </SelectItem>
+            ))}
+          </Select>
         </div>
       </div>
 
@@ -542,10 +615,6 @@ export function ProductForm({
               Stock quantity đã được tự động set = 0 vì product có variants
             </p>
           )}
-        </div>
-        <div>
-          <Label>Mã SKU</Label>
-          <Input {...register("sku")} />
         </div>
       </div>
 

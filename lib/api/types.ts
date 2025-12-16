@@ -115,6 +115,33 @@ export interface CategoryDto {
   productCount: number;
 }
 
+// Category tree shape from /api/categories/tree
+export interface CategoryTreeDto {
+  id?: string;
+  name?: string | null;
+  description?: string | null;
+  productCount?: number;
+  children?: CategoryTreeDto[] | null;
+}
+
+// Admin create category: payload with children
+export interface AdminCategoryChildRequest {
+  name: string;
+  description?: string | null;
+}
+
+export interface AdminCreateCategoryRequest {
+  name: string;
+  description?: string | null;
+  children?: AdminCategoryChildRequest[] | null;
+}
+
+export interface AdminUpdateCategoryRequest {
+  name: string;
+  description?: string | null;
+  children?: AdminCategoryChildRequest[] | null;
+}
+
 export interface ProductListDto {
   id: string;
   name: string | null;
