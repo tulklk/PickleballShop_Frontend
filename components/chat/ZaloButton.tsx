@@ -11,20 +11,23 @@ export function ZaloButton() {
   };
 
   return (
-    <Button
+    <button
       onClick={handleZaloClick}
-      className="fixed bottom-3 md:bottom-6 right-3 md:right-6 z-50 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 bg-blue-500 hover:bg-blue-600"
-      size="icon"
+      className="fixed bottom-3 md:bottom-6 right-3 md:right-6 z-40 shadow-lg transition-all duration-300 hover:scale-110 bg-transparent hover:bg-transparent border-0 p-0 cursor-pointer inline-flex items-center justify-center"
       aria-label="Liên hệ Zalo"
     >
       <Image
         src={zaloIcon}
         alt="Zalo"
-        width={28}
-        height={28}
-        className="object-contain md:w-8 md:h-8"
+        width={48}
+        height={48}
+        className="w-12 h-12 md:w-14 md:h-14 object-contain rounded-lg"
+        style={{ 
+          filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
+          WebkitFilter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))'
+        }}
       />
-    </Button>
+    </button>
   );
 }
 

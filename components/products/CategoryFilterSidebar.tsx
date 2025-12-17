@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { Plus, Minus, ChevronRight } from "lucide-react";
 import type { CategoryTreeDto, ProductListDto } from "@/lib/api/types";
 
 interface CategoryFilterSidebarProps {
@@ -392,9 +393,9 @@ export function CategoryFilterSidebar({
         )}
       </div>
 
-      {/* Category List - Separate box */}
+      {/* Category List - Desktop view */}
       {currentCategoryChildren.length > 0 && (
-        <div className="border border-gray-200 rounded-lg bg-white p-4">
+        <div className="hidden lg:block border border-gray-200 rounded-lg bg-white p-4">
           <h3 className="font-semibold text-sm uppercase mb-3 text-gray-900">
             DANH MỤC SẢN PHẨM
           </h3>
@@ -416,6 +417,168 @@ export function CategoryFilterSidebar({
           </div>
         </div>
       )}
+
+      {/* Mobile Category Menu - Always show on mobile when categories exist */}
+      {categories && categories.length > 0 ? (
+        <MobileCategoryMenu
+          categories={categories}
+          categoryId={categoryId}
+          onCategoryClick={onCategoryClick}
+        />
+      ) : null}
     </aside>
+  );
+}
+
+// Mobile Category Menu Component with expand/collapse functionality
+function MobileCategoryMenu({
+  categories,
+  categoryId,
+  onCategoryClick,
+}: {
+  categories?: CategoryTreeDto[];
+  categoryId?: string;
+  onCategoryClick: (categoryId: string) => void;
+}) {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [showMainCategories, setShowMainCategories] = useState(false);
+
+  // Get top-level categories (main categories)
+  const mainCategories = useMemo(() => {
+    if (!categories || categories.length === 0) return [];
+    
+    // Find all top-level categories (categories that are not children of any other category)
+    const childIds = new Set<string>();
+    const collectChildIds = (cats: CategoryTreeDto[]) => {
+      cats.forEach((cat) => {
+        if (cat.children && cat.children.length > 0) {
+          cat.children.forEach((child) => {
+            if (child.id) {
+              childIds.add(child.id);
+            }
+            if (child.children && child.children.length > 0) {
+              collectChildIds(child.children);
+            }
+          });
+        }
+      });
+    };
+    collectChildIds(categories);
+    
+    return categories.filter((cat) => cat.id && !childIds.has(cat.id));
+  }, [categories]);
+
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleMainCategories = () => {
+    setShowMainCategories((prev) => !prev);
+  };
+
+  // Find category and its children recursively
+  const findCategoryWithChildren = (cats: CategoryTreeDto[], targetId: string): CategoryTreeDto | null => {
+    for (const cat of cats) {
+      if (cat.id === targetId) {
+        return cat;
+      }
+      if (cat.children && cat.children.length > 0) {
+        const found = findCategoryWithChildren(cat.children, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  return (
+    <div className="lg:hidden border border-gray-200 rounded-lg bg-white overflow-hidden mt-4">
+      {/* Header - Orange background */}
+      <div className="bg-orange-500 text-white px-4 py-3 flex items-center justify-center">
+        <h3 className="font-semibold text-sm uppercase">DANH MỤC SẢN PHẨM</h3>
+      </div>
+
+      {/* Category List */}
+      <div className="bg-white">
+        {/* SẢN PHẨM - Main entry point */}
+        <div className="border-b border-gray-100">
+          <button
+            onClick={toggleMainCategories}
+            className="w-full flex items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
+          >
+            <span>SẢN PHẨM</span>
+            {showMainCategories ? (
+              <Minus className="h-4 w-4 text-gray-600" />
+            ) : (
+              <Plus className="h-4 w-4 text-gray-600" />
+            )}
+          </button>
+
+          {/* Main Categories - Shown when SẢN PHẨM is expanded */}
+          {showMainCategories && (
+            <div className="bg-white">
+              {mainCategories.map((mainCat) => {
+                const isExpanded = expandedCategories.has(mainCat.id || "");
+                const hasChildren = mainCat.children && mainCat.children.length > 0;
+
+                return (
+                  <div key={mainCat.id} className="border-t border-gray-100">
+                    {/* Main Category Item */}
+                    {hasChildren ? (
+                      <button
+                        onClick={() => mainCat.id && toggleCategory(mainCat.id)}
+                        className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors pl-6"
+                      >
+                        <span>{mainCat.name}</span>
+                        {isExpanded ? (
+                          <Minus className="h-4 w-4 text-gray-600" />
+                        ) : (
+                          <Plus className="h-4 w-4 text-gray-600" />
+                        )}
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/products?categoryId=${mainCat.id}`}
+                        onClick={() => mainCat.id && onCategoryClick(mainCat.id)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors pl-6"
+                      >
+                        {mainCat.name}
+                      </Link>
+                    )}
+
+                    {/* Child Categories - Shown when main category is expanded */}
+                    {hasChildren && isExpanded && (
+                      <div className="bg-gray-50">
+                        {mainCat.children?.map((child) => (
+                          <Link
+                            key={child.id}
+                            href={`/products?categoryId=${child.id}`}
+                            onClick={() => child.id && onCategoryClick(child.id)}
+                            className={`block px-4 py-2.5 text-sm transition-colors pl-10 ${
+                              child.id === categoryId
+                                ? "text-emerald-600 font-semibold bg-emerald-50"
+                                : "text-gray-700 hover:text-emerald-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

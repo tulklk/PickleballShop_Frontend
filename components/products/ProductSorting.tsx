@@ -1,6 +1,7 @@
 "use client";
 
 import { Select, SelectItem } from "@/components/ui/select";
+import { ArrowDownWideNarrow } from "lucide-react";
 
 interface ProductSortingProps {
   value: string;
@@ -10,6 +11,7 @@ interface ProductSortingProps {
 export function ProductSorting({ value, onChange }: ProductSortingProps) {
   return (
     <div className="flex items-center gap-2">
+      <ArrowDownWideNarrow className="h-4 w-4 text-gray-700" />
       <span className="text-sm text-gray-700">Sắp xếp:</span>
       <Select value={value} onValueChange={onChange} className="w-[180px]">
         <SelectItem value="default">Mặc định</SelectItem>

@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Plus, Minus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/lib/api/hooks";
+import { useCart, useUpdateCartItem, useDeleteCartItem } from "@/lib/api/hooks";
 import { useAuth } from "@/lib/auth/useAuth";
 import { getGuestCart, GuestCartItem } from "@/lib/utils/guestCart";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface CartPreviewProps {
   onClose?: () => void;
@@ -17,6 +19,9 @@ interface CartPreviewProps {
 export function CartPreview({ onClose }: CartPreviewProps) {
   const { isAuthenticated } = useAuth();
   const { data: cart } = useCart();
+  const updateCartItem = useUpdateCartItem();
+  const deleteCartItem = useDeleteCartItem();
+  const queryClient = useQueryClient();
   const [guestCartItems, setGuestCartItems] = useState<GuestCartItem[]>([]);
 
   useEffect(() => {
@@ -28,6 +33,60 @@ export function CartPreview({ onClose }: CartPreviewProps) {
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
+
+  const handleUpdateQuantity = async (cartItemId: string, newQuantity: number, currentQuantity: number) => {
+    if (newQuantity < 1) return;
+    if (newQuantity === currentQuantity) return;
+    
+    if (!isAuthenticated) {
+      // Update guest cart
+      const guestCart = getGuestCart();
+      const itemIndex = guestCart.findIndex(
+        (item, idx) => `guest-${idx}` === cartItemId
+      );
+      if (itemIndex >= 0) {
+        guestCart[itemIndex].quantity = newQuantity;
+        localStorage.setItem("guestCart", JSON.stringify(guestCart));
+        window.dispatchEvent(new Event("storage"));
+      }
+      return;
+    }
+
+    try {
+      await updateCartItem.mutateAsync({
+        cartItemId,
+        data: { quantity: newQuantity },
+      });
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    } catch (error) {
+      toast.error("Không thể cập nhật số lượng");
+    }
+  };
+
+  const handleRemoveItem = async (cartItemId: string) => {
+    if (!isAuthenticated) {
+      // Remove from guest cart
+      const guestCart = getGuestCart();
+      const itemIndex = guestCart.findIndex(
+        (item, idx) => `guest-${idx}` === cartItemId
+      );
+      if (itemIndex >= 0) {
+        guestCart.splice(itemIndex, 1);
+        localStorage.setItem("guestCart", JSON.stringify(guestCart));
+        window.dispatchEvent(new Event("storage"));
+        toast.success("Đã xóa sản phẩm");
+      }
+      return;
+    }
+
+    try {
+      await deleteCartItem.mutateAsync(cartItemId);
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+      toast.success("Đã xóa sản phẩm");
+    } catch (error) {
+      toast.error("Không thể xóa sản phẩm");
+    }
+  };
 
   // Get cart items based on auth status
   const items = isAuthenticated
@@ -68,7 +127,7 @@ export function CartPreview({ onClose }: CartPreviewProps) {
         
         <Link href="/products" onClick={onClose}>
           <Button 
-            className="w-full bg-lime-400 hover:bg-lime-500 text-gray-900 font-semibold uppercase tracking-wide"
+            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold uppercase tracking-wide"
           >
             QUAY TRỞ LẠI CỬA HÀNG
           </Button>
@@ -95,13 +154,16 @@ export function CartPreview({ onClose }: CartPreviewProps) {
           const quantity = item.quantity;
           const lineTotal = (item as any).lineTotal || unitPrice * quantity;
 
+          const cartItemId = isAuthenticated ? (item as any).id : `guest-${index}`;
+          const itemSize = isAuthenticated ? (item as any).size : (item as GuestCartItem & { size?: string }).size;
+
           return (
             <div
-              key={isAuthenticated ? (item as any).id : index}
+              key={cartItemId}
               className="flex items-start gap-3 p-3 border-b border-gray-100 hover:bg-gray-50"
             >
               {/* Product Image */}
-              <div className="relative h-16 w-16 flex-shrink-0 rounded-md overflow-hidden bg-gray-100">
+              <div className="relative h-16 w-16 shrink-0 rounded-md overflow-hidden bg-gray-100">
                 {imageUrl ? (
                   imageUrl.includes("cloudinary.com") ? (
                     <img
@@ -127,12 +189,65 @@ export function CartPreview({ onClose }: CartPreviewProps) {
 
               {/* Product Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                  {productName || "Sản phẩm"}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {quantity} × {formatCurrency(unitPrice)} = {formatCurrency(lineTotal)}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                      {productName || "Sản phẩm"}
+                    </p>
+                    {itemSize && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Size: {itemSize}
+                      </p>
+                    )}
+                  </div>
+                  {/* Remove Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleRemoveItem(cartItemId);
+                    }}
+                    className="shrink-0 p-1 hover:bg-red-100 rounded-full transition-colors"
+                    aria-label="Xóa sản phẩm"
+                  >
+                    <X className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                  </button>
+                </div>
+                
+                {/* Quantity Controls */}
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center border border-gray-300 rounded-md">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleUpdateQuantity(cartItemId, quantity - 1, quantity);
+                      }}
+                      className="p-1 hover:bg-gray-100 transition-colors"
+                      disabled={quantity <= 1}
+                      aria-label="Giảm số lượng"
+                    >
+                      <Minus className="h-3 w-3 text-gray-600" />
+                    </button>
+                    <span className="px-2 py-1 text-sm min-w-8 text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleUpdateQuantity(cartItemId, quantity + 1, quantity);
+                      }}
+                      className="p-1 hover:bg-gray-100 transition-colors"
+                      aria-label="Tăng số lượng"
+                    >
+                      <Plus className="h-3 w-3 text-gray-600" />
+                    </button>
+                  </div>
+                  <span className="text-sm font-semibold text-red-600 ml-auto">
+                    {formatCurrency(lineTotal)}
+                  </span>
+                </div>
               </div>
             </div>
           );

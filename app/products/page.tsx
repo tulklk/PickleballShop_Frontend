@@ -241,12 +241,12 @@ function ProductsPageContent() {
       )}
 
       {/* Mobile Overlay - Only show on mobile when filter is open */}
-      {isFilterOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
-          onClick={() => setIsFilterOpen(false)}
-        />
-      )}
+      <div
+        className={`lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${
+          isFilterOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsFilterOpen(false)}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-1 md:gap-2">
         {/* Sidebar - Show CategoryFilterSidebar when categoryId exists, otherwise show simple filters */}
@@ -255,16 +255,17 @@ function ProductsPageContent() {
           className={`
             lg:col-span-1 scroll-animate ${sidebarVisible ? 'visible' : ''}
             lg:block
-            ${isFilterOpen ? 'block' : 'hidden'}
             fixed lg:relative top-0 right-0 h-full lg:h-auto w-[85vw] max-w-sm lg:max-w-none z-50 lg:z-auto
             bg-white lg:bg-transparent
-            transform transition-transform duration-300 ease-in-out
+            transition-transform duration-300 ease-out
+            will-change-transform
             ${isFilterOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
             overflow-y-auto lg:overflow-visible
             shadow-xl lg:shadow-none
           `}
+          style={{ backfaceVisibility: 'hidden' }}
         >
-          {/* Close button for mobile */}
+          {/* Close button for mobile - Only show when filter sidebar is open */}
           {showCategoryLayout && (
             <div className="lg:hidden flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
               <h2 className="font-semibold text-lg text-emerald-950">Bộ lọc</h2>

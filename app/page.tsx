@@ -509,7 +509,21 @@ function NewProductsSection({
   const { data: productsData, isLoading: localIsLoading } = useProducts({ PageSize: 50 });
   const finalProductsData = sharedProductsData || productsData;
   const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
-  const products = finalProductsData?.items?.slice(0, 8) || [];
+  
+  // Sort products by createdAt (newest first) or by id (larger id = newer)
+  const sortedProducts = useMemo(() => {
+    const items = finalProductsData?.items || [];
+    return [...items].sort((a: any, b: any) => {
+      // Sort by createdAt if available (newest first)
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      // Fallback: sort by id (larger id = newer, assuming auto-increment)
+      return (b.id || '').localeCompare(a.id || '');
+    }).slice(0, 8);
+  }, [finalProductsData?.items]);
+  
+  const products = sortedProducts;
 
   if (finalIsLoading) {
     return (
@@ -606,6 +620,7 @@ function CategoryProductsSection({
     { 
       name: "PHỤ KIỆN PICKLEBALL", 
       searchKey: "phụ kiện",
+      exactName: "phụ kiện pickleball",
       banner: banner9,
       bannerText: {
         badge: "NEW PRODUCT",
@@ -616,6 +631,7 @@ function CategoryProductsSection({
     { 
       name: "BÓNG PICKLEBALL", 
       searchKey: "bóng",
+      exactName: "bóng pickleball",
       banner: banner12,
       bannerText: {
         badge: "HOT",
@@ -651,7 +667,7 @@ function CategoryProductsSection({
   }
 
   // Helper function to find category in tree (including children)
-  // Priority: exact match > partial match in name
+  // Priority: parent category first, then children
   const findCategoryInTree = (searchKey: string, exactName?: string): { id: string; name: string | null } | null => {
     if (!categoryTree || categoryTree.length === 0) {
       // Fallback to flat categories
@@ -668,54 +684,73 @@ function CategoryProductsSection({
       return null;
     }
 
-    // Search in tree (parent and children)
-    // Priority: exact match > starts with > contains
-    const searchInTree = (cats: any[]): { id: string; name: string | null } | null => {
-      let bestMatch: { id: string; name: string | null } | null = null;
-      const searchKeyLower = searchKey.toLowerCase();
-      const exactNameLower = exactName?.toLowerCase();
+    const searchKeyLower = searchKey.toLowerCase();
+    const exactNameLower = exactName?.toLowerCase();
+    
+    // Helper to check if category name matches
+    const matchesCategory = (catName: string): boolean => {
+      if (!catName) return false;
+      const name = catName.toLowerCase();
       
+      // Exact match with exactName
+      if (exactNameLower && name === exactNameLower) return true;
+      
+      // Contains all words from exactName (for multi-word categories)
+      if (exactNameLower) {
+        const exactWords = exactNameLower.split(/\s+/).filter(w => w.length > 0);
+        if (exactWords.every(word => name.includes(word))) return true;
+      }
+      
+      // Exact match with searchKey
+      if (name === searchKeyLower) return true;
+      
+      // Contains searchKey
+      if (name.includes(searchKeyLower)) return true;
+      
+      return false;
+    };
+    
+    // First, search for parent categories (top level)
+    const searchInParents = (cats: any[]): { id: string; name: string | null } | null => {
       for (const cat of cats) {
-        const catName = cat.name?.toLowerCase() || "";
+        const catName = cat.name || "";
         
-        // Try exact match first if exactName provided
-        if (exactNameLower && catName === exactNameLower) {
+        if (matchesCategory(catName)) {
           return { id: cat.id || "", name: cat.name };
         }
-        
-        // Check if current category matches searchKey
-        // Priority: exact match > starts with > contains
-        if (catName === searchKeyLower) {
-          return { id: cat.id || "", name: cat.name };
-        } else if (catName.startsWith(searchKeyLower) && !bestMatch) {
-          bestMatch = { id: cat.id || "", name: cat.name };
-        } else if (catName.includes(searchKeyLower) && !bestMatch) {
-          bestMatch = { id: cat.id || "", name: cat.name };
-        }
-        
-        // Search in children
+      }
+      return null;
+    };
+    
+    // Try to find in parent categories first
+    const parentMatch = searchInParents(categoryTree);
+    if (parentMatch) {
+      return parentMatch;
+    }
+    
+    // If not found in parents, search in children recursively
+    const searchInChildren = (cats: any[]): { id: string; name: string | null } | null => {
+      for (const cat of cats) {
         if (cat.children && cat.children.length > 0) {
-          const found = searchInTree(cat.children);
-          if (found) {
-            // If found exact match in children, return immediately
-            const foundName = found.name?.toLowerCase() || "";
-            if (exactNameLower && foundName === exactNameLower) {
-              return found;
+          for (const child of cat.children) {
+            const childName = child.name || "";
+            
+            if (matchesCategory(childName)) {
+              return { id: child.id || "", name: child.name };
             }
-            if (foundName === searchKeyLower) {
-              return found;
-            }
-            // Otherwise keep the best match
-            if (!bestMatch) {
-              bestMatch = found;
+            
+            // Recursively search in deeper children
+            if (child.children && child.children.length > 0) {
+              const found = searchInChildren([child]);
+              if (found) return found;
             }
           }
         }
       }
-      return bestMatch;
+      return null;
     };
-
-    return searchInTree(categoryTree);
+    
+    return searchInChildren(categoryTree);
   };
 
   return (
@@ -732,15 +767,27 @@ function CategoryProductsSection({
         if (!category && finalCategories) {
           const flatCategory = finalCategories.find((c: any) => {
             const name = c.name?.toLowerCase() || "";
-            if ((config as any).exactName) {
-              return name === (config as any).exactName.toLowerCase() || 
-                     name.includes(config.searchKey.toLowerCase());
+            const exactNameLower = (config as any).exactName?.toLowerCase();
+            const searchKeyLower = config.searchKey.toLowerCase();
+            
+            // Priority: exact match > contains exactName > contains searchKey
+            if (exactNameLower) {
+              if (name === exactNameLower) return true;
+              if (name.includes(exactNameLower)) return true;
             }
-            return name.includes(config.searchKey.toLowerCase());
+            if (name === searchKeyLower) return true;
+            if (name.includes(searchKeyLower)) return true;
+            
+            return false;
           });
           if (flatCategory) {
             category = { id: flatCategory.id, name: flatCategory.name };
           }
+        }
+        
+        // Debug: Log if category not found
+        if (!category && process.env.NODE_ENV === 'development') {
+          console.log(`Category not found for: ${config.name} (searchKey: ${config.searchKey}, exactName: ${(config as any).exactName})`);
         }
 
         // Render section even if category not found, but with loading state
@@ -1002,12 +1049,6 @@ function CategoryProductSection({
                         -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                       </span>
                     )}
-                    {/* Hover Button */}
-                    <div className="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100">
-                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm">
-                        CHỌN
-                      </Button>
-                    </div>
                   </div>
                   <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-emerald-600">
                     {product.name}

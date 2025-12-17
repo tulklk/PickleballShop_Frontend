@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart, FileSearch } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart, FileSearch, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -56,6 +56,7 @@ export function Navbar() {
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const userTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenuItems, setExpandedMenuItems] = useState<Set<string>>(new Set());
   const [suggestions, setSuggestions] = useState<ProductListDto[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -622,12 +623,14 @@ export function Navbar() {
             ) : (
               <div className="flex items-center gap-1 md:gap-2">
                 <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-xs md:text-sm">
-                    Đăng nhập
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9 md:h-10 md:w-10 rounded-full hover:bg-gray-100"
+                    aria-label="Đăng nhập"
+                  >
+                    <User className="h-5 w-5 md:h-6 md:w-6" />
                   </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="text-xs md:text-sm px-2 md:px-4">Đăng ký</Button>
                 </Link>
               </div>
             )}
@@ -639,10 +642,13 @@ export function Navbar() {
           className={`fixed inset-0 bg-black/50 z-[99] md:hidden transition-opacity duration-300 ${
             isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
           }`}
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={() => {
+            setIsMobileMenuOpen(false);
+            setExpandedMenuItems(new Set());
+          }}
         />
         
-        {/* Mobile Menu Slide-in Panel */}
+        {/* Mobile Menu Slide-in Panel - Matching Image Design */}
         <div 
           className={`fixed top-0 left-0 h-screen w-[85%] max-w-[320px] bg-white z-[100] md:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
@@ -650,96 +656,237 @@ export function Navbar() {
           style={{ pointerEvents: isMobileMenuOpen ? 'auto' : 'none' }}
         >
           {/* Mobile Menu Content */}
-          <div className="flex flex-col h-full overflow-y-auto bg-white pb-4">
-            {/* Close Button Row */}
-            <div className="flex justify-end px-4 py-3 border-b border-gray-200">
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Đóng menu"
-              >
-                <X className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
-            {/* Mobile Search */}
-            <div className="p-4 border-b border-gray-100">
+          <div className="flex flex-col h-full overflow-y-auto bg-white">
+            {/* Emerald Green Header with Title and Close Button */}
+            <div className="bg-emerald-500 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+              <h3 className="font-semibold text-sm uppercase flex-1 text-center">DANH MỤC SẢN PHẨM</h3>
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
-                  setShowSearchOverlay(true);
+                  setExpandedMenuItems(new Set());
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-gray-100 rounded-lg text-gray-500 hover:bg-gray-200 transition-colors text-sm"
+                className="p-1 hover:bg-emerald-600 rounded transition-colors ml-2"
+                aria-label="Đóng menu"
               >
-                <Search className="h-5 w-5" />
-                <span>Tìm kiếm sản phẩm...</span>
+                <X className="h-5 w-5 text-white" />
               </button>
             </div>
 
-            {/* Navigation Links */}
-            <div className="flex-1 py-2">
+            {/* Menu Items */}
+            <div className="flex-1 bg-white">
+              {/* TRANG CHỦ */}
               <Link
                 href="/"
-                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
-                  pathname === "/" ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname === "/" ? "bg-gray-50" : ""
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 TRANG CHỦ
-                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
               </Link>
-              <div
-                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 cursor-pointer ${
-                  pathname?.startsWith("/products") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                SẢN PHẨM
-                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+
+              {/* SẢN PHẨM - Expandable */}
+              <div className="border-b border-gray-100">
+                <button
+                  onClick={() => {
+                    const newSet = new Set(expandedMenuItems);
+                    if (newSet.has('products')) {
+                      newSet.delete('products');
+                    } else {
+                      newSet.add('products');
+                    }
+                    setExpandedMenuItems(newSet);
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium uppercase text-gray-900 hover:bg-gray-50 transition-colors ${
+                    pathname?.startsWith("/products") ? "bg-gray-50" : ""
+                  }`}
+                >
+                  <span>SẢN PHẨM</span>
+                  {expandedMenuItems.has('products') ? (
+                    <Minus className="h-4 w-4 text-gray-900" />
+                  ) : (
+                    <Plus className="h-4 w-4 text-gray-900" />
+                  )}
+                </button>
+                {/* Sub-categories */}
+                {expandedMenuItems.has('products') && categories && categories.length > 0 && (
+                  <div className="bg-white">
+                    {categories.map((category) => {
+                      const hasChildren = category.subCategories && category.subCategories.length > 0;
+                      const categoryKey = `category-${category.id}`;
+                      const isCategoryExpanded = expandedMenuItems.has(categoryKey);
+                      
+                      return (
+                        <div key={category.id}>
+                          {hasChildren ? (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  const newSet = new Set(expandedMenuItems);
+                                  if (newSet.has(categoryKey)) {
+                                    newSet.delete(categoryKey);
+                                  } else {
+                                    newSet.add(categoryKey);
+                                  }
+                                  setExpandedMenuItems(newSet);
+                                }}
+                                className="w-full flex items-center justify-between px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
+                              >
+                                <span>{category.name}</span>
+                                {isCategoryExpanded ? (
+                                  <Minus className="h-4 w-4 text-gray-700" />
+                                ) : (
+                                  <Plus className="h-4 w-4 text-gray-700" />
+                                )}
+                              </button>
+                              {/* Child categories */}
+                              {isCategoryExpanded && category.subCategories && (
+                                <div className="bg-gray-50">
+                                  {category.subCategories.map((child) => (
+                                    <Link
+                                      key={child.id}
+                                      href={`/products?categoryId=${child.id}`}
+                                      className="block px-8 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-emerald-600 transition-colors"
+                                      onClick={() => setIsMobileMenuOpen(false)}
+                                    >
+                                      {child.name}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <Link
+                              href={`/products?categoryId=${category.id}`}
+                              className="block px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              {category.name}
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+
+              {/* SALE OFF */}
+              <Link
+                href="/products?search=sale"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname?.includes("sale") ? "bg-gray-50" : ""
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                SALE OFF
+              </Link>
+
+              {/* TIN TỨC */}
               <Link
                 href="/news"
-                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
-                  pathname?.startsWith("/news") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname?.startsWith("/news") ? "bg-gray-50" : ""
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 TIN TỨC
-                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
               </Link>
+
+              {/* CHÍNH SÁCH NHƯỢNG QUYỀN */}
               <Link
-                href="/order-lookup"
-                className={`flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors border-b border-gray-100 ${
-                  pathname?.startsWith("/order-lookup") ? "text-emerald-600 bg-emerald-50" : "text-gray-800 hover:bg-gray-50"
+                href="/franchise"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname?.startsWith("/franchise") ? "bg-gray-50" : ""
                 }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                TRA CỨU ĐƠN HÀNG
-                <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+                CHÍNH SÁCH NHƯỢNG QUYỀN
               </Link>
-              
-              {/* Categories from API */}
-              {categories && categories.length > 0 && (
-                <div className="border-b border-gray-100">
-                  <div className="px-6 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50">
-                    Danh mục sản phẩm
-                  </div>
-                  {categories.map((category) => (
+
+              {/* HƯỚNG DẪN - Expandable */}
+              <div className="border-b border-gray-100">
+                <button
+                  onClick={() => {
+                    const newSet = new Set(expandedMenuItems);
+                    if (newSet.has('guide')) {
+                      newSet.delete('guide');
+                    } else {
+                      newSet.add('guide');
+                    }
+                    setExpandedMenuItems(newSet);
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium uppercase text-gray-900 hover:bg-gray-50 transition-colors"
+                >
+                  <span>HƯỚNG DẪN</span>
+                  {expandedMenuItems.has('guide') ? (
+                    <Minus className="h-4 w-4 text-gray-900" />
+                  ) : (
+                    <Plus className="h-4 w-4 text-gray-900" />
+                  )}
+                </button>
+                {/* Sub-items for Guide */}
+                {expandedMenuItems.has('guide') && (
+                  <div className="bg-white">
                     <Link
-                      key={category.id}
-                      href={`/products?categoryId=${category.id}`}
-                      className="flex items-center justify-between px-6 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
+                      href="/guide/shopping"
+                      className="block px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      {category.name}
-                      <span className="text-[11px] text-gray-400">
-                        {category.productCount || 0}
-                      </span>
+                      Hướng dẫn mua hàng
                     </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <Link
+                      href="/guide/payment"
+                      className="block px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Hướng dẫn thanh toán
+                    </Link>
+                    <Link
+                      href="/guide/shipping"
+                      className="block px-6 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600 transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Hướng dẫn vận chuyển
+                    </Link>
+                  </div>
+                )}
+              </div>
 
-            {/* Auth Section removed per request */}
+              {/* CÔNG NGHỆ SẢN PHẨM */}
+              <Link
+                href="/technology"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname?.startsWith("/technology") ? "bg-gray-50" : ""
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                CÔNG NGHỆ SẢN PHẨM
+              </Link>
+
+              {/* GIỚI THIỆU */}
+              <Link
+                href="/about"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname?.startsWith("/about") ? "bg-gray-50" : ""
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                GIỚI THIỆU
+              </Link>
+
+              {/* LIÊN HỆ */}
+              <Link
+                href="/contact"
+                className={`block px-4 py-3 text-sm font-medium uppercase text-gray-900 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                  pathname?.startsWith("/contact") ? "bg-gray-50" : ""
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                LIÊN HỆ
+              </Link>
+            </div>
           </div>
         </div>
       </div>
