@@ -34,6 +34,15 @@ import type {
   UpdateNewsRequest,
   AdminCreateCategoryRequest,
   AdminUpdateCategoryRequest,
+  // Voucher types
+  PagedVoucherResponse,
+  Voucher,
+  CreateVoucherRequest,
+  UpdateVoucherRequest,
+  ApplyVoucherRequest,
+  ApplyVoucherResponse,
+  GuestApplyVoucherRequest,
+  GuestApplyVoucherResponse,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -1246,6 +1255,109 @@ export function useAdminDeleteNews() {
       // Refetch all admin news queries
       await queryClient.refetchQueries({ queryKey: ["admin", "news"] });
     },
+  });
+}
+
+// ===== Voucher hooks (Admin) =====
+
+export function useAdminVouchers(params?: {
+  Page?: number;
+  PageSize?: number;
+  SearchTerm?: string;
+  IsPublic?: boolean | null;
+}) {
+  return useQuery<PagedVoucherResponse>({
+    queryKey: ["admin", "vouchers", params],
+    queryFn: () => apiClient.adminGetVouchers(params),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+export function useAdminVoucher(id: string) {
+  return useQuery<Voucher>({
+    queryKey: ["admin", "voucher", id],
+    queryFn: () => apiClient.adminGetVoucherById(id),
+    enabled: !!id,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+export function useAdminCreateVoucher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateVoucherRequest) =>
+      apiClient.adminCreateVoucher(data),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "vouchers"] });
+      await queryClient.refetchQueries({ queryKey: ["admin", "vouchers"] });
+    },
+  });
+}
+
+export function useAdminUpdateVoucher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateVoucherRequest;
+    }) => apiClient.adminUpdateVoucher(id, data),
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "vouchers"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "voucher", variables.id],
+      });
+      await queryClient.refetchQueries({ queryKey: ["admin", "vouchers"] });
+    },
+  });
+}
+
+export function useAdminDeleteVoucher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.adminDeleteVoucher(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "vouchers"] });
+      await queryClient.refetchQueries({ queryKey: ["admin", "vouchers"] });
+    },
+  });
+}
+
+export function useAdminPublishVoucher() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isPublic }: { id: string; isPublic: boolean }) =>
+      apiClient.adminPublishVoucher(id, isPublic),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "vouchers"] });
+      await queryClient.refetchQueries({ queryKey: ["admin", "vouchers"] });
+    },
+  });
+}
+
+// ===== Voucher hooks (Customer / Guest) =====
+
+export function useApplyVoucherForUser() {
+  return useMutation<ApplyVoucherResponse, unknown, ApplyVoucherRequest>({
+    mutationFn: (data: ApplyVoucherRequest) =>
+      apiClient.applyVoucherForUser(data),
+  });
+}
+
+export function useApplyVoucherForGuest() {
+  return useMutation<
+    GuestApplyVoucherResponse,
+    unknown,
+    GuestApplyVoucherRequest
+  >({
+    mutationFn: (data: GuestApplyVoucherRequest) =>
+      apiClient.applyVoucherForGuest(data),
   });
 }
 

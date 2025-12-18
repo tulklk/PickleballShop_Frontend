@@ -290,6 +290,8 @@ export interface ShippingAddressDto {
 export interface CreateOrderRequest {
   shippingAddress: ShippingAddressDto;
   paymentMethod: PaymentMethod;
+  // Mã giảm giá (nếu có) khi tạo đơn cho user đã đăng nhập
+  voucherCode?: string | null;
 }
 
 export interface GuestOrderItem {
@@ -313,6 +315,8 @@ export interface CreateGuestOrderRequest {
   shippingAddress: GuestShippingAddress;
   paymentMethod: number; // 0=COD, 1=MoMo, 2=VNPay, 3=PayOS
   items: GuestOrderItem[];
+  // Mã giảm giá (nếu có) khi tạo đơn cho khách vãng lai
+  voucherCode?: string | null;
 }
 
 export interface OrderDto {
@@ -420,6 +424,85 @@ export interface CreateOrderResponse {
   order: OrderDto;
   payment?: CreatePaymentResponse;
 }
+
+// ===== Vouchers =====
+
+// Backend có thể trả về DiscountType dạng string (theo Swagger: "Percent", "Fixed")
+// hoặc số (theo database: int4). Để an toàn chúng ta cho phép cả hai.
+export type DiscountType = "Percent" | "Fixed" | "FixedAmount" | number | string;
+
+export interface Voucher {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  maxDiscountAmount?: number | null;
+  minOrderAmount?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isPublic: boolean;
+  usageLimitTotal?: number | null;
+  usageLimitPerCustomer?: number | null;
+  usedCount?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PagedVoucherResponse {
+  items: Voucher[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+export interface CreateVoucherRequest {
+  code: string;
+  name: string;
+  description?: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  maxDiscountAmount?: number | null;
+  minOrderAmount?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  isPublic: boolean;
+  usageLimitTotal?: number | null;
+  usageLimitPerCustomer?: number | null;
+}
+
+export interface UpdateVoucherRequest extends CreateVoucherRequest {}
+
+// Apply voucher cho user đã đăng nhập
+export interface ApplyVoucherRequest {
+  code: string;
+}
+
+export interface ApplyVoucherResponse {
+  code?: string;
+  discountAmount: number;
+  finalTotal: number;
+  message?: string | null;
+}
+
+// Guest apply voucher – theo mô tả: email + items + code
+export interface GuestApplyVoucherItem {
+  productId: string;
+  productVariantId?: string | null;
+  quantity: number;
+}
+
+export interface GuestApplyVoucherRequest {
+  email: string;
+  items: GuestApplyVoucherItem[];
+  code: string;
+}
+
+export interface GuestApplyVoucherResponse extends ApplyVoucherResponse {}
 
 // Wishlist
 export interface WishlistItem {

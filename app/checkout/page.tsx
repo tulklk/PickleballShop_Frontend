@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCart, useCreateOrder, useCreatePayment, useCreateGuestOrder, useCreateGuestPayment, useUserMe } from "@/lib/api/hooks";
+import { useCart, useCreateOrder, useCreatePayment, useCreateGuestOrder, useCreateGuestPayment, useUserMe, useApplyVoucherForUser, useApplyVoucherForGuest } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +59,8 @@ function CheckoutContent() {
   const createGuestPayment = useCreateGuestPayment();
   const { user, isAuthenticated } = useAuth();
   const { data: userMe } = useUserMe();
+  const applyVoucherUser = useApplyVoucherForUser();
+  const applyVoucherGuest = useApplyVoucherForGuest();
 
   const {
     register,
@@ -88,6 +90,13 @@ function CheckoutContent() {
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(true);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
+
+  // Voucher state
+  const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucherCode, setAppliedVoucherCode] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [finalTotal, setFinalTotal] = useState<number | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
 
   // Load provinces on mount
   useEffect(() => {
@@ -272,6 +281,7 @@ function CheckoutContent() {
             city: data.city,
           },
           paymentMethod: data.paymentMethod,
+          voucherCode: appliedVoucherCode || undefined,
         });
 
         // Log response for debugging
@@ -360,6 +370,7 @@ function CheckoutContent() {
           },
           paymentMethod: Number(data.paymentMethod), // 0=COD, 1=MoMo, 2=VNPay, 3=PayOS
           items: guestCartItems,
+          voucherCode: appliedVoucherCode || undefined,
         });
 
         console.log("Create guest order response:", orderResponse);
@@ -912,6 +923,95 @@ function CheckoutContent() {
               </div>
               
               <div className="space-y-3 pt-4 border-t border-emerald-200">
+                {/* Voucher input */}
+                <div className="space-y-2">
+                  <Label htmlFor="voucherCode" className="text-sm text-emerald-900">
+                    Mã giảm giá
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="voucherCode"
+                      placeholder="Nhập mã giảm giá (ví dụ: HELLO)"
+                      value={voucherCode}
+                      onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                      className="flex-1"
+                      disabled={isApplyingVoucher}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        if (!voucherCode.trim()) {
+                          toast.error("Vui lòng nhập mã giảm giá");
+                          return;
+                        }
+                        if (!cart || !cart.items || cart.items.length === 0) {
+                          toast.error("Giỏ hàng trống, không thể áp dụng mã giảm giá");
+                          return;
+                        }
+                        try {
+                          setIsApplyingVoucher(true);
+                          let response;
+                          if (isAuthenticated) {
+                            response = await applyVoucherUser.mutateAsync({ code: voucherCode.trim() });
+                          } else {
+                            const guestItems = cart.items.map((item) => ({
+                              productId: item.productId,
+                              productVariantId: item.productVariantId || null,
+                              quantity: item.quantity,
+                            }));
+                            const emailValue = getValues("email");
+                            if (!emailValue || !emailValue.trim()) {
+                              toast.error("Vui lòng nhập email trước khi áp dụng mã giảm giá");
+                              return;
+                            }
+                            response = await applyVoucherGuest.mutateAsync({
+                              email: emailValue.trim(),
+                              items: guestItems,
+                              code: voucherCode.trim(),
+                            });
+                          }
+                          setAppliedVoucherCode(voucherCode.trim());
+                          setDiscountAmount(response.discountAmount);
+                          setFinalTotal(response.finalTotal);
+                          toast.success("Áp dụng mã giảm giá thành công");
+                        } catch (error: any) {
+                          console.error("Apply voucher error:", error);
+                          setAppliedVoucherCode(null);
+                          setDiscountAmount(0);
+                          setFinalTotal(null);
+                          toast.error(
+                            error?.data?.message || error?.message || "Mã giảm giá không hợp lệ hoặc đã hết hạn."
+                          );
+                        } finally {
+                          setIsApplyingVoucher(false);
+                        }
+                      }}
+                      disabled={isApplyingVoucher}
+                    >
+                      {isApplyingVoucher ? "Đang áp dụng..." : "Áp dụng"}
+                    </Button>
+                  </div>
+                  {appliedVoucherCode && (
+                    <div className="flex items-center justify-between text-xs text-emerald-700">
+                      <span>
+                        Đã áp dụng mã <span className="font-semibold">{appliedVoucherCode}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="text-red-500 underline"
+                        onClick={() => {
+                          setAppliedVoucherCode(null);
+                          setDiscountAmount(0);
+                          setFinalTotal(null);
+                        }}
+                      >
+                        Xóa mã
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Tạm tính ({cart.totalItems} sản phẩm)</span>
                   <span>{formatCurrency(cart.subTotal)}</span>
@@ -920,11 +1020,17 @@ function CheckoutContent() {
                   <span>Phí vận chuyển</span>
                   <span className="text-emerald-600 font-medium">Miễn phí</span>
                 </div>
+                {appliedVoucherCode && discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-700">
+                    <span>Giảm giá ({appliedVoucherCode})</span>
+                    <span>-{formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="border-t border-emerald-200 pt-3">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-emerald-900">Tổng cộng</span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent">
-                      {formatCurrency(cart.subTotal)}
+                      {formatCurrency(finalTotal ?? cart.subTotal)}
                     </span>
                   </div>
                 </div>

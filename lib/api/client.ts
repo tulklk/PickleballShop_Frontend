@@ -47,6 +47,15 @@ import type {
   CategoryTreeDto,
   AdminCreateCategoryRequest,
   AdminUpdateCategoryRequest,
+  // Voucher types
+  Voucher,
+  PagedVoucherResponse,
+  CreateVoucherRequest,
+  UpdateVoucherRequest,
+  ApplyVoucherRequest,
+  ApplyVoucherResponse,
+  GuestApplyVoucherRequest,
+  GuestApplyVoucherResponse,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -1274,6 +1283,85 @@ class ApiClient {
     return this.request<{ message: string }>(`/api/admin/adminnews/${id}`, {
       method: "DELETE",
     });
+  }
+
+  // ===== Vouchers (Admin) =====
+
+  async adminGetVouchers(params?: {
+    Page?: number;
+    PageSize?: number;
+    SearchTerm?: string;
+    IsPublic?: boolean | null;
+  }): Promise<PagedVoucherResponse> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return this.request<PagedVoucherResponse>(
+      `/api/admin/vouchers${query ? `?${query}` : ""}`
+    );
+  }
+
+  async adminGetVoucherById(id: string): Promise<Voucher> {
+    return this.request<Voucher>(`/api/admin/vouchers/${id}`);
+  }
+
+  async adminCreateVoucher(data: CreateVoucherRequest): Promise<Voucher> {
+    return this.request<Voucher>("/api/admin/vouchers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminUpdateVoucher(
+    id: string,
+    data: UpdateVoucherRequest
+  ): Promise<Voucher> {
+    return this.request<Voucher>(`/api/admin/vouchers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async adminDeleteVoucher(id: string): Promise<void> {
+    return this.request<void>(`/api/admin/vouchers/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async adminPublishVoucher(id: string, isPublic: boolean): Promise<void> {
+    const url = `/api/admin/vouchers/${id}/publish?isPublic=${isPublic}`;
+    return this.request<void>(url, {
+      method: "PATCH",
+    });
+  }
+
+  // ===== Vouchers (Customer / Guest) =====
+
+  async applyVoucherForUser(
+    data: ApplyVoucherRequest
+  ): Promise<ApplyVoucherResponse> {
+    return this.request<ApplyVoucherResponse>("/api/Orders/apply-voucher", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async applyVoucherForGuest(
+    data: GuestApplyVoucherRequest
+  ): Promise<GuestApplyVoucherResponse> {
+    return this.request<GuestApplyVoucherResponse>(
+      "/api/guest/orders/apply-voucher",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
   }
 }
 
