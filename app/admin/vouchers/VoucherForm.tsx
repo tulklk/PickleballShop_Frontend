@@ -22,7 +22,8 @@ const voucherSchema = z.object({
   minOrderAmount: z.number().nullable().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
-  isPublic: z.boolean().default(false),
+  // Bắt buộc boolean để khớp với type của react-hook-form
+  isPublic: z.boolean(),
   usageLimitTotal: z.number().int().min(0).nullable().optional(),
   usageLimitPerCustomer: z.number().int().min(0).nullable().optional(),
 });
