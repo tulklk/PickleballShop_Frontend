@@ -770,3 +770,28 @@
 .button-shine:hover::before {
   left: 100%;
 }
+
+/* Custom scrollbar for brand filter */
+.brand-filter-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.brand-filter-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.brand-filter-scroll::-webkit-scrollbar-thumb {
+  background: #26A65C;
+  border-radius: 3px;
+}
+
+.brand-filter-scroll::-webkit-scrollbar-thumb:hover {
+  background: #1e8a4a;
+}
+
+/* Firefox scrollbar */
+.brand-filter-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #26A65C #f1f1f1;
+}

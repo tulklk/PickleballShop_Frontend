@@ -190,10 +190,10 @@ export function CartPreview({ onClose }: CartPreviewProps) {
               {/* Product Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                      {productName || "Sản phẩm"}
-                    </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                  {productName || "Sản phẩm"}
+                </p>
                     {itemSize && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         Size: {itemSize}

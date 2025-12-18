@@ -684,9 +684,9 @@ function CategoryProductsSection({
       return null;
     }
 
-    const searchKeyLower = searchKey.toLowerCase();
-    const exactNameLower = exactName?.toLowerCase();
-    
+      const searchKeyLower = searchKey.toLowerCase();
+      const exactNameLower = exactName?.toLowerCase();
+      
     // Helper to check if category name matches
     const matchesCategory = (catName: string): boolean => {
       if (!catName) return false;
@@ -749,7 +749,7 @@ function CategoryProductsSection({
       }
       return null;
     };
-    
+
     return searchInChildren(categoryTree);
   };
 
@@ -1280,35 +1280,24 @@ function CategoryLinksGrid({
   sharedCategories?: any;
   isLoading?: boolean;
 } = {} as { sharedCategories?: any; isLoading?: boolean }) {
-  // Use shared categories if provided, otherwise fetch independently
-  const { data: categories, isLoading: localIsLoading } = useCategories();
-  const finalCategories = sharedCategories || categories;
+  // Use category tree to get root categories
+  const { data: categoryTree, isLoading: localIsLoading } = useCategoryTree();
   const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
 
-  const categoryIcons: { [key: string]: string } = {
-    "vợt": "🏸",
-    "giày": "👟",
-    "bóng": "⚽",
-    "trang phục": "👕",
-    "phụ kiện": "🎒",
-  };
-
-  const getIcon = (name: string) => {
-    const lowerName = name.toLowerCase();
-    for (const [key, icon] of Object.entries(categoryIcons)) {
-      if (lowerName.includes(key)) return icon;
-    }
-    return "📦";
-  };
+  // Get root categories (top-level categories only)
+  const rootCategories = useMemo(() => {
+    if (!categoryTree || !Array.isArray(categoryTree)) return [];
+    // Root categories are the top-level categories in the tree
+    return categoryTree.filter((cat: any) => cat && cat.id && cat.name);
+  }, [categoryTree]);
 
   // Show skeleton while loading
-  if (isLoading) {
+  if (finalIsLoading) {
     return (
       <section className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="bg-white border rounded-xl p-4">
-              <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto mb-2"></div>
               <div className="h-4 bg-gray-200 rounded mb-2"></div>
               <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto"></div>
             </div>
@@ -1319,7 +1308,7 @@ function CategoryLinksGrid({
   }
 
   // Show section even if no categories
-  if (!finalCategories?.length) {
+  if (!rootCategories?.length) {
     return (
       <section className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
@@ -1334,16 +1323,15 @@ function CategoryLinksGrid({
   return (
     <section className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-        {finalCategories.slice(0, 5).map((category: any) => (
+        {rootCategories.slice(0, 5).map((category: any) => (
           <Link
             key={category.id}
             href={`/products?categoryId=${category.id}`}
             className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 group"
           >
             <div className="text-center">
-              <span className="text-4xl">{getIcon(category.name || "")}</span>
-              <h3 className="font-semibold text-gray-900 mt-2 group-hover:text-emerald-600">{category.name}</h3>
-              <p className="text-sm text-gray-500">{category.productCount || 0} sản phẩm</p>
+              <h3 className="font-semibold text-gray-900 group-hover:text-emerald-600">{category.name}</h3>
+              <p className="text-sm text-gray-500 mt-1">{category.productCount || 0} sản phẩm</p>
             </div>
           </Link>
         ))}

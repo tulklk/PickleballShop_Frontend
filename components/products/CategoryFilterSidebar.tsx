@@ -144,6 +144,35 @@ export function CategoryFilterSidebar({
     return { currentCategory: current, currentCategoryChildren: [] };
   }, [categories, categoryId]);
 
+  // Find root category (top-level category)
+  const rootCategory = useMemo(() => {
+    if (!categories || !categoryId) return null;
+    
+    const findRootCategory = (cats: CategoryTreeDto[], targetId: string, parentPath: CategoryTreeDto[] = []): CategoryTreeDto | null => {
+      for (const cat of cats) {
+        if (cat.id === targetId) {
+          // If this category is at root level (no parent in path), return it
+          // Otherwise, return the first category in the path (root)
+          return parentPath.length > 0 ? parentPath[0] : cat;
+        }
+        if (cat.children && cat.children.length > 0) {
+          const found = findRootCategory(cat.children, targetId, [...parentPath, cat]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    return findRootCategory(categories, categoryId);
+  }, [categories, categoryId]);
+
+  // Check if root category is "Giày Pickleball"
+  const isShoeCategory = useMemo(() => {
+    if (!rootCategory?.name) return false;
+    const name = rootCategory.name.toLowerCase();
+    return name.includes("giày") && name.includes("pickleball");
+  }, [rootCategory]);
+
   // Check if this is a racket category
   const isRacketCategory = useMemo(() => {
     if (!currentCategory?.name) return false;
@@ -245,7 +274,7 @@ export function CategoryFilterSidebar({
             <h3 className="font-semibold text-sm uppercase mb-3 text-gray-900">
               THƯƠNG HIỆU
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[140px] overflow-y-auto pr-2 brand-filter-scroll">
               {availableBrands.map((brand) => (
                 <div key={brand} className="flex items-center space-x-2">
                   <Checkbox
@@ -265,13 +294,13 @@ export function CategoryFilterSidebar({
           </div>
         )}
 
-        {/* Size Filter - Only show for non-racket categories */}
-        {!isRacketCategory && (
+        {/* Size Filter - Only show for "Giày Pickleball" root category */}
+        {!isRacketCategory && isShoeCategory && (
           <div className="border-t border-gray-100 pt-4">
             <h3 className="font-semibold text-sm uppercase mb-3 text-gray-900">
               LỌC THEO SIZE
             </h3>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 max-h-[200px] overflow-y-auto pr-2 brand-filter-scroll">
               {sizes.map((size) => (
                 <div key={size} className="flex items-center space-x-2">
                   <Checkbox

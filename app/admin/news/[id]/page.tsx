@@ -175,6 +175,10 @@ export default function EditNewsPage() {
       });
 
       toast.success(publish ? "Đã cập nhật và publish tin tức!" : "Đã lưu bản nháp!");
+      
+      // Wait a bit for queries to refetch
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      
       router.push(`/admin/news`);
     } catch (error: any) {
       toast.error(error.message || "Không thể cập nhật tin tức");

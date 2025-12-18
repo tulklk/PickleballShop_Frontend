@@ -1209,9 +1209,12 @@ export function useAdminCreateNews() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateNewsRequest) => apiClient.adminCreateNews(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
-      queryClient.invalidateQueries({ queryKey: ["news"] });
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
+      await queryClient.invalidateQueries({ queryKey: ["news"] });
+      // Refetch all admin news queries
+      await queryClient.refetchQueries({ queryKey: ["admin", "news"] });
     },
   });
 }
@@ -1221,10 +1224,13 @@ export function useAdminUpdateNews() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateNewsRequest }) =>
       apiClient.adminUpdateNews(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
-      queryClient.invalidateQueries({ queryKey: ["news"] });
-      queryClient.invalidateQueries({ queryKey: ["news", "detail", variables.id] });
+    onSuccess: async (_, variables) => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
+      await queryClient.invalidateQueries({ queryKey: ["news"] });
+      await queryClient.invalidateQueries({ queryKey: ["news", "detail", variables.id] });
+      // Refetch all admin news queries
+      await queryClient.refetchQueries({ queryKey: ["admin", "news"] });
     },
   });
 }
@@ -1233,9 +1239,12 @@ export function useAdminDeleteNews() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiClient.adminDeleteNews(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
-      queryClient.invalidateQueries({ queryKey: ["news"] });
+    onSuccess: async () => {
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
+      await queryClient.invalidateQueries({ queryKey: ["news"] });
+      // Refetch all admin news queries
+      await queryClient.refetchQueries({ queryKey: ["admin", "news"] });
     },
   });
 }

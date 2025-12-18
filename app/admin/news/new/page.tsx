@@ -135,6 +135,10 @@ export default function CreateNewsPage() {
       });
 
       toast.success(publish ? "Đã publish tin tức thành công!" : "Đã lưu bản nháp!");
+      
+      // Wait a bit for queries to refetch
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      
       router.push(`/admin/news/${news.id}`);
     } catch (error: any) {
       toast.error(error.message || "Không thể tạo tin tức");
