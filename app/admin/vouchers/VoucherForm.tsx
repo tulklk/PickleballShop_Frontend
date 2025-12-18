@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import type { DiscountType, Voucher } from "@/lib/api/types";
+import type { Voucher } from "@/lib/api/types";
 
 const voucherSchema = z.object({
   code: z.string().min(1, "Mã giảm giá là bắt buộc"),
@@ -52,7 +52,7 @@ export function VoucherForm({ initialData, onSubmit, loading }: VoucherFormProps
           description: initialData.description ?? "",
           discountType:
             typeof initialData.discountType === "string"
-              ? (initialData.discountType as DiscountType)
+              ? initialData.discountType
               : "Percent",
           discountValue: Number(initialData.discountValue || 0),
           maxDiscountAmount: initialData.maxDiscountAmount ?? null,
