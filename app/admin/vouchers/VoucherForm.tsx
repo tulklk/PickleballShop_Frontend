@@ -16,32 +16,15 @@ const voucherSchema = z.object({
   name: z.string().min(1, "Tên voucher là bắt buộc"),
   description: z.string().optional().nullable(),
   discountType: z.enum(["Percent", "Fixed"]).or(z.string()),
-  discountValue: z
-    .number({ invalid_type_error: "Giá trị giảm phải là số" })
-    .positive("Giá trị giảm phải lớn hơn 0"),
-  maxDiscountAmount: z
-    .number({ invalid_type_error: "Giảm tối đa phải là số" })
-    .nullable()
-    .optional(),
-  minOrderAmount: z
-    .number({ invalid_type_error: "Đơn tối thiểu phải là số" })
-    .nullable()
-    .optional(),
+  // Zod version hiện tại không hỗ trợ invalid_type_error, dùng thông báo mặc định
+  discountValue: z.number().positive("Giá trị giảm phải lớn hơn 0"),
+  maxDiscountAmount: z.number().nullable().optional(),
+  minOrderAmount: z.number().nullable().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
   isPublic: z.boolean().default(false),
-  usageLimitTotal: z
-    .number({ invalid_type_error: "Giới hạn tổng phải là số" })
-    .int()
-    .min(0)
-    .nullable()
-    .optional(),
-  usageLimitPerCustomer: z
-    .number({ invalid_type_error: "Giới hạn mỗi khách phải là số" })
-    .int()
-    .min(0)
-    .nullable()
-    .optional(),
+  usageLimitTotal: z.number().int().min(0).nullable().optional(),
+  usageLimitPerCustomer: z.number().int().min(0).nullable().optional(),
 });
 
 export type VoucherFormValues = z.infer<typeof voucherSchema>;
