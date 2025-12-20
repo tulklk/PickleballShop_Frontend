@@ -4,7 +4,16 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useCart, useCreateOrder, useCreatePayment, useCreateGuestOrder, useCreateGuestPayment, useUserMe, useApplyVoucherForUser, useApplyVoucherForGuest } from "@/lib/api/hooks";
+import {
+  useCart,
+  useCreateOrder,
+  useCreatePayment,
+  useCreateGuestOrder,
+  useCreateGuestPayment,
+  useUserMe,
+  useApplyVoucherForUser,
+  useApplyVoucherForGuest,
+} from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +23,8 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentMethod } from "@/lib/api/types";
+import { getDefaultUserAddress } from "@/lib/utils/userAddresses";
+import type { SavedAddress } from "@/lib/utils/userAddresses";
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 import { 
@@ -97,6 +108,9 @@ function CheckoutContent() {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [finalTotal, setFinalTotal] = useState<number | null>(null);
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+
+  // Địa chỉ mặc định lấy từ mục Địa chỉ giao hàng trong tài khoản
+  const [defaultAddress, setDefaultAddress] = useState<SavedAddress | null>(null);
 
   // Load provinces on mount
   useEffect(() => {
@@ -231,21 +245,93 @@ function CheckoutContent() {
     loadWardsForDistrict();
   }, [selectedDistrict, selectedDistrictCode, districts, setValue]);
 
-  // Auto-fill user information when user data is available
-  // Only fill if the fields are empty to avoid overwriting user input
+  // Auto-fill user information khi đã đăng nhập
+  // - Ưu tiên địa chỉ giao hàng mặc định lưu trong local (Account > Địa chỉ giao hàng)
+  // - Nếu chưa có thì dùng fullName / phone từ profile
   useEffect(() => {
     if (user && isAuthenticated) {
       const currentFullName = getValues("fullName");
       const currentPhoneNumber = getValues("phoneNumber");
-      
-      if (user.fullName && !currentFullName) {
-        setValue("fullName", user.fullName);
+      const currentAddressLine = getValues("addressLine");
+      const currentCity = getValues("city");
+      const currentDistrict = getValues("district");
+      const currentWard = getValues("ward");
+
+      const addr = getDefaultUserAddress(user.id);
+      setDefaultAddress(addr);
+
+      // Tên & SĐT
+      if (!currentFullName) {
+        if (addr?.fullName) {
+          setValue("fullName", addr.fullName);
+        } else if (user.fullName) {
+          setValue("fullName", user.fullName);
+        }
       }
-      if (user.phoneNumber && !currentPhoneNumber) {
-        setValue("phoneNumber", user.phoneNumber);
+      if (!currentPhoneNumber) {
+        if (addr?.phoneNumber) {
+          setValue("phoneNumber", addr.phoneNumber);
+        } else if (user.phoneNumber) {
+          setValue("phoneNumber", user.phoneNumber);
+        }
+      }
+
+      // Địa chỉ chi tiết
+      if (addr) {
+        if (!currentAddressLine && addr.addressLine) {
+          setValue("addressLine", addr.addressLine);
+        }
+        if (!currentCity && addr.city) {
+          setValue("city", addr.city);
+        }
+        if (!currentDistrict && addr.district) {
+          setValue("district", addr.district);
+        }
+        if (!currentWard && addr.ward) {
+          setValue("ward", addr.ward);
+        }
       }
     }
   }, [user, isAuthenticated, setValue, getValues]);
+
+  // Sau khi đã có provinces & defaultAddress, map city -> province dropdown
+  useEffect(() => {
+    if (!defaultAddress || provinces.length === 0) return;
+    if (selectedProvinceCode) return; // đã chọn bằng tay
+
+    const province = provinces.find((p) => p.name === defaultAddress.city);
+    if (province) {
+      setSelectedProvinceCode(province.code);
+      setValue("city", province.name);
+    }
+  }, [defaultAddress, provinces, selectedProvinceCode, setValue]);
+
+  // Khi đã load districts cho province, map district name từ defaultAddress
+  useEffect(() => {
+    if (!defaultAddress || districts.length === 0) return;
+    if (selectedDistrictCode) return; // đã chọn bằng tay
+
+    if (!defaultAddress.district) return;
+    const district = districts.find((d) => d.name === defaultAddress.district);
+    if (district) {
+      setSelectedDistrictCode(district.code);
+      setValue("district", district.name);
+    }
+  }, [defaultAddress, districts, selectedDistrictCode, setValue]);
+
+  // Khi đã load wards cho district, map ward name từ defaultAddress
+  useEffect(() => {
+    if (!defaultAddress || wards.length === 0) return;
+    if (!defaultAddress.ward) return;
+
+    const currentWard = getValues("ward");
+    if (currentWard) return; // đã có giá trị
+
+    const ward = wards.find((w) => w.name === defaultAddress.ward);
+    if (ward) {
+      setValue("ward", ward.name);
+    }
+  }, [defaultAddress, wards, setValue, getValues]);
 
   const onSubmit = async (data: CheckoutFormData) => {
     try {

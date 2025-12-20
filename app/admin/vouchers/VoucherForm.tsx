@@ -15,14 +15,13 @@ const voucherSchema = z.object({
   code: z.string().min(1, "Mã giảm giá là bắt buộc"),
   name: z.string().min(1, "Tên voucher là bắt buộc"),
   description: z.string().optional().nullable(),
-  discountType: z.enum(["Percent", "Fixed"]).or(z.string()),
-  // Zod version hiện tại không hỗ trợ invalid_type_error, dùng thông báo mặc định
+  // Backend hỗ trợ: "Percent", "Fixed", "Amount"
+  discountType: z.enum(["Percent", "Fixed", "Amount"]).or(z.string()),
   discountValue: z.number().positive("Giá trị giảm phải lớn hơn 0"),
   maxDiscountAmount: z.number().nullable().optional(),
   minOrderAmount: z.number().nullable().optional(),
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),
-  // Bắt buộc boolean để khớp với type của react-hook-form
   isPublic: z.boolean(),
   usageLimitTotal: z.number().int().min(0).nullable().optional(),
   usageLimitPerCustomer: z.number().int().min(0).nullable().optional(),
@@ -81,28 +80,43 @@ export function VoucherForm({ initialData, onSubmit, loading }: VoucherFormProps
 
   const discountType = watch("discountType");
 
+  // Helper: Convert datetime-local format (YYYY-MM-DDTHH:mm) to ISO 8601 with Z (UTC)
+  const convertToISO8601 = (dateTimeLocal: string | null | undefined): string | null => {
+    if (!dateTimeLocal || dateTimeLocal.trim() === "") return null;
+    // datetime-local format: "2025-12-19T14:30"
+    // Convert to ISO 8601 with Z: "2025-12-19T14:30:00.000Z"
+    try {
+      const date = new Date(dateTimeLocal);
+      if (isNaN(date.getTime())) return null;
+      return date.toISOString();
+    } catch {
+      return null;
+    }
+  };
+
   const handleFormSubmit = async (values: VoucherFormValues) => {
     const payload: VoucherFormValues = {
       ...values,
       discountValue: Number(values.discountValue) || 0,
       maxDiscountAmount:
-        values.maxDiscountAmount !== null && values.maxDiscountAmount !== undefined
+        values.maxDiscountAmount !== null && values.maxDiscountAmount !== undefined && values.maxDiscountAmount > 0
           ? Number(values.maxDiscountAmount)
           : null,
       minOrderAmount:
-        values.minOrderAmount !== null && values.minOrderAmount !== undefined
+        values.minOrderAmount !== null && values.minOrderAmount !== undefined && values.minOrderAmount > 0
           ? Number(values.minOrderAmount)
           : null,
       usageLimitTotal:
-        values.usageLimitTotal !== null && values.usageLimitTotal !== undefined
+        values.usageLimitTotal !== null && values.usageLimitTotal !== undefined && values.usageLimitTotal > 0
           ? Number(values.usageLimitTotal)
           : null,
       usageLimitPerCustomer:
-        values.usageLimitPerCustomer !== null && values.usageLimitPerCustomer !== undefined
+        values.usageLimitPerCustomer !== null && values.usageLimitPerCustomer !== undefined && values.usageLimitPerCustomer > 0
           ? Number(values.usageLimitPerCustomer)
           : null,
-      startDate: values.startDate || null,
-      endDate: values.endDate || null,
+      // Convert datetime-local to ISO 8601 format with Z (UTC) như backend expect
+      startDate: convertToISO8601(values.startDate),
+      endDate: convertToISO8601(values.endDate),
     };
 
     await onSubmit(payload);
@@ -155,6 +169,7 @@ export function VoucherForm({ initialData, onSubmit, loading }: VoucherFormProps
               >
                 <option value="Percent">Phần trăm (%)</option>
                 <option value="Fixed">Số tiền cố định</option>
+                <option value="Amount">Số tiền (Amount)</option>
               </select>
             </div>
             <div>

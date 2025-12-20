@@ -62,6 +62,10 @@
   * {
     @apply border-border;
   }
+  html {
+    /* Giảm toàn bộ kích thước (font + spacing dùng rem) khoảng 10% */
+    font-size: 90%;
+  }
   body {
     @apply bg-background text-foreground;
   }

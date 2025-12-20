@@ -16,12 +16,14 @@ export default function AdminVoucherEditPage() {
 
   const handleSubmit = async (values: VoucherFormValues) => {
     try {
+      // Backend expect: các field nullable nếu = 0 hoặc null thì gửi null
+      // Date đã được convert sang ISO 8601 trong VoucherForm.handleFormSubmit
       await updateVoucher.mutateAsync({
         id,
         data: {
           code: values.code.trim(),
           name: values.name.trim(),
-          description: values.description || null,
+          description: values.description?.trim() || null,
           discountType: values.discountType,
           discountValue: values.discountValue,
           maxDiscountAmount: values.maxDiscountAmount ?? null,

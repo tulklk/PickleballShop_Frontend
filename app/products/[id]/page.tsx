@@ -975,12 +975,12 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mb-4">
+          {/* Action Buttons - Mobile: 2 nút cùng hàng */}
+          <div className="flex flex-row gap-2 md:gap-3 mb-4">
             <Button
               size="lg"
               variant="outline"
-              className="flex-1 border-emerald-600 text-emerald-600 hover:bg-emerald-50 text-sm md:text-base"
+              className="flex-1 h-12 rounded-full border-emerald-600 text-emerald-600 font-semibold shadow-sm hover:bg-emerald-50 text-sm md:text-base"
               onClick={() => {
                 handleAddToCart();
                 router.push("/checkout");
@@ -996,7 +996,7 @@ export default function ProductDetailPage() {
             </Button>
             <Button
               size="lg"
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-lime-500 hover:from-emerald-600 hover:to-lime-600 text-sm md:text-base"
+              className="flex-1 h-12 rounded-full bg-linear-to-r from-emerald-500 to-lime-500 hover:from-emerald-600 hover:to-lime-600 font-semibold shadow-md text-sm md:text-base"
               onClick={handleAddToCart}
               disabled={
                 addCartItem.isPending || 
@@ -1011,11 +1011,11 @@ export default function ProductDetailPage() {
             </Button>
           </div>
 
-          {/* Contact Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+          {/* Contact Buttons - Mobile: 2 nút cùng hàng */}
+          <div className="flex flex-row gap-2 md:gap-3">
             <Button
               variant="outline"
-              className="flex-1 border-blue-500 text-blue-500 hover:bg-blue-50"
+              className="flex-1 h-12 rounded-full border-blue-500 text-blue-500 hover:bg-blue-50 font-semibold shadow-sm"
               onClick={() => window.open("https://zalo.me", "_blank")}
             >
               <Image
@@ -1025,11 +1025,12 @@ export default function ProductDetailPage() {
                 height={20}
                 className="mr-2"
               />
-              Tư vấn qua Zalo
+              <span className="hidden sm:inline">Tư vấn qua Zalo</span>
+              <span className="sm:hidden">Zalo</span>
             </Button>
             <Button
               variant="outline"
-              className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+              className="flex-1 h-12 rounded-full border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold shadow-sm"
               onClick={() => window.open("https://facebook.com", "_blank")}
             >
               <Image
@@ -1039,7 +1040,8 @@ export default function ProductDetailPage() {
                 height={20}
                 className="mr-2"
               />
-              Tư vấn qua Facebook
+              <span className="hidden sm:inline">Tư vấn qua Facebook</span>
+              <span className="sm:hidden">Facebook</span>
             </Button>
           </div>
         </div>
