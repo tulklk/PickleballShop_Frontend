@@ -3,7 +3,16 @@
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useProductBySlug, useAddCartItem, useProducts, useWishlist, useToggleWishlist, useProductReviews, useCreateProductReview } from "@/lib/api/hooks";
+import {
+  useProductBySlug,
+  useAddCartItem,
+  useProducts,
+  useWishlist,
+  useToggleWishlist,
+  useProductReviews,
+  useCreateProductReview,
+  useCategoryTree,
+} from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +29,8 @@ import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
 import { getProductUrl } from "@/lib/utils/productUrl";
 import { ProductComments } from "@/components/product/ProductComments";
+import { findRootCategoryName } from "@/lib/utils/categoryUtils";
+import type { ProductSpecification } from "@/lib/api/types";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -67,6 +78,15 @@ export default function ProductDetailPage() {
     CategoryId: product?.categoryId,
     PageSize: 5,
   });
+
+  // Fetch category tree để xác định root category
+  const { data: categoryTree } = useCategoryTree();
+  
+  // Kiểm tra xem product có thuộc root category "Vợt Pickleball" không
+  const rootCategoryName = product
+    ? findRootCategoryName(product.categoryId, categoryTree)
+    : null;
+  const isPickleballPaddle = rootCategoryName === "Vợt Pickleball";
 
   // Build images array - must be before useCallback hooks
   const placeholderImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EProduct Image%3C/text%3E%3C/svg%3E";
@@ -1061,16 +1081,19 @@ export default function ProductDetailPage() {
           >
             CHI TIẾT SẢN PHẨM
           </button>
-          <button
-            className={`px-3 md:px-6 py-2 md:py-3 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === "specs"
-                ? "bg-emerald-600 text-white rounded-t-lg"
-                : "text-gray-600 hover:text-emerald-600"
-            }`}
-            onClick={() => setActiveTab("specs")}
-          >
-            THÔNG SỐ KỸ THUẬT
-          </button>
+          {/* Chỉ hiển thị tab "THÔNG SỐ KỸ THUẬT" nếu root category là "Vợt Pickleball" */}
+          {isPickleballPaddle && (
+            <button
+              className={`px-3 md:px-6 py-2 md:py-3 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === "specs"
+                  ? "bg-emerald-600 text-white rounded-t-lg"
+                  : "text-gray-600 hover:text-emerald-600"
+              }`}
+              onClick={() => setActiveTab("specs")}
+            >
+              THÔNG SỐ KỸ THUẬT
+            </button>
+          )}
           <button
             className={`px-3 md:px-6 py-2 md:py-3 text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === "reviews"
@@ -1229,53 +1252,31 @@ export default function ProductDetailPage() {
             </Card>
           )}
 
-          {/* Thông số kỹ thuật */}
-          {activeTab === "specs" && (
+          {/* Thông số kỹ thuật - chỉ hiển thị cho sản phẩm có root category là "Vợt Pickleball" */}
+          {activeTab === "specs" && isPickleballPaddle && (
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold mb-4">Thông số kỹ thuật</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <tbody>
-                      <tr className="border-b">
-                        <td className="py-3 px-4 bg-gray-50 font-medium w-1/3">Tên sản phẩm</td>
-                        <td className="py-3 px-4">{product.name}</td>
-                      </tr>
-                      {product.brand && (
-                        <tr className="border-b">
-                          <td className="py-3 px-4 bg-gray-50 font-medium">Thương hiệu</td>
-                          <td className="py-3 px-4">{product.brand}</td>
-                        </tr>
-                      )}
-                      {product.productType && (
-                        <tr className="border-b">
-                          <td className="py-3 px-4 bg-gray-50 font-medium">Loại sản phẩm</td>
-                          <td className="py-3 px-4">{product.productType}</td>
-                        </tr>
-                      )}
-                      <tr className="border-b">
-                        <td className="py-3 px-4 bg-gray-50 font-medium">Tình trạng</td>
-                        <td className="py-3 px-4">
-                          {product.stockQuantity > 0 ? (
-                            <span className="text-green-600">Còn hàng</span>
-                          ) : (
-                            <span className="text-red-600">Hết hàng</span>
-                          )}
-                        </td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="py-3 px-4 bg-gray-50 font-medium">Giá bán</td>
-                        <td className="py-3 px-4 text-emerald-600 font-bold">{formatCurrency(product.price)}</td>
-                      </tr>
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <tr className="border-b">
-                          <td className="py-3 px-4 bg-gray-50 font-medium">Giá gốc</td>
-                          <td className="py-3 px-4 text-gray-500 line-through">{formatCurrency(product.originalPrice)}</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                {product.specifications && product.specifications.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <tbody>
+                        {product.specifications.map((spec: ProductSpecification) => (
+                          <tr key={spec.id} className="border-b">
+                            <td className="py-3 px-4 bg-gray-50 font-medium w-1/3">
+                              {spec.key}
+                            </td>
+                            <td className="py-3 px-4">{spec.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic text-center py-8">
+                    Chưa có thông số kỹ thuật cho sản phẩm này.
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

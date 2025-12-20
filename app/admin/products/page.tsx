@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   useAdminProducts,
   useAdminDeleteProduct,
   useProducts,
+  useCategoryTree,
 } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,12 +34,18 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { DeleteConfirmationDialog } from "@/components/shared/DeleteConfirmationDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectItem } from "@/components/ui/select";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { findRootCategoryName } from "@/lib/utils/categoryUtils";
+import type { CategoryTreeDto } from "@/lib/api/types";
 
 export default function AdminProductsPage() {
   const { isAdmin } = useAuth();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productName, setProductName] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const {
     data: adminProducts,
@@ -49,6 +56,7 @@ export default function AdminProductsPage() {
   });
 
   const { data: publicProducts, isLoading: isLoadingPublic } = useProducts({ Page: 1, PageSize: 1000 });
+  const { data: categoryTree } = useCategoryTree();
   const deleteProduct = useAdminDeleteProduct();
 
   // Prefer publicProducts (ProductListDto[]) because it has primaryImageUrl
@@ -60,28 +68,69 @@ export default function AdminProductsPage() {
     : []) as Array<Product | ProductListDto>;
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRootCategory, setSelectedRootCategory] = useState<string>("all");
+
+  // Get root categories from category tree
+  const rootCategories = useMemo(() => {
+    if (!categoryTree || !Array.isArray(categoryTree)) return [];
+    return categoryTree.filter((cat) => cat.name && cat.id);
+  }, [categoryTree]);
 
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return normalizedProducts;
-    const term = searchTerm.trim().toLowerCase();
+    let filtered = normalizedProducts;
 
-    return normalizedProducts.filter((product) => {
-      const name = (product.name || "").toLowerCase();
-      const brand = ("brand" in product && product.brand ? product.brand : "N/A").toLowerCase();
-      const priceValue =
-        "price" in product
-          ? typeof product.price === "number"
-            ? product.price.toString()
-            : String(product.price || "")
-          : "0";
+    // Filter by root category first
+    if (selectedRootCategory !== "all" && categoryTree) {
+      filtered = filtered.filter((product) => {
+        const rootCategoryName = findRootCategoryName(
+          "categoryId" in product ? product.categoryId : undefined,
+          categoryTree
+        );
+        return rootCategoryName === selectedRootCategory;
+      });
+    }
 
-      return (
-        name.includes(term) ||
-        brand.includes(term) ||
-        priceValue.includes(term)
-      );
-    });
-  }, [normalizedProducts, searchTerm]);
+    // Then filter by search term
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter((product) => {
+        const name = (product.name || "").toLowerCase();
+        const brand = ("brand" in product && product.brand ? product.brand : "N/A").toLowerCase();
+        const priceValue =
+          "price" in product
+            ? typeof product.price === "number"
+              ? product.price.toString()
+              : String(product.price || "")
+            : "0";
+
+        return (
+          name.includes(term) ||
+          brand.includes(term) ||
+          priceValue.includes(term)
+        );
+      });
+    }
+
+    return filtered;
+  }, [normalizedProducts, searchTerm, selectedRootCategory, categoryTree, rootCategories]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredProducts.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term or root category filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRootCategory]);
+
+  // Ensure currentPage doesn't exceed totalPages when filtered results change
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
   
   // Only show error if both admin and public products fail, and we're not still loading
   const showError = isAdminErrorQuery && !isLoadingAdmin && !isLoadingPublic && normalizedProducts.length === 0;
@@ -135,20 +184,49 @@ export default function AdminProductsPage() {
 
       <Card className="border-emerald-100 bg-white/95 shadow-[0_20px_60px_rgba(15,118,110,0.1)]">
         <CardHeader>
-          <div className="mt-4 w-full md:w-80">
-            <Label
-              htmlFor="product-search"
-              className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500"
-            >
-              Tìm kiếm sản phẩm
-            </Label>
-            <Input
-              id="product-search"
-              placeholder="Tìm theo tên, giá bán hoặc thương hiệu..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="mt-1"
-            />
+          <div className="mt-4 flex flex-row gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px] md:w-80">
+              <Label
+                htmlFor="product-search"
+                className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500"
+              >
+                Tìm kiếm sản phẩm
+              </Label>
+              <Input
+                id="product-search"
+                placeholder="Tìm theo tên, giá bán hoặc thương hiệu..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to page 1 when searching
+                }}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex-1 min-w-[200px] md:w-80">
+              <Label
+                htmlFor="root-category-filter"
+                className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-500"
+              >
+                Lọc theo danh mục gốc
+              </Label>
+              <Select
+                id="root-category-filter"
+                value={selectedRootCategory}
+                onValueChange={(value) => {
+                  setSelectedRootCategory(value);
+                  setCurrentPage(1);
+                }}
+                className="mt-1"
+              >
+                <SelectItem value="all">Tất cả danh mục</SelectItem>
+                {rootCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.name || ""}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -161,20 +239,21 @@ export default function AdminProductsPage() {
               Đang tải sản phẩm...
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-20">Hình ảnh</TableHead>
-                    <TableHead>Tên</TableHead>
-                    <TableHead>Giá bán</TableHead>
-                    <TableHead>Tồn kho</TableHead>
-                    <TableHead>Thương hiệu</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => {
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-20">Hình ảnh</TableHead>
+                      <TableHead>Tên</TableHead>
+                      <TableHead>Giá bán</TableHead>
+                      <TableHead>Tồn kho</TableHead>
+                      <TableHead>Thương hiệu</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedProducts.map((product) => {
                     const stock =
                       "stockQuantity" in product
                         ? product.stockQuantity ?? "N/A"
@@ -303,10 +382,16 @@ export default function AdminProductsPage() {
                         </TableCell>
                       </TableRow>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <AdminPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
           ) : (
             <div className="py-10 text-center text-muted-foreground">
               Không tìm thấy sản phẩm nào.

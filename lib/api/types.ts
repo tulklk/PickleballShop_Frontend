@@ -206,6 +206,7 @@ export interface ProductDto {
   createdAt: string;
   hasVariants?: boolean; // NEW: Product có variants hay không
   variants?: ProductVariantDto[] | null; // NEW: Danh sách variants
+  specifications?: ProductSpecification[] | null; // Thông số kỹ thuật (đã sắp xếp theo displayOrder)
 }
 
 export interface ProductCategory {
@@ -503,6 +504,28 @@ export interface GuestApplyVoucherRequest {
 }
 
 export interface GuestApplyVoucherResponse extends ApplyVoucherResponse {}
+
+// ===== Product Specifications =====
+
+export interface ProductSpecification {
+  id: string;
+  productId: string;
+  key: string;
+  value: string;
+  displayOrder: number;
+}
+
+export interface CreateProductSpecificationRequest {
+  key: string;
+  value: string;
+  displayOrder: number;
+}
+
+export interface UpdateProductSpecificationRequest extends CreateProductSpecificationRequest {}
+
+export interface BulkUpdateProductSpecificationsRequest {
+  specifications: CreateProductSpecificationRequest[];
+}
 
 // Wishlist
 export interface WishlistItem {

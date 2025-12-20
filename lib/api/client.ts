@@ -56,6 +56,11 @@ import type {
   ApplyVoucherResponse,
   GuestApplyVoucherRequest,
   GuestApplyVoucherResponse,
+  // Product Specification types
+  ProductSpecification,
+  CreateProductSpecificationRequest,
+  UpdateProductSpecificationRequest,
+  BulkUpdateProductSpecificationsRequest,
 } from "./types";
 
 // Ensure URL has protocol and no trailing slash
@@ -1359,6 +1364,66 @@ class ApiClient {
       "/api/guest/orders/apply-voucher",
       {
         method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  // ===== Product Specifications (Admin) =====
+
+  async adminGetProductSpecifications(productId: string): Promise<ProductSpecification[]> {
+    return this.request<ProductSpecification[]>(
+      `/api/admin/products/${productId}/specifications`
+    );
+  }
+
+  async adminCreateProductSpecification(
+    productId: string,
+    data: CreateProductSpecificationRequest
+  ): Promise<ProductSpecification> {
+    return this.request<ProductSpecification>(
+      `/api/admin/products/${productId}/specifications`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async adminUpdateProductSpecification(
+    productId: string,
+    specificationId: string,
+    data: UpdateProductSpecificationRequest
+  ): Promise<ProductSpecification> {
+    return this.request<ProductSpecification>(
+      `/api/admin/products/${productId}/specifications/${specificationId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async adminDeleteProductSpecification(
+    productId: string,
+    specificationId: string
+  ): Promise<void> {
+    return this.request<void>(
+      `/api/admin/products/${productId}/specifications/${specificationId}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  async adminBulkUpdateProductSpecifications(
+    productId: string,
+    data: BulkUpdateProductSpecificationsRequest
+  ): Promise<ProductSpecification[]> {
+    return this.request<ProductSpecification[]>(
+      `/api/admin/products/${productId}/specifications/bulk`,
+      {
+        method: "PUT",
         body: JSON.stringify(data),
       }
     );

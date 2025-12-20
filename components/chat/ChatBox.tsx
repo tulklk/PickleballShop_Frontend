@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, X, Send, Bot, User } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import logo from "@/app/img/logopickleball.png";
 import { cn } from "@/lib/utils";
 import { useChatMessage } from "@/lib/api/hooks";
@@ -258,9 +259,11 @@ export function ChatBox() {
                                 ? prod.imageUrls[0]!
                                 : "/placeholder-product.jpg";
                             return (
-                              <div
+                              <Link
                                 key={prod.id}
-                                className="flex gap-3 rounded-md border border-gray-200 bg-white p-2 shadow-sm"
+                                href={`/products/${prod.id}`}
+                                className="flex gap-3 rounded-md border border-gray-200 bg-white p-2 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer"
+                                onClick={() => setIsOpen(false)}
                               >
                                 <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
                                   {img === "/placeholder-product.jpg" ? (
@@ -307,7 +310,7 @@ export function ChatBox() {
                                       )}
                                   </div>
                                 </div>
-                              </div>
+                              </Link>
                             );
                           })}
                         </div>

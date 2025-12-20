@@ -43,6 +43,11 @@ import type {
   ApplyVoucherResponse,
   GuestApplyVoucherRequest,
   GuestApplyVoucherResponse,
+  // Product Specification types
+  ProductSpecification,
+  CreateProductSpecificationRequest,
+  UpdateProductSpecificationRequest,
+  BulkUpdateProductSpecificationsRequest,
 } from "./types";
 
 // Helper to sync guest cart to server
@@ -1358,6 +1363,105 @@ export function useApplyVoucherForGuest() {
   >({
     mutationFn: (data: GuestApplyVoucherRequest) =>
       apiClient.applyVoucherForGuest(data),
+  });
+}
+
+// ===== Product Specifications hooks (Admin) =====
+
+export function useAdminProductSpecifications(productId: string) {
+  return useQuery<ProductSpecification[]>({
+    queryKey: ["admin", "product", productId, "specifications"],
+    queryFn: () => apiClient.adminGetProductSpecifications(productId),
+    enabled: !!productId,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+export function useAdminCreateProductSpecification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      data,
+    }: {
+      productId: string;
+      data: CreateProductSpecificationRequest;
+    }) => apiClient.adminCreateProductSpecification(productId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "product", variables.productId, "specifications"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["product", variables.productId],
+      });
+    },
+  });
+}
+
+export function useAdminUpdateProductSpecification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      specificationId,
+      data,
+    }: {
+      productId: string;
+      specificationId: string;
+      data: UpdateProductSpecificationRequest;
+    }) =>
+      apiClient.adminUpdateProductSpecification(productId, specificationId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "product", variables.productId, "specifications"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["product", variables.productId],
+      });
+    },
+  });
+}
+
+export function useAdminDeleteProductSpecification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      specificationId,
+    }: {
+      productId: string;
+      specificationId: string;
+    }) => apiClient.adminDeleteProductSpecification(productId, specificationId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "product", variables.productId, "specifications"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["product", variables.productId],
+      });
+    },
+  });
+}
+
+export function useAdminBulkUpdateProductSpecifications() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      data,
+    }: {
+      productId: string;
+      data: BulkUpdateProductSpecificationsRequest;
+    }) => apiClient.adminBulkUpdateProductSpecifications(productId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "product", variables.productId, "specifications"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["product", variables.productId],
+      });
+    },
   });
 }
 

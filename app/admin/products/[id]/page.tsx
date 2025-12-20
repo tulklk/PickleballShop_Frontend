@@ -9,6 +9,7 @@ import {
   useProduct,
 } from "@/lib/api/hooks";
 import { ProductForm, ProductFormValues } from "../ProductForm";
+import { ProductSpecifications } from "@/components/admin/ProductSpecifications";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/useAuth";
 import { Button } from "@/components/ui/button";
@@ -229,7 +230,7 @@ export default function AdminProductEditPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Chỉnh sửa sản phẩm</CardTitle>
@@ -243,6 +244,11 @@ export default function AdminProductEditPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Thông số kỹ thuật - chỉ hiển thị cho admin */}
+      {isAdmin && (
+        <ProductSpecifications productId={productId} />
+      )}
     </div>
   );
 }

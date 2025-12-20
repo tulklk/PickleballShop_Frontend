@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAdminOrders } from "@/lib/api/hooks";
 import {
   Table,
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { OrderStatus, PaymentStatus } from "@/lib/api/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 function getOrderStatusText(status: OrderStatus | string): string {
   // Handle string values from backend
@@ -97,9 +98,11 @@ function getPaymentStatusText(status: PaymentStatus | string): string {
 
 export default function AdminOrdersPage() {
   const { data: orders, isLoading, error } = useAdminOrders();
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
-  const filteredOrders = React.useMemo(() => {
+  const filteredOrders = useMemo(() => {
     const rawList = Array.isArray(orders) ? orders : [];
     if (!searchTerm.trim()) return rawList;
 
@@ -122,8 +125,26 @@ export default function AdminOrdersPage() {
     });
   }, [orders, searchTerm]);
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Ensure currentPage doesn't exceed totalPages when filtered results change
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
   // Debug logging
-  React.useEffect(() => {
+  useEffect(() => {
     if (process.env.NODE_ENV === "development") {
       console.log("[AdminOrdersPage] orders:", orders);
       console.log("[AdminOrdersPage] orders length:", orders?.length);
@@ -173,28 +194,32 @@ export default function AdminOrdersPage() {
               id="order-search"
               placeholder="Tìm theo mã đơn, khách hàng hoặc tổng tiền..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to page 1 when searching
+              }}
               className="mt-1"
             />
           </div>
         </CardHeader>
         <CardContent>
           {filteredOrders && Array.isArray(filteredOrders) && filteredOrders.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mã đơn hàng</TableHead>
-                    <TableHead>Khách hàng</TableHead>
-                    <TableHead>Tổng tiền</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Thanh toán</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead>Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Mã đơn hàng</TableHead>
+                      <TableHead>Khách hàng</TableHead>
+                      <TableHead>Tổng tiền</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>Thanh toán</TableHead>
+                      <TableHead>Ngày tạo</TableHead>
+                      <TableHead>Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">
                         {order.orderNumber || "N/A"}
@@ -217,10 +242,16 @@ export default function AdminOrdersPage() {
                         </Link>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <AdminPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               {orders && Array.isArray(orders) && orders.length === 0 ? (
