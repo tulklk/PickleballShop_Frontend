@@ -245,23 +245,23 @@ function ProfileContent() {
     )}&background=10b981&color=ffffff`;
 
   return (
-    <div className="container mx-auto px-4 py-10 space-y-6">
-      <div className="rounded-3xl border border-emerald-100 bg-white shadow-[0_20px_60px_rgba(16,185,129,0.12)]">
-        <CardContent className="p-6 lg:p-10 space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-emerald-500">
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6">
+      <div className="rounded-2xl md:rounded-3xl border border-emerald-100 bg-white shadow-[0_20px_60px_rgba(16,185,129,0.12)]">
+        <CardContent className="p-4 md:p-6 lg:p-10 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-500">
                 Hồ sơ cá nhân
               </p>
-              <h1 className="mt-2 text-3xl font-bold text-emerald-950">
+              <h1 className="mt-2 text-2xl md:text-3xl font-bold text-emerald-950">
                 {user.fullName || "Thành viên IKA"}
               </h1>
-              <p className="text-sm text-emerald-800/70 mt-1">
+              <p className="text-xs md:text-sm text-emerald-800/70 mt-1">
                 Quản lý thông tin tài khoản và cập nhật ảnh đại diện của bạn.
               </p>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <div className="relative h-24 w-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-emerald-50">
+              <div className="relative h-20 w-20 md:h-24 md:w-24 rounded-full border-4 border-white shadow-lg overflow-hidden bg-emerald-50">
                 <img
                   src={displayAvatar}
                   alt="Avatar"
@@ -280,25 +280,26 @@ function ProfileContent() {
                 size="sm"
                 onClick={triggerAvatarUpload}
                 disabled={uploadingAvatar}
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs md:text-sm"
               >
                 {uploadingAvatar ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang tải...
+                    <Loader2 className="mr-2 h-3 w-3 md:h-4 md:w-4 animate-spin" />
+                    <span className="hidden sm:inline">Đang tải...</span>
+                    <span className="sm:hidden">Tải...</span>
                   </>
                 ) : (
                   <>
-                    <UploadCloud className="mr-2 h-4 w-4" />
+                    <UploadCloud className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                     Sửa ảnh đại diện
                   </>
                 )}
               </Button>
-              <p className="text-xs text-slate-500">Vui lòng chọn ảnh nhỏ hơn 5MB</p>
+              <p className="text-xs text-slate-500 text-center">Vui lòng chọn ảnh nhỏ hơn 5MB</p>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <OverviewItem label="Tên đăng nhập" icon={UserCheck} value={loginName} />
             <OverviewItem label="Email" icon={Mail} value={user.email || "—"} />
             <OverviewItem label="Nhóm khách hàng" icon={Shield} value={roleLabel} />
@@ -308,10 +309,10 @@ function ProfileContent() {
       </div>
 
       <Card className="border-emerald-100 bg-white/90 shadow-lg">
-        <CardContent className="p-6 lg:p-10">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <CardContent className="p-4 md:p-6 lg:p-10">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email-display" className="flex items-center gap-2 text-emerald-700">
+              <Label htmlFor="email-display" className="flex items-center gap-2 text-emerald-700 text-sm md:text-base">
                 <Mail className="h-4 w-4" />
                 Email
               </Label>
@@ -320,14 +321,14 @@ function ProfileContent() {
                 type="email"
                 value={user.email || ""}
                 disabled
-                className="bg-emerald-50 cursor-not-allowed"
+                className="bg-emerald-50 cursor-not-allowed h-10 md:h-11 text-sm md:text-base"
               />
               <p className="text-xs text-slate-500">Email dùng để đăng nhập và không thể thay đổi.</p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="flex items-center gap-2 text-emerald-700">
+                <Label htmlFor="fullName" className="flex items-center gap-2 text-emerald-700 text-sm md:text-base">
                   <User className="h-4 w-4" />
                   Họ và tên *
                 </Label>
@@ -335,15 +336,15 @@ function ProfileContent() {
                   id="fullName"
                   {...register("fullName")}
                   placeholder="Nhập họ và tên"
-                  className="h-11"
+                  className="h-10 md:h-11 text-sm md:text-base"
                 />
                 {errors.fullName && (
-                  <p className="text-sm text-red-600">{errors.fullName.message}</p>
+                  <p className="text-xs md:text-sm text-red-600">{errors.fullName.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="flex items-center gap-2 text-emerald-700">
+                <Label htmlFor="phoneNumber" className="flex items-center gap-2 text-emerald-700 text-sm md:text-base">
                   <Phone className="h-4 w-4" />
                   Số điện thoại
                 </Label>
@@ -351,10 +352,10 @@ function ProfileContent() {
                   id="phoneNumber"
                   {...register("phoneNumber")}
                   placeholder="Nhập số điện thoại"
-                  className="h-11"
+                  className="h-10 md:h-11 text-sm md:text-base"
                 />
                 {errors.phoneNumber && (
-                  <p className="text-sm text-red-600">{errors.phoneNumber.message}</p>
+                  <p className="text-xs md:text-sm text-red-600">{errors.phoneNumber.message}</p>
                 )}
               </div>
             </div>
@@ -365,7 +366,7 @@ function ProfileContent() {
               <Button
                 type="submit"
                 disabled={updateUser.isPending}
-                className="bg-emerald-600 hover:bg-emerald-700 px-8"
+                className="bg-emerald-600 hover:bg-emerald-700 px-6 md:px-8 text-sm md:text-base w-full md:w-auto"
               >
                 {updateUser.isPending ? (
                   <>
@@ -394,13 +395,13 @@ function OverviewItem({
   icon: React.ElementType;
 }) {
   return (
-    <div className="rounded-2xl border border-emerald-50 bg-emerald-50/50 p-4 flex items-center gap-3">
-      <div className="rounded-xl bg-white p-2 text-emerald-600 shadow-inner">
-        <Icon className="h-5 w-5" />
+    <div className="rounded-xl md:rounded-2xl border border-emerald-50 bg-emerald-50/50 p-3 md:p-4 flex items-center gap-2 md:gap-3">
+      <div className="rounded-lg md:rounded-xl bg-white p-1.5 md:p-2 text-emerald-600 shadow-inner shrink-0">
+        <Icon className="h-4 w-4 md:h-5 md:w-5" />
       </div>
-      <div>
-        <p className="text-xs uppercase tracking-widest text-emerald-500">{label}</p>
-        <p className="text-lg font-semibold text-emerald-900">{value || "—"}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] md:text-xs uppercase tracking-widest text-emerald-500 truncate">{label}</p>
+        <p className="text-sm md:text-lg font-semibold text-emerald-900 truncate">{value || "—"}</p>
       </div>
     </div>
   );

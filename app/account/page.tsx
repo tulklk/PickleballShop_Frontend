@@ -14,19 +14,19 @@ function AccountContent() {
   const { user } = useAuth();
 
   return (
-    <div className="container mx-auto px-4 py-10 space-y-6">
-        <div className="rounded-3xl border border-emerald-100 bg-white/80 p-8 shadow-[0_25px_80px_rgba(15,118,110,0.12)]">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-500">
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6">
+        <div className="rounded-2xl md:rounded-3xl border border-emerald-100 bg-white/80 p-4 md:p-8 shadow-[0_25px_80px_rgba(15,118,110,0.12)]">
+          <p className="text-xs md:text-sm uppercase tracking-[0.3em] text-emerald-500">
             Hồ sơ cá nhân
           </p>
-          <h1 className="mt-2 text-4xl font-bold text-emerald-950">
+          <h1 className="mt-2 text-2xl md:text-4xl font-bold text-emerald-950">
             {user?.fullName || "Thành viên IKA"}
           </h1>
-          <p className="mt-3 text-emerald-900/80">
+          <p className="mt-3 text-sm md:text-base text-emerald-900/80">
             Quản lý thông tin tài khoản, theo dõi đơn hàng và tiếp tục hành trình
             Pickleball của bạn.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 md:mt-6 grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-3">
             <ProfileItem
               label="Email"
               value={user?.email || "Chưa cập nhật"}
@@ -45,7 +45,7 @@ function AccountContent() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-[2fr_1fr]">
           <Card className="border-emerald-100 bg-white/90 shadow-[0_20px_60px_rgba(15,118,110,0.1)]">
             <CardHeader>
               <CardTitle>Hoạt động gần đây</CardTitle>
@@ -107,16 +107,16 @@ function ProfileItem({
   icon: React.ElementType;
 }) {
   return (
-    <div className="rounded-2xl border border-emerald-50 bg-white/60 p-4">
-      <div className="flex items-center gap-3">
-        <div className="rounded-xl bg-emerald-100/80 p-2 text-emerald-700">
-          <Icon className="h-5 w-5" />
+    <div className="rounded-xl md:rounded-2xl border border-emerald-50 bg-white/60 p-3 md:p-4">
+      <div className="flex items-center gap-2 md:gap-3">
+        <div className="rounded-lg md:rounded-xl bg-emerald-100/80 p-1.5 md:p-2 text-emerald-700 shrink-0">
+          <Icon className="h-4 w-4 md:h-5 md:w-5" />
         </div>
-        <div>
-          <p className="text-xs uppercase tracking-widest text-emerald-500">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] md:text-xs uppercase tracking-widest text-emerald-500 truncate">
             {label}
           </p>
-          <p className="text-lg font-semibold text-emerald-950">{value}</p>
+          <p className="text-sm md:text-lg font-semibold text-emerald-950 truncate">{value}</p>
         </div>
       </div>
     </div>

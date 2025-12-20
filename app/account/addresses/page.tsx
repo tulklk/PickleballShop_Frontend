@@ -214,15 +214,15 @@ function AccountAddressesContent() {
   const currentEditing = editing;
 
   return (
-    <div className="container mx-auto px-4 py-10 space-y-6">
+    <div className="container mx-auto px-4 py-6 md:py-10 space-y-6">
       <Card className="border-emerald-100 bg-white shadow-[0_20px_60px_rgba(16,185,129,0.12)]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-emerald-900">
-            <MapPin className="h-5 w-5" />
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="flex items-center gap-2 text-emerald-900 text-lg md:text-xl">
+            <MapPin className="h-4 w-4 md:h-5 md:w-5" />
             Địa chỉ giao hàng
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-8 lg:grid-cols-[3fr_2fr]">
+        <CardContent className="grid gap-6 md:gap-8 grid-cols-1 lg:grid-cols-[3fr_2fr] p-4 md:p-6">
           {/* Danh sách địa chỉ */}
           <div className="space-y-4">
             {addresses.length === 0 ? (
@@ -233,33 +233,33 @@ function AccountAddressesContent() {
               addresses.map((addr) => (
                 <div
                   key={addr.id}
-                  className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                  className="rounded-xl md:rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3 md:p-4 flex flex-col gap-3"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-emerald-900 flex items-center gap-1">
-                        <Home className="h-4 w-4" />
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-emerald-900 flex items-center gap-1 text-sm md:text-base">
+                        <Home className="h-3 w-3 md:h-4 md:w-4" />
                         {addr.fullName}
                       </span>
                       {addr.isDefault && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white">
-                          <Star className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] md:text-xs font-medium text-white">
+                          <Star className="h-2.5 w-2.5 md:h-3 md:w-3" />
                           Mặc định
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-700">SĐT: {addr.phoneNumber}</p>
-                    <p className="text-sm text-slate-700">
+                    <p className="text-xs md:text-sm text-slate-700">SĐT: {addr.phoneNumber}</p>
+                    <p className="text-xs md:text-sm text-slate-700">
                       {addr.addressLine}, {addr.ward && `${addr.ward}, `}{addr.district && `${addr.district}, `}
                       {addr.city}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 justify-end">
+                  <div className="flex items-center gap-2 justify-end flex-wrap">
                     {!addr.isDefault && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs md:text-sm px-2 md:px-3"
                         onClick={() => handleSetDefault(addr)}
                       >
                         Đặt mặc định
@@ -269,16 +269,17 @@ function AccountAddressesContent() {
                       variant="outline"
                       size="sm"
                       onClick={() => startEdit(addr)}
+                      className="text-xs md:text-sm px-2 md:px-3"
                     >
                       Sửa
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      className="text-red-600 border-red-200 hover:bg-red-50 px-2 md:px-3"
                       onClick={() => handleDelete(addr)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                   </div>
                 </div>
@@ -288,8 +289,8 @@ function AccountAddressesContent() {
 
           {/* Form thêm / sửa địa chỉ */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-emerald-900 text-lg">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <h3 className="font-semibold text-emerald-900 text-base md:text-lg">
                 {currentEditing ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới"}
               </h3>
               {currentEditing && (
@@ -297,7 +298,7 @@ function AccountAddressesContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setEditing(null)}
-                  className="text-sm"
+                  className="text-xs md:text-sm"
                 >
                   <Plus className="h-3 w-3 mr-1" /> Địa chỉ mới
                 </Button>
@@ -339,7 +340,7 @@ function AccountAddressesContent() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* Tỉnh / Thành phố */}
                 <div className="space-y-1">
-                  <Label htmlFor="city">Tỉnh/Thành phố *</Label>
+                  <Label htmlFor="city" className="text-sm md:text-base">Tỉnh/Thành phố *</Label>
                   <Select
                     id="city"
                     value={
@@ -375,7 +376,7 @@ function AccountAddressesContent() {
 
                 {/* Quận / Huyện */}
                 <div className="space-y-1">
-                  <Label htmlFor="district">Quận/Huyện</Label>
+                  <Label htmlFor="district" className="text-sm md:text-base">Quận/Huyện</Label>
                   <Select
                     id="district"
                     value={
@@ -417,7 +418,7 @@ function AccountAddressesContent() {
 
                 {/* Phường / Xã */}
                 <div className="space-y-1">
-                  <Label htmlFor="ward">Phường/Xã</Label>
+                  <Label htmlFor="ward" className="text-sm md:text-base">Phường/Xã</Label>
                   <Select
                     id="ward"
                     value={selectedWardName || ""}
@@ -457,7 +458,7 @@ function AccountAddressesContent() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 px-6">
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 px-4 md:px-6 text-sm md:text-base w-full md:w-auto">
                   Lưu địa chỉ
                 </Button>
               </div>
