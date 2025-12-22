@@ -24,7 +24,6 @@ import type {
   OrderItem,
   CreatePaymentResponse,
   UpdateOrderStatusRequest,
-  UpdatePaymentStatusRequest,
   OrderStatus,
   PaymentStatus,
   PaymentMethod,
@@ -905,16 +904,6 @@ class ApiClient {
     data: UpdateOrderStatusRequest
   ): Promise<void> {
     return this.request<void>(`/api/admin/AdminOrders/${id}/status`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async adminUpdatePaymentStatus(
-    id: string,
-    data: UpdatePaymentStatusRequest
-  ): Promise<void> {
-    return this.request<void>(`/api/admin/AdminOrders/${id}/payment-status`, {
       method: "PUT",
       body: JSON.stringify(data),
     });

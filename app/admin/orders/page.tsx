@@ -15,51 +15,14 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { OrderStatus, PaymentStatus } from "@/lib/api/types";
+import { OrderStatus, PaymentStatus, OrderStatusLabels, normalizeOrderStatus } from "@/lib/api/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 
 function getOrderStatusText(status: OrderStatus | string): string {
-  // Handle string values from backend
-  if (typeof status === "string") {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes("pending") || statusLower.includes("chờ")) {
-      return "Chờ xử lý";
-    }
-    if (statusLower.includes("processing") || statusLower.includes("xử lý")) {
-      return "Đang xử lý";
-    }
-    if (statusLower.includes("shipped") || statusLower.includes("giao")) {
-      return "Đang giao";
-    }
-    if (statusLower.includes("completed") || statusLower.includes("hoàn thành")) {
-      return "Hoàn thành";
-    }
-    if (statusLower.includes("confirmed") || statusLower.includes("xác nhận")) {
-      return "Đã xác nhận";
-    }
-    if (statusLower.includes("cancelled") || statusLower.includes("hủy")) {
-      return "Đã hủy";
-    }
-    return status; // Return original string if no match
-  }
-  
-  // Handle enum values
-  switch (status) {
-    case OrderStatus.Pending:
-      return "Chờ xử lý";
-    case OrderStatus.Processing:
-      return "Đang xử lý";
-    case OrderStatus.Shipped:
-      return "Đang giao";
-    case OrderStatus.Completed:
-      return "Hoàn thành";
-    case OrderStatus.Cancelled:
-      return "Đã hủy";
-    default:
-      return "Không xác định";
-  }
+  const normalizedStatus = normalizeOrderStatus(status);
+  return OrderStatusLabels[normalizedStatus] || "Không xác định";
 }
 
 function getPaymentStatusText(status: PaymentStatus | string): string {

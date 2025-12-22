@@ -60,11 +60,19 @@ function getStatusBadge(orderStatus: string | null) {
       </Badge>
     );
   }
-  if (status.includes("cancelled") || status.includes("hủy")) {
+  if (status.includes("confirmed") || status.includes("xác nhận")) {
     return (
-      <Badge className="bg-red-500 hover:bg-red-600 text-white">
-        <XCircle className="h-3 w-3 mr-1" />
-        Đã hủy
+      <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white">
+        <CheckCircle2 className="h-3 w-3 mr-1" />
+        Đã xác nhận
+      </Badge>
+    );
+  }
+  if (status.includes("prepared") || status.includes("chuẩn bị")) {
+    return (
+      <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white">
+        <Package className="h-3 w-3 mr-1" />
+        Đã chuẩn bị hàng
       </Badge>
     );
   }
@@ -72,7 +80,15 @@ function getStatusBadge(orderStatus: string | null) {
     return (
       <Badge className="bg-purple-500 hover:bg-purple-600 text-white">
         <Truck className="h-3 w-3 mr-1" />
-        Đang giao
+        Đã giao cho đơn vị vận chuyển
+      </Badge>
+    );
+  }
+  if (status.includes("cancelled") || status.includes("hủy")) {
+    return (
+      <Badge className="bg-red-500 hover:bg-red-600 text-white">
+        <XCircle className="h-3 w-3 mr-1" />
+        Đã hủy
       </Badge>
     );
   }

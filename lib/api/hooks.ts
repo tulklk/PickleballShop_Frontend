@@ -16,7 +16,6 @@ import type {
   ResendVerificationEmailRequest,
   ForgotPasswordRequest,
   UpdateOrderStatusRequest,
-  UpdatePaymentStatusRequest,
   OrderStatus,
   PaymentStatus,
   UserDto,
@@ -802,23 +801,6 @@ export function useAdminUpdateOrderStatus() {
   });
 }
 
-export function useAdminUpdatePaymentStatus() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: UpdatePaymentStatusRequest;
-    }) => apiClient.adminUpdatePaymentStatus(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "order"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
-  });
-}
 
 export function useAdminProducts(options?: { enabled?: boolean }) {
   return useQuery({

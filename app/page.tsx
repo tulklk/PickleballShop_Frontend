@@ -311,16 +311,17 @@ function FlashSaleSection({
 }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 22, minutes: 37, seconds: 39 });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef2 = useRef<HTMLDivElement>(null);
 
   // Use shared data if provided, otherwise fetch independently
   const { data: productsData, isLoading: localIsLoading } = useProducts({ PageSize: 20 });
   const finalProductsData = sharedProductsData || productsData;
   const finalIsLoading = isLoading !== undefined ? isLoading : localIsLoading;
 
-  // Get products with discount
+  // Get products with discount - increase to 20 for 2 rows
   const saleProducts = finalProductsData?.items?.filter(
     (p: any) => p.originalPrice && p.originalPrice > p.price
-  ).slice(0, 10) || [];
+  ).slice(0, 20) || [];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -335,8 +336,12 @@ function FlashSaleSection({
   }, []);
 
   const scroll = (dir: "left" | "right") => {
+    const scrollAmount = dir === "left" ? -300 : 300;
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+    if (scrollRef2.current) {
+      scrollRef2.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
 
@@ -354,14 +359,27 @@ function FlashSaleSection({
           </div>
           <div className="lg:w-2/3 bg-linear-to-r from-emerald-500 to-lime-400 rounded-xl p-4 md:p-6">
             <div className="h-8 bg-white/20 rounded mb-4"></div>
-            <div className="flex gap-4 overflow-x-auto">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="shrink-0 w-[200px] bg-white rounded-lg p-3">
-                  <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-1"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              ))}
+            <div className="space-y-4">
+              {/* First Row Skeleton */}
+              <div className="flex gap-4 overflow-x-auto">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="shrink-0 w-[200px] bg-white rounded-lg p-3">
+                    <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+              {/* Second Row Skeleton - Hidden on mobile, visible on desktop */}
+              <div className="hidden lg:flex gap-4 overflow-x-auto">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="shrink-0 w-[200px] bg-white rounded-lg p-3">
+                    <div className="aspect-square bg-gray-200 rounded-lg mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -452,45 +470,90 @@ function FlashSaleSection({
             </div>
           </div>
 
-          <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
-            {saleProducts.slice(1).map((product: any, index: number) => (
-              <Link 
-                key={product.id} 
-                href={getProductUrl(product)} 
-                className="shrink-0 w-[200px]"
-              >
-                <Card className="bg-white hover:shadow-xl group">
-                  <CardContent className="p-3">
-                    <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-                      {product.primaryImageUrl?.includes("cloudinary") ? (
-                        <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
-                      ) : product.primaryImageUrl ? (
-                        <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100" />
-                      )}
+          <div className="space-y-4">
+            {/* First Row */}
+            <div ref={scrollRef} className="flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
+              {saleProducts.slice(1, 9).map((product: any, index: number) => (
+                <Link 
+                  key={product.id} 
+                  href={getProductUrl(product)} 
+                  className="shrink-0 w-[200px]"
+                >
+                  <Card className="bg-white hover:shadow-xl group">
+                    <CardContent className="p-3">
+                      <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
+                        {product.primaryImageUrl?.includes("cloudinary") ? (
+                          <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                        ) : product.primaryImageUrl ? (
+                          <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100" />
+                        )}
+                        {product.originalPrice && (
+                          <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-md">
+                            -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">{product.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
+                      </div>
                       {product.originalPrice && (
-                        <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-md">
-                          -{Math.round((1 - product.price / product.originalPrice) * 100)}%
-                        </span>
+                        <span className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>
                       )}
-                    </div>
-                    <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">{product.name}</h4>
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
-                    </div>
-                    {product.originalPrice && (
-                      <span className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>
-                    )}
-                    <div className="flex mt-1">
-                      {[1,2,3,4,5].map(s => (
-                        <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                      <div className="flex mt-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            
+            {/* Second Row - Hidden on mobile, visible on desktop */}
+            <div ref={scrollRef2} className="hidden lg:flex gap-4 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: "none" }}>
+              {saleProducts.slice(9).map((product: any, index: number) => (
+                <Link 
+                  key={product.id} 
+                  href={getProductUrl(product)} 
+                  className="shrink-0 w-[200px]"
+                >
+                  <Card className="bg-white hover:shadow-xl group">
+                    <CardContent className="p-3">
+                      <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
+                        {product.primaryImageUrl?.includes("cloudinary") ? (
+                          <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                        ) : product.primaryImageUrl ? (
+                          <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100" />
+                        )}
+                        {product.originalPrice && (
+                          <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-md">
+                            -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">{product.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
+                      </div>
+                      {product.originalPrice && (
+                        <span className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>
+                      )}
+                      <div className="flex mt-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`h-3 w-3 ${s <= (product.averageRating || 5) ? "fill-yellow-500 text-yellow-500" : "text-gray-300"}`} />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { OrderItemDto } from "@/lib/api/types";
+import { OrderStatusBar } from "@/components/orders/OrderStatusBar";
 
 export default function OrderDetailPage() {
   return <OrderDetailContent />;
@@ -41,11 +42,17 @@ function getStatusConfig(orderStatus: string | null) {
   if (status.includes("processing") || status.includes("xử lý")) {
     return { label: "Đang xử lý", color: "blue", icon: Package };
   }
-  if (status.includes("cancelled") || status.includes("hủy")) {
-    return { label: "Đã hủy", color: "red", icon: XCircle };
+  if (status.includes("confirmed") || status.includes("xác nhận")) {
+    return { label: "Đã xác nhận", color: "cyan", icon: CheckCircle2 };
+  }
+  if (status.includes("prepared") || status.includes("chuẩn bị")) {
+    return { label: "Đã chuẩn bị hàng", color: "indigo", icon: Package };
   }
   if (status.includes("shipped") || status.includes("giao")) {
-    return { label: "Đang giao", color: "purple", icon: Truck };
+    return { label: "Đã giao cho đơn vị vận chuyển", color: "purple", icon: Truck };
+  }
+  if (status.includes("cancelled") || status.includes("hủy")) {
+    return { label: "Đã hủy", color: "red", icon: XCircle };
   }
   return { label: orderStatus, color: "gray", icon: Clock };
 }
@@ -136,11 +143,11 @@ function OrderDetailContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Order Info - Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Status Card */}
-          <Card className="border-emerald-100">
+      {/* Row 1: Order Info and Summary - Same row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Order Info Card - Left */}
+        <div className="lg:col-span-2">
+          <Card className="border-emerald-100 h-full">
             <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
               <CardTitle className="flex items-center gap-2 text-emerald-900">
                 <Receipt className="h-5 w-5" />
@@ -186,35 +193,11 @@ function OrderDetailContent() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Shipping Address Card */}
-          <Card className="border-emerald-100">
-            <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
-              <CardTitle className="flex items-center gap-2 text-emerald-900">
-                <MapPin className="h-5 w-5" />
-                Địa chỉ giao hàng
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                <p className="font-semibold text-emerald-900">{order.shippingAddress.fullName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {order.shippingAddress.phoneNumber}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {order.shippingAddress.addressLine}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {order.shippingAddress.ward}, {order.shippingAddress.district}, {order.shippingAddress.city}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Summary Card - Right Column */}
+        {/* Summary Card - Right */}
         <div className="lg:col-span-1">
-          <Card className="border-emerald-100 sticky top-4">
+          <Card className="border-emerald-100 h-full sticky top-4">
             <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
               <CardTitle className="text-emerald-900">Tóm tắt</CardTitle>
             </CardHeader>
@@ -250,20 +233,60 @@ function OrderDetailContent() {
         </div>
       </div>
 
-      {/* Order Items Card */}
+      {/* Row 2: Order Items and Shipping Address - Same row, full width */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Order Items Card - Left */}
+        <Card className="border-emerald-100">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+            <CardTitle className="flex items-center gap-2 text-emerald-900">
+              <Package className="h-5 w-5" />
+              Sản phẩm đơn hàng ({order.items?.length || 0} {order.items?.length === 1 ? "sản phẩm" : "sản phẩm"})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {order.items?.map((item) => (
+                <OrderItemDetailCard key={item.id} item={item} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Shipping Address Card - Right */}
+        <Card className="border-emerald-100">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
+            <CardTitle className="flex items-center gap-2 text-emerald-900">
+              <MapPin className="h-5 w-5" />
+              Địa chỉ giao hàng
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-2">
+              <p className="font-semibold text-emerald-900">{order.shippingAddress.fullName}</p>
+              <p className="text-sm text-muted-foreground">
+                {order.shippingAddress.phoneNumber}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {order.shippingAddress.addressLine}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {order.shippingAddress.ward}, {order.shippingAddress.district}, {order.shippingAddress.city}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 4: Order Status Bar - Full width, bottom */}
       <Card className="border-emerald-100">
         <CardHeader className="bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
           <CardTitle className="flex items-center gap-2 text-emerald-900">
-            <Package className="h-5 w-5" />
-            Sản phẩm đơn hàng ({order.items?.length || 0} {order.items?.length === 1 ? "sản phẩm" : "sản phẩm"})
+            <Receipt className="h-5 w-5" />
+            Trạng thái đơn hàng
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="space-y-4">
-            {order.items?.map((item) => (
-              <OrderItemDetailCard key={item.id} item={item} />
-            ))}
-          </div>
+          <OrderStatusBar orderStatus={order.orderStatus} />
         </CardContent>
       </Card>
     </div>
@@ -292,9 +315,9 @@ function OrderItemDetailCard({ item }: { item: OrderItemDto }) {
   };
 
   return (
-    <div className="flex gap-4 p-4 rounded-lg bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-50 transition-colors">
+    <div className="flex gap-4 p-4 rounded-lg">
       {/* Product Image */}
-      <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-white border border-emerald-100">
+      <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-white">
         {imageUrl && isValidUrl(imageUrl) ? (
           <Image
             src={imageUrl}

@@ -2,56 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useAdminOrder, useAdminUpdateOrderStatus, useAdminUpdatePaymentStatus } from "@/lib/api/hooks";
+import { useAdminOrder, useAdminUpdateOrderStatus } from "@/lib/api/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDateTime } from "@/lib/utils/formatDate";
 import { Button } from "@/components/ui/button";
 import { Select, SelectItem } from "@/components/ui/select";
-import { OrderStatus, PaymentStatus, PaymentMethod } from "@/lib/api/types";
+import { OrderStatus, PaymentStatus, PaymentMethod, OrderStatusLabels, normalizeOrderStatus } from "@/lib/api/types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 function getOrderStatusText(status: OrderStatus | string): string {
-  // Handle string values from backend
-  if (typeof status === "string") {
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes("pending") || statusLower.includes("chờ")) {
-      return "Chờ xử lý";
-    }
-    if (statusLower.includes("processing") || statusLower.includes("xử lý")) {
-      return "Đang xử lý";
-    }
-    if (statusLower.includes("shipped") || statusLower.includes("giao")) {
-      return "Đang giao";
-    }
-    if (statusLower.includes("completed") || statusLower.includes("hoàn thành")) {
-      return "Hoàn thành";
-    }
-    if (statusLower.includes("confirmed") || statusLower.includes("xác nhận")) {
-      return "Đã xác nhận";
-    }
-    if (statusLower.includes("cancelled") || statusLower.includes("hủy")) {
-      return "Đã hủy";
-    }
-    return status; // Return original string if no match
-  }
-  
-  // Handle enum values
-  switch (status) {
-    case OrderStatus.Pending:
-      return "Chờ xử lý";
-    case OrderStatus.Processing:
-      return "Đang xử lý";
-    case OrderStatus.Shipped:
-      return "Đang giao";
-    case OrderStatus.Completed:
-      return "Hoàn thành";
-    case OrderStatus.Cancelled:
-      return "Đã hủy";
-    default:
-      return "Không xác định";
-  }
+  const normalizedStatus = normalizeOrderStatus(status);
+  return OrderStatusLabels[normalizedStatus] || "Không xác định";
 }
 
 function getPaymentStatusText(status: PaymentStatus | string): string {
@@ -144,37 +107,22 @@ export default function AdminOrderDetailPage() {
   const orderId = params.id as string;
   const { data: order, isLoading, error } = useAdminOrder(orderId);
   const updateOrderStatus = useAdminUpdateOrderStatus();
-  const updatePaymentStatus = useAdminUpdatePaymentStatus();
   const [selectedOrderStatus, setSelectedOrderStatus] = useState<OrderStatus | undefined>();
-  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<PaymentStatus | undefined>();
 
   const handleUpdateOrderStatus = async () => {
     if (!selectedOrderStatus) return;
 
     try {
+      // Convert enum to string for API (e.g., OrderStatus.Processing -> "Processing")
+      const statusString = OrderStatus[selectedOrderStatus] as string;
       await updateOrderStatus.mutateAsync({
         id: orderId,
-        data: { orderStatus: selectedOrderStatus },
+        data: { status: statusString },
       });
       toast.success("Cập nhật trạng thái đơn hàng thành công");
       setSelectedOrderStatus(undefined);
     } catch (error: any) {
       toast.error(error?.data?.message || "Không thể cập nhật trạng thái đơn hàng");
-    }
-  };
-
-  const handleUpdatePaymentStatus = async () => {
-    if (!selectedPaymentStatus) return;
-
-    try {
-      await updatePaymentStatus.mutateAsync({
-        id: orderId,
-        data: { paymentStatus: selectedPaymentStatus },
-      });
-      toast.success("Cập nhật trạng thái thanh toán thành công");
-      setSelectedPaymentStatus(undefined);
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Không thể cập nhật trạng thái thanh toán");
     }
   };
 
@@ -398,96 +346,44 @@ export default function AdminOrderDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Cập nhật trạng thái đơn hàng</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Select
-                value={selectedOrderStatus?.toString()}
-                onValueChange={(value) =>
-                  setSelectedOrderStatus(parseInt(value) as OrderStatus)
-                }
-              >
-                <SelectItem value={OrderStatus.Pending.toString()}>
-                  Chờ xử lý
-                </SelectItem>
-                <SelectItem value={OrderStatus.Processing.toString()}>
-                  Đang xử lý
-                </SelectItem>
-                <SelectItem value={OrderStatus.Shipped.toString()}>
-                  Đang giao
-                </SelectItem>
-                <SelectItem value={OrderStatus.Completed.toString()}>
-                  Hoàn thành
-                </SelectItem>
-                <SelectItem value={OrderStatus.Cancelled.toString()}>
-                  Đã hủy
-                </SelectItem>
-              </Select>
-              <Button
-                onClick={handleUpdateOrderStatus}
-                disabled={!selectedOrderStatus || updateOrderStatus.isPending}
-                className="w-full"
-              >
-                {updateOrderStatus.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang cập nhật...
-                  </>
-                ) : (
-                  "Cập nhật trạng thái"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Cập nhật trạng thái thanh toán</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Select
-                value={selectedPaymentStatus?.toString()}
-                onValueChange={(value) =>
-                  setSelectedPaymentStatus(parseInt(value) as PaymentStatus)
-                }
-              >
-                <SelectItem value={PaymentStatus.Pending.toString()}>
-                  Chờ thanh toán
-                </SelectItem>
-                <SelectItem value={PaymentStatus.Processing.toString()}>
-                  Đang xử lý
-                </SelectItem>
-                <SelectItem value={PaymentStatus.Completed.toString()}>
-                  Đã thanh toán
-                </SelectItem>
-                <SelectItem value={PaymentStatus.Failed.toString()}>
-                  Thanh toán thất bại
-                </SelectItem>
-              </Select>
-              <Button
-                onClick={handleUpdatePaymentStatus}
-                disabled={!selectedPaymentStatus || updatePaymentStatus.isPending}
-                className="w-full"
-              >
-                {updatePaymentStatus.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang cập nhật...
-                  </>
-                ) : (
-                  "Cập nhật thanh toán"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Cập nhật trạng thái đơn hàng</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Select
+              value={selectedOrderStatus?.toString()}
+              onValueChange={(value) =>
+                setSelectedOrderStatus(parseInt(value) as OrderStatus)
+              }
+            >
+              {Object.entries(OrderStatusLabels).map(([value, label]) => {
+                const statusValue = parseInt(value) as OrderStatus;
+                return (
+                  <SelectItem key={value} value={statusValue.toString()}>
+                    {label}
+                  </SelectItem>
+                );
+              })}
+            </Select>
+            <Button
+              onClick={handleUpdateOrderStatus}
+              disabled={!selectedOrderStatus || updateOrderStatus.isPending}
+              className="w-full"
+            >
+              {updateOrderStatus.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang cập nhật...
+                </>
+              ) : (
+                "Cập nhật trạng thái"
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

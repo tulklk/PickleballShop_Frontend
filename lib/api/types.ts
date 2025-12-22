@@ -1,11 +1,62 @@
 // Generated types from Swagger JSON
 
 export enum OrderStatus {
-  Pending = 1,
-  Processing = 2,
-  Shipped = 3,
-  Completed = 4,
-  Cancelled = 5,
+  Processing = 1,        // Đang xử lý (thay thế Pending)
+  Confirmed = 2,          // Đã xác nhận
+  Prepared = 3,           // Đã chuẩn bị hàng (mới)
+  Shipped = 4,            // Đã giao cho đơn vị vận chuyển (thay thế Shipping)
+  Completed = 5,          // Hoàn thành
+  Cancelled = 6,          // Đã hủy
+}
+
+export const OrderStatusLabels: Record<OrderStatus, string> = {
+  [OrderStatus.Processing]: 'Đang xử lý',
+  [OrderStatus.Confirmed]: 'Đã xác nhận',
+  [OrderStatus.Prepared]: 'Đã chuẩn bị hàng',
+  [OrderStatus.Shipped]: 'Đã giao cho đơn vị vận chuyển',
+  [OrderStatus.Completed]: 'Hoàn thành',
+  [OrderStatus.Cancelled]: 'Đã hủy',
+};
+
+// Helper function để normalize order status từ backend (có thể là string hoặc number)
+export function normalizeOrderStatus(status: string | number): OrderStatus {
+  // Nếu backend trả về string
+  if (typeof status === 'string') {
+    const statusMap: Record<string, OrderStatus> = {
+      'Pending': OrderStatus.Processing,    // Pending cũ → Processing mới
+      'Shipping': OrderStatus.Shipped,     // Shipping cũ → Shipped mới
+      'Confirmed': OrderStatus.Confirmed,
+      'Completed': OrderStatus.Completed,
+      'Cancelled': OrderStatus.Cancelled,
+      // Enum mới
+      'Processing': OrderStatus.Processing,
+      'Prepared': OrderStatus.Prepared,
+      'Shipped': OrderStatus.Shipped,
+    };
+    return statusMap[status] || OrderStatus.Processing;
+  }
+  
+  // Nếu backend trả về number (enum value)
+  if (typeof status === 'number') {
+    // 1 = Processing (không đổi)
+    // 2 = Confirmed (không đổi)
+    // 3 = Prepared (mới, thay Shipping)
+    // 4 = Shipped (mới, thay Shipping)
+    // 5 = Completed (không đổi)
+    // 6 = Cancelled (không đổi)
+    // Map giá trị cũ sang mới nếu cần
+    if (status === 1 && status !== OrderStatus.Processing) {
+      // Nếu có giá trị cũ là 1 (Pending) thì chuyển sang Processing
+      return OrderStatus.Processing;
+    }
+    if (status === 3 && status !== OrderStatus.Prepared) {
+      // Nếu có giá trị cũ là 3 (Shipping) thì chuyển sang Shipped
+      return OrderStatus.Shipped;
+    }
+    return status as OrderStatus;
+  }
+  
+  return OrderStatus.Processing;
 }
 
 export enum PaymentStatus {
@@ -373,7 +424,7 @@ export interface CreatePaymentResponse {
 }
 
 export interface UpdateOrderStatusRequest {
-  orderStatus: OrderStatus;
+  status: string; // Backend expects string like "Processing", "Confirmed", etc.
 }
 
 // Admin Order type (different from OrderDto)
