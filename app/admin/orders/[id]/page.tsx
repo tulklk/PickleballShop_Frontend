@@ -230,6 +230,11 @@ export default function AdminOrderDetailPage() {
     return null;
   }
 
+  // Sync dropdown with current order status (so it shows "Đã chuẩn bị hàng" when order is Prepared, etc.)
+  const currentOrderStatus = normalizeOrderStatus(order.orderStatus);
+  const displayStatus = selectedOrderStatus ?? currentOrderStatus;
+  const hasStatusChange = selectedOrderStatus !== undefined && selectedOrderStatus !== currentOrderStatus;
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Chi tiết đơn hàng</h1>
@@ -353,7 +358,7 @@ export default function AdminOrderDetailPage() {
         <CardContent>
           <div className="space-y-4">
             <Select
-              value={selectedOrderStatus?.toString()}
+              value={displayStatus.toString()}
               onValueChange={(value) =>
                 setSelectedOrderStatus(parseInt(value) as OrderStatus)
               }
@@ -369,7 +374,7 @@ export default function AdminOrderDetailPage() {
             </Select>
             <Button
               onClick={handleUpdateOrderStatus}
-              disabled={!selectedOrderStatus || updateOrderStatus.isPending}
+              disabled={!hasStatusChange || updateOrderStatus.isPending}
               className="w-full"
             >
               {updateOrderStatus.isPending ? (

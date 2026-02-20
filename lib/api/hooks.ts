@@ -268,26 +268,30 @@ export function useCategoryBySlug(slug: string) {
 }
 
 // Products hooks
-export function useProducts(params?: {
-  Page?: number;
-  PageSize?: number;
-  CategoryId?: string;
-  MinPrice?: number;
-  MaxPrice?: number;
-  SortBy?: string;
-  ProductType?: string;
-  SkillLevel?: string;
-  Brand?: string;
-  SearchTerm?: string;
-}) {
+export function useProducts(
+  params?: {
+    Page?: number;
+    PageSize?: number;
+    CategoryId?: string;
+    MinPrice?: number;
+    MaxPrice?: number;
+    SortBy?: string;
+    ProductType?: string;
+    SkillLevel?: string;
+    Brand?: string;
+    SearchTerm?: string;
+  },
+  queryOptions?: { refetchOnMount?: boolean; staleTime?: number }
+) {
   return useQuery({
     queryKey: ["products", params],
     queryFn: () => apiClient.getProducts(params),
-    staleTime: 15 * 60 * 1000, // 15 minutes - Products thay đổi không thường xuyên
+    staleTime: queryOptions?.staleTime ?? 15 * 60 * 1000, // 15 minutes - Products thay đổi không thường xuyên
     gcTime: 45 * 60 * 1000, // 45 minutes - Giữ cache để navigate qua lại nhanh
     retry: 1,
     retryOnMount: false,
     placeholderData: (previousData) => previousData, // Giữ data cũ khi loading data mới (UX mượt mà)
+    refetchOnMount: queryOptions?.refetchOnMount,
   });
 }
 
@@ -794,22 +798,32 @@ export function useAdminUpdateOrderStatus() {
       id: string;
       data: UpdateOrderStatusRequest;
     }) => apiClient.adminUpdateOrderStatus(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    onSuccess: async (_, variables) => {
+      // Invalidate specific order so detail page refetches and shows new status immediately
+      await queryClient.invalidateQueries({ queryKey: ["admin", "order", variables.id] });
+      // Invalidate list so order management page shows updated status (refetchType: "all" to refetch even when list not mounted)
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "orders"],
+        refetchType: "all",
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["orders"],
+        refetchType: "all",
+      });
     },
   });
 }
 
 
-export function useAdminProducts(options?: { enabled?: boolean }) {
+export function useAdminProducts(options?: { enabled?: boolean; refetchOnMount?: boolean; staleTime?: number }) {
   return useQuery({
     queryKey: ["admin", "products"],
     queryFn: () => apiClient.adminGetProducts(),
     enabled: options?.enabled ?? true,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
     gcTime: 15 * 60 * 1000, // 15 minutes
     retry: 1,
+    refetchOnMount: options?.refetchOnMount,
   });
 }
 
@@ -828,18 +842,15 @@ export function useAdminCreateProduct() {
   return useMutation({
     mutationFn: (data: Product) => apiClient.adminCreateProduct(data),
     onSuccess: async () => {
-      // Invalidate and refetch immediately
-      await queryClient.invalidateQueries({ 
+      // Invalidate and refetch all matching queries (including inactive) so list cache is fresh after redirect
+      await queryClient.invalidateQueries({
         queryKey: ["admin", "products"],
-        refetchType: "active"
+        refetchType: "all",
       });
-      await queryClient.invalidateQueries({ 
+      await queryClient.invalidateQueries({
         queryKey: ["products"],
-        refetchType: "active"
+        refetchType: "all",
       });
-      // Explicitly refetch to ensure data is updated
-      await queryClient.refetchQueries({ queryKey: ["admin", "products"] });
-      await queryClient.refetchQueries({ queryKey: ["products"] });
     },
   });
 }
@@ -850,25 +861,22 @@ export function useAdminUpdateProduct() {
     mutationFn: ({ id, data }: { id: string; data: Product }) =>
       apiClient.adminUpdateProduct(id, data),
     onSuccess: async (_, variables) => {
-      // Invalidate and refetch immediately
-      await queryClient.invalidateQueries({ 
+      // Invalidate and refetch all matching queries (including inactive) so list cache is fresh after redirect
+      await queryClient.invalidateQueries({
         queryKey: ["admin", "products"],
-        refetchType: "active"
+        refetchType: "all",
       });
-      await queryClient.invalidateQueries({ 
+      await queryClient.invalidateQueries({
         queryKey: ["products"],
-        refetchType: "active"
+        refetchType: "all",
       });
       // Also invalidate the specific product
-      await queryClient.invalidateQueries({ 
-        queryKey: ["admin", "product", variables.id]
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "product", variables.id],
       });
-      await queryClient.invalidateQueries({ 
-        queryKey: ["product", variables.id]
+      await queryClient.invalidateQueries({
+        queryKey: ["product", variables.id],
       });
-      // Explicitly refetch to ensure data is updated
-      await queryClient.refetchQueries({ queryKey: ["admin", "products"] });
-      await queryClient.refetchQueries({ queryKey: ["products"] });
     },
   });
 }

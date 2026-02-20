@@ -53,9 +53,14 @@ export default function AdminProductsPage() {
     isError: isAdminErrorQuery,
   } = useAdminProducts({
     enabled: isAdmin,
+    refetchOnMount: true,
+    staleTime: 0,
   });
 
-  const { data: publicProducts, isLoading: isLoadingPublic } = useProducts({ Page: 1, PageSize: 1000 });
+  const { data: publicProducts, isLoading: isLoadingPublic } = useProducts(
+    { Page: 1, PageSize: 1000 },
+    { refetchOnMount: true, staleTime: 0 }
+  );
   const { data: categoryTree } = useCategoryTree();
   const deleteProduct = useAdminDeleteProduct();
 
@@ -254,9 +259,11 @@ export default function AdminProductsPage() {
                   </TableHeader>
                   <TableBody>
                     {paginatedProducts.map((product) => {
+                    // Safe stock display: coerce to number, avoid NaN/undefined
+                    const rawStock = "stockQuantity" in product ? product.stockQuantity : undefined;
                     const stock =
-                      "stockQuantity" in product
-                        ? product.stockQuantity ?? "N/A"
+                      rawStock !== undefined && rawStock !== null && !Number.isNaN(Number(rawStock))
+                        ? Math.max(0, Math.floor(Number(rawStock)))
                         : "N/A";
                     
                     // Get image URL - handle both ProductListDto (has primaryImageUrl) and ProductDto (has imageUrls)

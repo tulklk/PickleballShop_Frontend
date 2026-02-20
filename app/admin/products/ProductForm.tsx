@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { VariantFormItem, ProductVariantFormData } from "@/components/admin/VariantFormItem";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 
 const productSchema = z.object({
   name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
@@ -485,7 +486,7 @@ export function ProductForm({
         originalPrice: values.originalPrice !== undefined && values.originalPrice !== null
           ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
           : null,
-        stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
+        stockQuantity: coerceStockQuantity(values.stockQuantity),
         // Always use state imageUrls (source of truth)
         imageUrls: finalImageUrls,
         // Add variants data
@@ -606,7 +607,13 @@ export function ProductForm({
           <Label>Tồn kho</Label>
           <Input 
             type="number" 
-            {...register("stockQuantity", { valueAsNumber: true })} 
+            min={0}
+            {...register("stockQuantity", { valueAsNumber: true })}
+            onBlur={(e) => {
+              const v = e.target.value;
+              const n = coerceStockQuantity(v === "" ? undefined : Number(v));
+              setValue("stockQuantity", n, { shouldValidate: true });
+            }}
             disabled={hasVariants}
           />
           {hasVariants && (

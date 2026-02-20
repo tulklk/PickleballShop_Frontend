@@ -166,6 +166,7 @@ function HeroBannerSlider() {
                 src={banner}
                 alt={`Banner ${idx + 1}`}
                 fill
+                sizes="100vw"
                 className="object-cover"
                 priority={idx === 0}
               />
@@ -207,6 +208,7 @@ function HeroBannerSlider() {
               src={banner5}
               alt="Side Banner 1"
               fill
+              sizes="(max-width: 1024px) 0vw, 33vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent flex items-end p-4">
@@ -218,6 +220,7 @@ function HeroBannerSlider() {
               src={banner11}
               alt="JOOLA Pro IV New Colorway Vietnam Edition"
               fill
+              sizes="(max-width: 1024px) 0vw, 33vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent" />
@@ -246,6 +249,7 @@ function FeatureBanners() {
             src={banner10}
             alt="Sản phẩm mới Pickleball"
             fill
+            sizes="(max-width: 768px) 100vw, 66vw"
             className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-between p-6 md:p-8">
@@ -275,6 +279,7 @@ function FeatureBanners() {
             src={banner9}
             alt="Tiêu điểm tháng - sản phẩm nổi bật"
             fill
+            sizes="(max-width: 768px) 100vw, 33vw"
             className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-black/70 flex flex-col justify-between p-6">
@@ -402,7 +407,7 @@ function FlashSaleSection({
                 {saleProducts[0].primaryImageUrl?.includes("cloudinary") ? (
                   <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain" />
                 ) : (
-                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill className="object-contain" />
+                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
                 )}
                 {saleProducts[0].originalPrice && (
                   <span className="absolute top-2 right-2 bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg">
@@ -485,7 +490,7 @@ function FlashSaleSection({
                         {product.primaryImageUrl?.includes("cloudinary") ? (
                           <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
                         ) : product.primaryImageUrl ? (
-                          <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
+                          <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
                         ) : (
                           <div className="w-full h-full bg-gray-100" />
                         )}
@@ -527,7 +532,7 @@ function FlashSaleSection({
                         {product.primaryImageUrl?.includes("cloudinary") ? (
                           <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
                         ) : product.primaryImageUrl ? (
-                          <Image src={product.primaryImageUrl} alt="" fill className="object-contain" />
+                          <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
                         ) : (
                           <div className="w-full h-full bg-gray-100" />
                         )}
@@ -628,7 +633,7 @@ function NewProductsSection({
         {/* Left Banner */}
         <div className="hidden lg:block w-1/4">
           <div className="relative h-full rounded-xl overflow-hidden">
-            <Image src={banner10} alt="New Products" fill className="object-cover" />
+            <Image src={banner10} alt="New Products" fill sizes="(max-width: 1024px) 0vw, 25vw" className="object-cover" />
           </div>
         </div>
 
@@ -729,90 +734,61 @@ function CategoryProductsSection({
     );
   }
 
-  // Helper function to find category in tree (including children)
-  // Priority: parent category first, then children
+  // Helper: match category name by searchKey / exactName
+  const matchCategoryName = (name: string, searchKey: string, exactName?: string): boolean => {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    const searchKeyLower = searchKey.toLowerCase();
+    const exactNameLower = exactName?.toLowerCase();
+    if (exactNameLower && (n === exactNameLower || n.includes(exactNameLower))) return true;
+    if (exactNameLower) {
+      const words = exactNameLower.split(/\s+/).filter((w) => w.length > 0);
+      if (words.every((word) => n.includes(word))) return true;
+    }
+    if (n === searchKeyLower || n.includes(searchKeyLower)) return true;
+    return false;
+  };
+
+  // Find category: prefer flat list first (stable as soon as categories load), then tree
   const findCategoryInTree = (searchKey: string, exactName?: string): { id: string; name: string | null } | null => {
-    if (!categoryTree || categoryTree.length === 0) {
-      // Fallback to flat categories
-      const flatCategory = finalCategories?.find((c: any) => {
-        const name = c.name?.toLowerCase() || "";
-        if (exactName) {
-          return name === exactName.toLowerCase() || name.includes(searchKey.toLowerCase());
-        }
-        return name.includes(searchKey.toLowerCase());
-      });
-      if (flatCategory) {
+    // 1) Prefer flat categories when available so sections don't depend on categoryTree load order
+    if (finalCategories && finalCategories.length > 0) {
+      const flatCategory = finalCategories.find((c: any) =>
+        matchCategoryName(c.name || "", searchKey, exactName)
+      );
+      if (flatCategory?.id) {
         return { id: flatCategory.id, name: flatCategory.name };
       }
-      return null;
     }
 
-      const searchKeyLower = searchKey.toLowerCase();
-      const exactNameLower = exactName?.toLowerCase();
-      
-    // Helper to check if category name matches
-    const matchesCategory = (catName: string): boolean => {
-      if (!catName) return false;
-      const name = catName.toLowerCase();
-      
-      // Exact match with exactName
-      if (exactNameLower && name === exactNameLower) return true;
-      
-      // Contains all words from exactName (for multi-word categories)
-      if (exactNameLower) {
-        const exactWords = exactNameLower.split(/\s+/).filter(w => w.length > 0);
-        if (exactWords.every(word => name.includes(word))) return true;
-      }
-      
-      // Exact match with searchKey
-      if (name === searchKeyLower) return true;
-      
-      // Contains searchKey
-      if (name.includes(searchKeyLower)) return true;
-      
-      return false;
-    };
-    
-    // First, search for parent categories (top level)
+    // 2) Fallback: search in category tree (may load later)
+    if (!categoryTree || categoryTree.length === 0) return null;
+
     const searchInParents = (cats: any[]): { id: string; name: string | null } | null => {
       for (const cat of cats) {
-        const catName = cat.name || "";
-        
-        if (matchesCategory(catName)) {
+        if (matchCategoryName(cat.name || "", searchKey, exactName)) {
           return { id: cat.id || "", name: cat.name };
         }
       }
       return null;
     };
-    
-    // Try to find in parent categories first
-    const parentMatch = searchInParents(categoryTree);
-    if (parentMatch) {
-      return parentMatch;
-    }
-    
-    // If not found in parents, search in children recursively
     const searchInChildren = (cats: any[]): { id: string; name: string | null } | null => {
       for (const cat of cats) {
-        if (cat.children && cat.children.length > 0) {
+        if (cat.children?.length) {
           for (const child of cat.children) {
-            const childName = child.name || "";
-            
-            if (matchesCategory(childName)) {
+            if (matchCategoryName(child.name || "", searchKey, exactName)) {
               return { id: child.id || "", name: child.name };
             }
-            
-            // Recursively search in deeper children
-            if (child.children && child.children.length > 0) {
-              const found = searchInChildren([child]);
-              if (found) return found;
-            }
+            const found = searchInChildren(child.children?.length ? [child] : []);
+            if (found) return found;
           }
         }
       }
       return null;
     };
 
+    const parentMatch = searchInParents(categoryTree);
+    if (parentMatch) return parentMatch;
     return searchInChildren(categoryTree);
   };
 
@@ -939,42 +915,56 @@ function CategoryProductSection({
     CategoryId: category?.id 
   });
 
-  // If parent has children, fetch from each child category
+  // If parent has children, fetch from each child category (with error handling for backend 500s)
   const childQueries = useQueries({
-    queries: allCategoryIds.length > 1 
+    queries: allCategoryIds.length > 1
       ? allCategoryIds.slice(1).map((childId) => ({
           queryKey: ["products", { PageSize: 8, CategoryId: childId }],
-          queryFn: () => apiClient.getProducts({ PageSize: 8, CategoryId: childId }),
+          queryFn: async () => {
+            try {
+              return await apiClient.getProducts({ PageSize: 8, CategoryId: childId });
+            } catch (error: any) {
+              if (error?.status === 500) {
+                if (process.env.NODE_ENV === "development") {
+                  console.warn(`[CategoryProductSection] Failed to fetch products for category ${childId}:`, error);
+                }
+                return { items: [], totalCount: 0, page: 1, pageSize: 8, totalPages: 0, hasPreviousPage: false, hasNextPage: false };
+              }
+              throw error;
+            }
+          },
           staleTime: 15 * 60 * 1000,
+          retry: false,
         }))
       : [],
   });
 
-  // Combine products from parent and all children
+  // Combine products from parent and successful child queries only
   const displayProducts = useMemo(() => {
     const products: any[] = [];
-    
-    // Add parent products
+
     if (parentProductsData?.items) {
       products.push(...parentProductsData.items);
     }
-    
-    // Add child products
+
     childQueries.forEach((query) => {
-      if (query.data?.items) {
+      if (query.isSuccess && query.data?.items) {
         products.push(...query.data.items);
       }
     });
-    
-    // Remove duplicates by ID and limit to 8
+
     const uniqueProducts = Array.from(
       new Map(products.map((p) => [p.id, p])).values()
     ).slice(0, 8);
-    
+
     return uniqueProducts;
   }, [parentProductsData?.items, childQueries]);
 
-  const isLoading = isLoadingParent || childQueries.some((q) => q.isLoading);
+  // Only show loading if parent is loading, or no parent data yet and some child queries still loading
+  const isLoading = isLoadingParent || (
+    !parentProductsData?.items?.length &&
+    childQueries.some((q) => q.isLoading)
+  );
 
   // Show skeleton while loading
   if (isLoading) {
@@ -1053,6 +1043,7 @@ function CategoryProductSection({
               src={config.banner} 
               alt={config.name} 
               fill 
+              sizes="(max-width: 1024px) 0vw, 25vw"
               className="object-cover" 
             />
             {/* Overlay content */}
@@ -1099,6 +1090,7 @@ function CategoryProductSection({
                         src={product.primaryImageUrl} 
                         alt={product.name || ""} 
                         fill 
+                        sizes="(max-width: 768px) 50vw, 25vw"
                         className="object-contain" 
                       />
                     ) : (
@@ -1238,7 +1230,7 @@ function TrendingSection({
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
                   ) : product.primaryImageUrl ? (
-                    <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
+                    <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                   ) : null}
                   {product.originalPrice && product.originalPrice > product.price && (
                     <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded shadow-md">
@@ -1274,7 +1266,7 @@ function TrendingSection({
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
                   ) : product.primaryImageUrl ? (
-                    <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
+                    <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                   ) : null}
                 </div>
                 <div className="flex-1">
@@ -1305,7 +1297,7 @@ function TrendingSection({
                   {product.primaryImageUrl?.includes("cloudinary") ? (
                     <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
                   ) : product.primaryImageUrl ? (
-                    <Image src={product.primaryImageUrl} alt="" fill className="object-cover" />
+                    <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                   ) : null}
                   {product.originalPrice && (
                     <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded">

@@ -11,6 +11,7 @@ import {
 import { ProductForm, ProductFormValues } from "../ProductForm";
 import { ProductSpecifications } from "@/components/admin/ProductSpecifications";
 import { toast } from "sonner";
+import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 import { useAuth } from "@/lib/auth/useAuth";
 import { Button } from "@/components/ui/button";
 
@@ -92,7 +93,7 @@ export default function AdminProductEditPage() {
         originalPrice: values.originalPrice !== undefined && values.originalPrice !== null 
           ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
           : null,
-        stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
+        stockQuantity: coerceStockQuantity(values.stockQuantity),
         brand: values.brand || null,
         isActive: Boolean(values.isActive),
         // Always include imageUrls as array of valid strings (even if empty)
@@ -123,7 +124,7 @@ export default function AdminProductEditPage() {
               spec: v.spec || null,
               price: v.price,
               originalPrice: v.originalPrice || null,
-              stockQuantity: v.stockQuantity,
+              stockQuantity: coerceStockQuantity(v.stockQuantity),
               sku: v.sku?.trim() || "",
               isActive: v.isActive,
             }));

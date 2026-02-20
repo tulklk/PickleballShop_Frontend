@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminCategories, useAdminCreateProduct } from "@/lib/api/hooks";
 import { ProductForm, ProductFormValues } from "../ProductForm";
 import { toast } from "sonner";
+import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 
 export default function AdminProductCreatePage() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function AdminProductCreatePage() {
         originalPrice: values.originalPrice !== undefined && values.originalPrice !== null 
           ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
           : null,
-        stockQuantity: typeof values.stockQuantity === "number" ? values.stockQuantity : Number(values.stockQuantity) || 0,
+        stockQuantity: coerceStockQuantity(values.stockQuantity),
         brand: values.brand || null,
         isActive:
           typeof values.isActive === "string"
@@ -88,7 +89,7 @@ export default function AdminProductCreatePage() {
               originalPrice: v.originalPrice !== undefined && v.originalPrice !== null
                 ? (typeof v.originalPrice === "number" ? v.originalPrice : Number(v.originalPrice))
                 : null,
-              stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : Number(v.stockQuantity) || 0,
+              stockQuantity: coerceStockQuantity(v.stockQuantity),
               sku: v.sku?.trim() || "",
               isActive: Boolean(v.isActive),
             };
