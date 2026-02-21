@@ -8,13 +8,15 @@ import { getProductUrl } from "@/lib/utils/productUrl";
 
 interface ProductCardProps {
   product: ProductListDto | ProductDto;
+  /** When false, hides the brand/category line below the product name (e.g. in New Products section). Default true. */
+  showBrand?: boolean;
 }
 
 function isProductDto(product: ProductListDto | ProductDto): product is ProductDto {
   return "imageUrls" in product;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, showBrand = true }: ProductCardProps) {
   // Helper function to validate URL
   const isValidUrl = (url: string | null | undefined): boolean => {
     if (!url || typeof url !== 'string' || url.trim() === '') {
@@ -92,7 +94,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <h3 className="text-sm font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-emerald-600">
             {product.name}
           </h3>
-          {product.brand && (
+          {showBrand && product.brand && (
             <p className="text-sm text-muted-foreground mb-2">{product.brand}</p>
           )}
           {/* Star Rating */}

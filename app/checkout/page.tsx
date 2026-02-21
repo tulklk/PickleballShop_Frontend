@@ -39,6 +39,7 @@ import {
   Mail
 } from "lucide-react";
 import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from "@/lib/utils/provinces";
+import { formatVariantInfoWithMm } from "@/lib/utils/variantDisplay";
 import momoIcon from "@/app/img/momo_icon.png";
 import vnpayLogo from "@/app/img/Logo-VNPAY-QR-350x65.png";
 import { Building2 } from "lucide-react";
@@ -994,7 +995,7 @@ function CheckoutContent() {
                       {/* Variant Info */}
                       {"variantInfo" in item && item.variantInfo && (
                         <p className="text-xs text-emerald-600 mt-1">
-                          {item.variantInfo}
+                          {formatVariantInfoWithMm(item.variantInfo)}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">

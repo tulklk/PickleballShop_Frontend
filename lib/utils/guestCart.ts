@@ -29,7 +29,9 @@ export function addToGuestCart(item: GuestCartItemInput): void {
   try {
     const cart = getGuestCart();
     const existingItemIndex = cart.findIndex(
-      (i) => i.productId === item.productId
+      (i) =>
+        i.productId === item.productId &&
+        (i.productVariantId ?? null) === (item.productVariantId ?? null)
     );
 
     if (existingItemIndex >= 0) {

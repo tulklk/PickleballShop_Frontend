@@ -89,10 +89,13 @@ export default function AdminProductEditPage() {
         name: values.name || "",
         description: values.description || null,
         categoryId: finalCategoryId.trim(), // Ensure no whitespace
-        price: typeof values.price === "number" ? values.price : Number(values.price) || 0,
-        originalPrice: values.originalPrice !== undefined && values.originalPrice !== null 
-          ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
-          : null,
+        price: typeof values.price === "number" && !Number.isNaN(values.price) ? values.price : Number(values.price) || 0,
+        originalPrice:
+          values.originalPrice !== undefined &&
+          values.originalPrice !== null &&
+          !Number.isNaN(Number(values.originalPrice))
+            ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
+            : null,
         stockQuantity: coerceStockQuantity(values.stockQuantity),
         brand: values.brand || null,
         isActive: Boolean(values.isActive),
@@ -125,7 +128,6 @@ export default function AdminProductEditPage() {
               price: v.price,
               originalPrice: v.originalPrice || null,
               stockQuantity: coerceStockQuantity(v.stockQuantity),
-              sku: v.sku?.trim() || "",
               isActive: v.isActive,
             }));
           }
@@ -193,7 +195,22 @@ export default function AdminProductEditPage() {
       }
       
       console.log("═══════════════════════════════════════════════════════");
-      const errorMessage = error?.data?.message || error?.message || error?.data?.error || "Không thể cập nhật sản phẩm";
+      let errorMessage = error?.data?.message || error?.message || error?.data?.error || "Không thể cập nhật sản phẩm";
+      if (error?.data?.errors) {
+        const parts: string[] = [];
+        for (const [k, v] of Object.entries(error.data.errors)) {
+          const val = Array.isArray(v) ? v.join(", ") : String(v);
+          parts.push(`${k}: ${val}`);
+        }
+        if (parts.length > 0) {
+          errorMessage = "Lỗi dữ liệu: " + parts.join("; ");
+          if (/Description.*5000|5000.*character/i.test(errorMessage)) {
+            errorMessage += " — Để dùng mô tả dài hơn 5.000 ký tự, cần tăng giới hạn trường Description ở backend (API).";
+          }
+        }
+      } else if (/Description.*5000|5000.*character/i.test(errorMessage)) {
+        errorMessage += " — Để dùng mô tả dài hơn 5.000 ký tự, cần tăng giới hạn trường Description ở backend (API).";
+      }
       toast.error(errorMessage);
     }
   };

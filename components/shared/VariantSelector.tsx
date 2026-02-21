@@ -317,7 +317,7 @@ export function VariantSelector({
                       : ""
                   } ${outOfStock ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  {spec}
+                  {spec && /mm$/i.test(spec) ? spec : `${spec}mm`}
                   {outOfStock && " (Hết)"}
                 </Button>
               );

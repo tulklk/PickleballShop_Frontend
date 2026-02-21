@@ -8,6 +8,7 @@ import { useCart, useUpdateCartItem, useDeleteCartItem } from "@/lib/api/hooks";
 import { useAuth } from "@/lib/auth/useAuth";
 import { getGuestCart, GuestCartItem } from "@/lib/utils/guestCart";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
+import { formatVariantInfoWithMm } from "@/lib/utils/variantDisplay";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -155,7 +156,9 @@ export function CartPreview({ onClose }: CartPreviewProps) {
           const lineTotal = (item as any).lineTotal || unitPrice * quantity;
 
           const cartItemId = isAuthenticated ? (item as any).id : `guest-${index}`;
-          const itemSize = isAuthenticated ? (item as any).size : (item as GuestCartItem & { size?: string }).size;
+          const variantInfo = isAuthenticated
+            ? (item as any).variantInfo
+            : (item as GuestCartItem).variantInfo;
 
           return (
             <div
@@ -194,9 +197,9 @@ export function CartPreview({ onClose }: CartPreviewProps) {
                 <p className="text-sm font-medium text-gray-900 line-clamp-2">
                   {productName || "Sản phẩm"}
                 </p>
-                    {itemSize && (
+                    {variantInfo && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Size: {itemSize}
+                        {formatVariantInfoWithMm(variantInfo)}
                       </p>
                     )}
                   </div>

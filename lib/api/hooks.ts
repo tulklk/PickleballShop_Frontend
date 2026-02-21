@@ -586,10 +586,8 @@ export function useDeleteCartItem() {
   return useMutation({
     mutationFn: (cartItemId: string) => apiClient.deleteCartItem(cartItemId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ 
-        queryKey: ["cart"],
-        refetchType: "active"
-      });
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
+      await queryClient.refetchQueries({ queryKey: ["cart"], type: "active" });
     },
   });
 }

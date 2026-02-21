@@ -7,8 +7,9 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectItem } from "@/components/ui/select";
+import { Controller } from "react-hook-form";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import type { Product, ProductCategory, ProductVariantDto, ProductDto, CategoryTreeDto } from "@/lib/api/types";
 import { X, Plus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -17,17 +18,30 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 
-const productSchema = z.object({
-  name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
-  description: z.string().optional().nullable(),
-  categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
-  price: z.number().min(0, "Giá phải lớn hơn hoặc bằng 0"),
-  originalPrice: z.number().nullable().optional(),
-  stockQuantity: z.number().int().min(0, "Tồn kho phải lớn hơn hoặc bằng 0"),
-  brand: z.string().optional().nullable(),
-  isActive: z.boolean(),
-  imageUrls: z.array(z.string().url("URL không hợp lệ")).optional(),
-});
+const DESCRIPTION_MAX_LENGTH = 50_000;
+
+const productSchema = z
+  .object({
+    name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
+    description: z
+      .string()
+      .optional()
+      .nullable()
+      .refine((v) => v == null || v.length <= DESCRIPTION_MAX_LENGTH, {
+        message: `Mô tả không được vượt quá ${DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")} ký tự`,
+      }),
+    categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
+    price: z.number().min(0, "Giá giảm phải lớn hơn hoặc bằng 0"),
+    originalPrice: z.number().nullable().optional(),
+    stockQuantity: z.number().int().min(0, "Tồn kho phải lớn hơn hoặc bằng 0"),
+    brand: z.string().optional().nullable(),
+    isActive: z.boolean(),
+    imageUrls: z.array(z.string().url("URL không hợp lệ")).optional(),
+  })
+  .refine(
+    (data) => data.price > 0 || (data.originalPrice != null && Number(data.originalPrice) > 0),
+    { message: "Ít nhất một trong hai ô Giá giảm hoặc Giá gốc phải lớn hơn 0", path: ["price"] }
+  );
 
 export type ProductFormValues = z.infer<typeof productSchema> & {
   variants?: ProductVariantFormData[] | null;
@@ -101,6 +115,10 @@ export function ProductForm({
   const categoryId = watch("categoryId");
   const brand = watch("brand");
   const watchedImageUrls = watch("imageUrls");
+  const watchedPrice = watch("price") ?? 0;
+  const watchedOriginalPrice = watch("originalPrice");
+  // Giá bán hiệu lực: có giá giảm thì dùng giá giảm, không thì dùng giá gốc
+  const effectivePrice = watchedPrice > 0 ? watchedPrice : (watchedOriginalPrice ?? 0);
   
   // Get children categories (brands) based on selected category
   const getBrandOptions = (): CategoryTreeDto[] => {
@@ -211,7 +229,6 @@ export function ProductForm({
           price: v.price,
           originalPrice: v.originalPrice || null,
           stockQuantity: v.stockQuantity,
-          sku: v.sku || "",
           isActive: v.isActive,
         }));
         setVariants(initialVariants);
@@ -223,6 +240,18 @@ export function ProductForm({
       }
     }
   }, [initialData, setValue]);
+
+  // Sync variant prices from product when hasVariants and price/originalPrice change
+  useEffect(() => {
+    if (!hasVariants) return;
+    const nextOriginal = watchedOriginalPrice ?? null;
+    setVariants((prev) => {
+      if (prev.length === 0) return prev;
+      const first = prev[0];
+      if (first.price === effectivePrice && (first.originalPrice ?? null) === nextOriginal) return prev;
+      return prev.map((v) => ({ ...v, price: effectivePrice, originalPrice: nextOriginal }));
+    });
+  }, [hasVariants, effectivePrice, watchedOriginalPrice]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -305,22 +334,17 @@ export function ProductForm({
     console.log("Removed image, updated imageUrls:", updated);
   };
 
-  // Variants management functions
+  // Variants management functions (use effectivePrice so variant gets correct selling price)
   const addVariant = () => {
-    const currentPrice = watch("price") || 0;
-    const currentOriginalPrice = watch("originalPrice");
-    
     const newVariant: ProductVariantFormData = {
       color: null,
       size: null,
       spec: null,
-      price: currentPrice,
-      originalPrice: currentOriginalPrice || null,
+      price: effectivePrice,
+      originalPrice: watchedOriginalPrice ?? null,
       stockQuantity: 0,
-      sku: "",
       isActive: true,
     };
-    
     setVariants([...variants, newVariant]);
   };
 
@@ -333,21 +357,15 @@ export function ProductForm({
       return;
     }
     
-    const currentPrice = watch("price") || 0;
-    const currentOriginalPrice = watch("originalPrice");
-    
-    // Create multiple variants
     const newVariants: ProductVariantFormData[] = Array.from({ length: count }, () => ({
       color: null,
       size: null,
       spec: null,
-      price: currentPrice,
-      originalPrice: currentOriginalPrice || null,
+      price: effectivePrice,
+      originalPrice: watchedOriginalPrice ?? null,
       stockQuantity: 0,
-      sku: "",
       isActive: true,
     }));
-    
     setVariants([...variants, ...newVariants]);
     setVariantCountInput(""); // Clear input after creating
     toast.success(`Đã tạo ${count} variant${count > 1 ? 's' : ''}`);
@@ -361,18 +379,13 @@ export function ProductForm({
       // Enable variants - set stock to 0
       setValue("stockQuantity", 0);
       if (variants.length === 0) {
-        // Add first variant if none exists
-        const currentPrice = watch("price") || 0;
-        const currentOriginalPrice = watch("originalPrice");
-        
         const newVariant: ProductVariantFormData = {
           color: null,
           size: null,
           spec: null,
-          price: currentPrice,
-          originalPrice: currentOriginalPrice || null,
+          price: effectivePrice,
+          originalPrice: watchedOriginalPrice ?? null,
           stockQuantity: 0,
-          sku: "",
           isActive: true,
         };
         setVariants([newVariant]);
@@ -482,10 +495,13 @@ export function ProductForm({
         // Ensure categoryId is valid and not empty
         categoryId: finalCategoryId,
         // Ensure numbers are actually numbers
-        price: typeof values.price === "number" ? values.price : Number(values.price) || 0,
-        originalPrice: values.originalPrice !== undefined && values.originalPrice !== null
-          ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
-          : null,
+        price: typeof values.price === "number" && !Number.isNaN(values.price) ? values.price : Number(values.price) || 0,
+        originalPrice:
+          values.originalPrice !== undefined &&
+          values.originalPrice !== null &&
+          !Number.isNaN(Number(values.originalPrice))
+            ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
+            : null,
         stockQuantity: coerceStockQuantity(values.stockQuantity),
         // Always use state imageUrls (source of truth)
         imageUrls: finalImageUrls,
@@ -586,14 +602,14 @@ export function ProductForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <Label>Giá bán</Label>
-          <Input type="number" step="0.01" {...register("price", { valueAsNumber: true })} />
+          <Label>Giá giảm — có thể 0 nếu chỉ có giá gốc</Label>
+          <Input type="number" step="0.01" min={0} {...register("price", { valueAsNumber: true })} />
           {errors.price && (
             <p className="text-sm text-destructive">{errors.price.message}</p>
           )}
         </div>
         <div>
-          <Label>Giá gốc (nếu có)</Label>
+          <Label>Giá gốc</Label>
           <Input
             type="number"
             step="0.01"
@@ -627,7 +643,23 @@ export function ProductForm({
 
       <div>
         <Label>Mô tả</Label>
-        <Textarea rows={4} {...register("description")} />
+        <p className="text-sm text-muted-foreground mb-2">
+          Có thể chèn ảnh trực tiếp vào mô tả (nút 📷 Ảnh hoặc dán ảnh). Ảnh được tải lên Cloudinary. Mô tả tối đa {DESCRIPTION_MAX_LENGTH.toLocaleString("vi-VN")} ký tự.
+        </p>
+        <Controller
+          name="description"
+          control={control}
+          render={({ field }) => (
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              placeholder="Nhập mô tả sản phẩm. Có thể in đậm, in nghiêng, chèn ảnh..."
+              minLength={0}
+              uploadFolder="pickleball-shop/products/description"
+              className="rounded-md"
+            />
+          )}
+        />
       </div>
 
       <div>
@@ -776,8 +808,9 @@ export function ProductForm({
                   key={index}
                   variant={variant}
                   index={index}
-                  basePrice={watch("price") || 0}
-                  baseOriginalPrice={watch("originalPrice")}
+                  basePrice={effectivePrice}
+                  baseOriginalPrice={watchedOriginalPrice}
+                  priceLocked={true}
                   onChange={(field, value) => updateVariant(index, field, value)}
                   onRemove={() => removeVariant(index)}
                 />

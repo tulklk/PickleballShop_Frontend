@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { useQueries } from "@tanstack/react-query";
 import {
   useAdminProducts,
   useAdminDeleteProduct,
   useProducts,
   useCategoryTree,
 } from "@/lib/api/hooks";
+import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,8 +29,8 @@ import {
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
 import { getProductUrl } from "@/lib/utils/productUrl";
-import { PackagePlus, Trash2, Eye, Pencil, Package } from "lucide-react";
-import type { Product, ProductListDto, ProductDto } from "@/lib/api/types";
+import { PackagePlus, Trash2, Eye, Pencil, Package, ChevronDown, ChevronRight } from "lucide-react";
+import type { Product, ProductListDto, ProductDto, ProductVariantDto } from "@/lib/api/types";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth/useAuth";
 import { DeleteConfirmationDialog } from "@/components/shared/DeleteConfirmationDialog";
@@ -45,7 +47,17 @@ export default function AdminProductsPage() {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productName, setProductName] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set());
   const pageSize = 10;
+
+  const toggleExpand = (productId: string) => {
+    setExpandedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
 
   const {
     data: adminProducts,
@@ -63,6 +75,7 @@ export default function AdminProductsPage() {
   );
   const { data: categoryTree } = useCategoryTree();
   const deleteProduct = useAdminDeleteProduct();
+
 
   // Prefer publicProducts (ProductListDto[]) because it has primaryImageUrl
   // Only use adminProducts if publicProducts is not available
@@ -124,6 +137,23 @@ export default function AdminProductsPage() {
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  const visibleProductIds = useMemo(() => paginatedProducts.map((p) => p.id), [paginatedProducts]);
+  const visibleProductQueries = useQueries({
+    queries: visibleProductIds.map((id) => ({
+      queryKey: ["product", id] as const,
+      queryFn: () => apiClient.getProductById(id),
+      enabled: true,
+    })),
+  });
+  const productDetailsMap = useMemo(() => {
+    const map: Record<string, ProductDto> = {};
+    visibleProductQueries.forEach((q, i) => {
+      const id = visibleProductIds[i];
+      if (id && q.data) map[id] = q.data as ProductDto;
+    });
+    return map;
+  }, [visibleProductQueries, visibleProductIds]);
 
   // Reset to page 1 when search term or root category filter changes
   useEffect(() => {
@@ -249,6 +279,7 @@ export default function AdminProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10"></TableHead>
                       <TableHead className="w-20">Hình ảnh</TableHead>
                       <TableHead>Tên</TableHead>
                       <TableHead>Giá bán</TableHead>
@@ -310,8 +341,36 @@ export default function AdminProductsPage() {
                       imageUrl.includes('cloudinary.com')
                     );
 
+                    const productDetail = productDetailsMap[product.id];
+                    const variants = productDetail?.hasVariants && Array.isArray(productDetail.variants) ? productDetail.variants : [];
+                    const hasVariants = variants.length > 0;
+                    const isExpanded = expandedProductIds.has(product.id);
+                    const isLoadingDetail = isExpanded && productDetail === undefined && visibleProductIds.includes(product.id);
+
+                    const getVariantDisplayName = (v: ProductVariantDto) =>
+                      v.displayName ?? ([v.color, v.size, v.spec].filter(Boolean).join(" / ") || "Variant");
+
                     return (
+                      <>
                       <TableRow key={product.id}>
+                        <TableCell className="w-10">
+                          {hasVariants ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleExpand(product.id)}
+                              className="flex items-center justify-center w-8 h-8 hover:bg-gray-200 rounded transition-colors"
+                              title={isExpanded ? "Thu gọn" : "Mở rộng xem variants"}
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-gray-600" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-gray-600" />
+                              )}
+                            </button>
+                          ) : (
+                            <span className="w-8 inline-block" />
+                          )}
+                        </TableCell>
                         <TableCell>
                           {imageUrl ? (
                             <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-emerald-100 bg-emerald-50">
@@ -388,6 +447,46 @@ export default function AdminProductsPage() {
                           </div>
                         </TableCell>
                       </TableRow>
+                      {isExpanded && (
+                        <>
+                          {isLoadingDetail && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center text-muted-foreground py-4">
+                                Đang tải variants...
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {!isLoadingDetail && hasVariants && variants.map((variant) => (
+                            <TableRow key={variant.id} className="bg-gray-50/50">
+                              <TableCell className="w-10"></TableCell>
+                              <TableCell></TableCell>
+                              <TableCell className="pl-8 text-sm text-gray-700">
+                                <span className="text-gray-400">↳</span> {getVariantDisplayName(variant)}
+                              </TableCell>
+                              <TableCell>{formatCurrency(variant.price)}</TableCell>
+                              <TableCell>{variant.stockQuantity ?? "—"}</TableCell>
+                              <TableCell>—</TableCell>
+                              <TableCell>
+                                <div className="flex justify-end gap-2">
+                                  <Link href={`/admin/products/${product.id}`}>
+                                    <Button size="icon" variant="outline" title="Chỉnh sửa sản phẩm">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  </Link>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {!isLoadingDetail && !hasVariants && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="pl-12 text-sm text-muted-foreground py-2 bg-gray-50/50">
+                                Không có variant.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      )}
+                    </>
                     );
                     })}
                   </TableBody>

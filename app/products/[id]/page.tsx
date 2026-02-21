@@ -28,6 +28,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
 import { getProductUrl } from "@/lib/utils/productUrl";
+
+function getVariantDisplayInfo(v: ProductVariantDto | null): string | null {
+  if (!v) return null;
+  if (v.displayName && v.displayName.trim()) return v.displayName.trim();
+  const parts: string[] = [];
+  if (v.color?.trim()) parts.push(`Màu: ${v.color.trim()}`);
+  if (v.size?.trim()) parts.push(`Size: ${v.size.trim()}`);
+  if (v.spec?.trim()) parts.push(/mm$/i.test(v.spec) ? `Thông số: ${v.spec}` : `Thông số: ${v.spec}mm`);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
 import { ProductComments } from "@/components/product/ProductComments";
 import { findRootCategoryName } from "@/lib/utils/categoryUtils";
 import type { ProductSpecification } from "@/lib/api/types";
@@ -177,10 +187,12 @@ export default function ProductDetailPage() {
     if (!isAuthenticated) {
       addToGuestCart({
         productId: product.id,
+        productVariantId: variantId ?? undefined,
         quantity,
         productName: product.name || undefined,
         productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
         unitPrice: displayPrice,
+        variantInfo: getVariantDisplayInfo(selectedVariant) ?? undefined,
       });
       toast.success("Đã thêm vào giỏ hàng!");
       // Invalidate cart query to update cart count in navbar
@@ -209,10 +221,12 @@ export default function ProductDetailPage() {
         console.warn("API failed, saving to guest cart as fallback:", error);
         addToGuestCart({
           productId: product.id,
+          productVariantId: variantId ?? undefined,
           quantity,
           productName: product.name || undefined,
           productImageUrl: product.primaryImageUrl || product.imageUrls?.[0] || undefined,
           unitPrice: displayPrice,
+          variantInfo: getVariantDisplayInfo(selectedVariant) ?? undefined,
         });
         toast.warning("Đã lưu vào giỏ hàng tạm thời. Vui lòng thử lại sau.");
         queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -1121,7 +1135,17 @@ export default function ProductDetailPage() {
                       }`}
                     >
                       {(() => {
-                        // Parse description into sections based on numbered headings (1., 2., 3., etc.)
+                        // Rich text (HTML) from admin editor: render as HTML
+                        const isHtmlDescription = /<[a-z][\s\S]*>/i.test(product.description) || product.description.includes("</");
+                        if (isHtmlDescription) {
+                          return (
+                            <div
+                              className="text-gray-700 leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_img]:my-4 [&_img]:block"
+                              dangerouslySetInnerHTML={{ __html: product.description }}
+                            />
+                          );
+                        }
+                        // Plain text: parse into sections based on numbered headings (1., 2., 3., etc.)
                         const sections: Array<{ title: string; content: string; index: number }> = [];
                         const lines = product.description.split('\n');
                         let currentSection: { title: string; content: string; index: number } | null = null;

@@ -7,6 +7,7 @@ import {
   useClearCart,
   useProduct,
 } from "@/lib/api/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
@@ -18,6 +19,7 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { useRouter } from "next/navigation";
 import { getGuestCart, clearGuestCart } from "@/lib/utils/guestCart";
 import type { CartItemDto } from "@/lib/api/types";
+import { formatVariantInfoWithMm } from "@/lib/utils/variantDisplay";
 
 export default function CartPage() {
   return <CartContent />;
@@ -25,6 +27,7 @@ export default function CartPage() {
 
 function CartContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const { data: cart, isLoading } = useCart();
   const updateCartItem = useUpdateCartItem();
@@ -71,6 +74,8 @@ function CartContent() {
         guestCart.splice(itemIndex, 1);
         localStorage.setItem("guestCart", JSON.stringify(guestCart));
         window.dispatchEvent(new Event("storage"));
+        await queryClient.invalidateQueries({ queryKey: ["cart"] });
+        await queryClient.refetchQueries({ queryKey: ["cart"], type: "active" });
         toast.success("Đã xóa sản phẩm");
       }
       return;
@@ -156,9 +161,26 @@ function CartContent() {
               <CardTitle>Tóm tắt đơn hàng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between">
-                <span>Sản phẩm ({cart.totalItems})</span>
-                <span>{formatCurrency(cart.subTotal)}</span>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Sản phẩm ({cart.totalItems})</span>
+                  <span>{formatCurrency(cart.subTotal)}</span>
+                </div>
+                {cart.items.length > 0 && (
+                  <ul className="text-xs text-muted-foreground space-y-1 list-none pl-0">
+                    {cart.items.map((item) => (
+                      <li key={item.id} className="flex justify-between gap-2">
+                        <span className="min-w-0 truncate">
+                          {item.productName || "Sản phẩm"}
+                          {"variantInfo" in item && item.variantInfo && (
+                            <span className="text-emerald-600"> — {formatVariantInfoWithMm(item.variantInfo)}</span>
+                          )}
+                        </span>
+                        <span className="shrink-0">×{item.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className="border-t pt-4">
                 <div className="flex justify-between text-lg font-bold">
@@ -267,7 +289,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
                   {item.productName}
                 </h3>
                 {"variantInfo" in item && item.variantInfo && (
-                  <p className="text-xs md:text-sm text-gray-500">{item.variantInfo}</p>
+                  <p className="text-xs md:text-sm text-gray-500">{formatVariantInfoWithMm(item.variantInfo)}</p>
                 )}
                 <p className="text-xs md:text-sm text-gray-500 mt-1">
                   <span className="font-medium text-gray-700">Tình trạng:</span>{" "}

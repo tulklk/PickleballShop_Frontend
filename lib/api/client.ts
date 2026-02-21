@@ -987,12 +987,8 @@ class ApiClient {
       if (Array.isArray(variants) && variants.length > 0) {
         // Validate and format variants
         const formattedVariants = variants.map((v: any, index: number) => {
-          // SKU is required - validate it's not empty
-          const sku = v.sku?.trim() || "";
-          if (!sku) {
-            throw new Error(`Variant ${index + 1}: SKU is required and cannot be empty`);
-          }
-          
+          // SKU no longer from form; use generated placeholder if backend requires it
+          const sku = (v.sku?.trim() || "") || `VAR-${index + 1}`;
           return {
             color: v.color?.trim() || null,
             size: v.size?.trim() || null,
@@ -1002,7 +998,7 @@ class ApiClient {
               ? (typeof v.originalPrice === "number" ? v.originalPrice : Number(v.originalPrice))
               : null,
             stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : Number(v.stockQuantity) || 0,
-            sku: sku, // SKU is required and validated above
+            sku,
             isActive: Boolean(v.isActive),
           };
         });
@@ -1081,9 +1077,19 @@ class ApiClient {
     // - Only add variants field if it's explicitly provided
     // - If undefined, don't add it = keep existing variants
     // - If null or [], add it = remove all variants
-    // - If [...], add it = replace all variants
+    // - If [...], add it = replace all variants (with generated sku if missing)
     if ((data as any).variants !== undefined) {
-      payload.variants = (data as any).variants;
+      const rawVariants = (data as any).variants;
+      if (rawVariants === null || !Array.isArray(rawVariants)) {
+        payload.variants = rawVariants;
+      } else if (rawVariants.length === 0) {
+        payload.variants = [];
+      } else {
+        payload.variants = rawVariants.map((v: any, index: number) => ({
+          ...v,
+          sku: (v.sku?.trim() || "") || `VAR-${index + 1}`,
+        }));
+      }
     }
 
     console.log("🟡 [adminUpdateProduct] Final payload:", JSON.stringify(payload, null, 2));

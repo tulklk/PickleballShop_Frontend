@@ -16,7 +16,6 @@ export interface ProductVariantFormData {
   price: number;
   originalPrice?: number | null;
   stockQuantity: number;
-  sku: string;
   isActive: boolean;
 }
 
@@ -25,6 +24,8 @@ interface VariantFormItemProps {
   index: number;
   basePrice: number;
   baseOriginalPrice?: number | null;
+  /** When true, Giá and Giá gốc are read-only and follow product price. Default false. */
+  priceLocked?: boolean;
   onChange: (field: keyof ProductVariantFormData, value: any) => void;
   onRemove: () => void;
 }
@@ -34,6 +35,7 @@ export function VariantFormItem({
   index,
   basePrice,
   baseOriginalPrice,
+  priceLocked = false,
   onChange,
   onRemove,
 }: VariantFormItemProps) {
@@ -156,13 +158,16 @@ export function VariantFormItem({
           <Label className="text-sm font-semibold">
             Thông số: <span className="text-red-500">*</span>
           </Label>
-          <Input
-            type="text"
-            value={variant.spec || ""}
-            onChange={(e) => onChange("spec", e.target.value || null)}
-            placeholder="Ví dụ: 13mm, 15mm"
-            className="mt-1"
-          />
+          <div className="mt-1 flex items-center gap-2">
+            <Input
+              type="text"
+              value={variant.spec || ""}
+              onChange={(e) => onChange("spec", e.target.value || null)}
+              placeholder="Ví dụ: 13, 15"
+              className="flex-1"
+            />
+            <span className="text-sm font-medium text-muted-foreground shrink-0">mm</span>
+          </div>
         </div>
       )}
 
@@ -190,13 +195,16 @@ export function VariantFormItem({
           </div>
           <div>
             <Label className="text-sm">Thông số (tùy chọn)</Label>
-            <Input
-              type="text"
-              value={variant.spec || ""}
-              onChange={(e) => onChange("spec", e.target.value || null)}
-              placeholder="Thông số"
-              className="mt-1"
-            />
+            <div className="mt-1 flex items-center gap-2">
+              <Input
+                type="text"
+                value={variant.spec || ""}
+                onChange={(e) => onChange("spec", e.target.value || null)}
+                placeholder="Ví dụ: 13, 15"
+                className="flex-1"
+              />
+              <span className="text-sm font-medium text-muted-foreground shrink-0">mm</span>
+            </div>
           </div>
           {!hasAtLeastOneAttribute && (
             <div className="col-span-3 flex items-center gap-2 text-amber-600 text-sm">
@@ -207,38 +215,57 @@ export function VariantFormItem({
         </div>
       )}
 
-      {/* Price Fields */}
+      {/* Price Fields: read-only when priceLocked, else editable */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-sm font-semibold">
             Giá: <span className="text-red-500">*</span>
           </Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={variant.price || ""}
-            onChange={(e) => onChange("price", parseFloat(e.target.value) || 0)}
-            placeholder="Giá của variant"
-            className="mt-1"
-            min="0"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Giá gợi ý từ product: {basePrice.toLocaleString("vi-VN")} ₫
-          </p>
+          {priceLocked ? (
+            <>
+              <div className="mt-1 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700">
+                {variant.price != null ? variant.price.toLocaleString("vi-VN") : basePrice.toLocaleString("vi-VN")} ₫
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Lấy theo giá sản phẩm</p>
+            </>
+          ) : (
+            <>
+              <Input
+                type="number"
+                step="0.01"
+                value={variant.price || ""}
+                onChange={(e) => onChange("price", parseFloat(e.target.value) || 0)}
+                placeholder="Giá của variant"
+                className="mt-1"
+                min="0"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Giá gợi ý từ product: {basePrice.toLocaleString("vi-VN")} ₫
+              </p>
+            </>
+          )}
         </div>
         <div>
           <Label className="text-sm font-semibold">Giá gốc (tùy chọn):</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={variant.originalPrice || ""}
-            onChange={(e) =>
-              onChange("originalPrice", e.target.value ? parseFloat(e.target.value) : null)
-            }
-            placeholder="Giá gốc nếu có giảm giá"
-            className="mt-1"
-            min="0"
-          />
+          {priceLocked ? (
+            <div className="mt-1 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700">
+              {variant.originalPrice != null && variant.originalPrice > 0
+                ? `${variant.originalPrice.toLocaleString("vi-VN")} ₫`
+                : "—"}
+            </div>
+          ) : (
+            <Input
+              type="number"
+              step="0.01"
+              value={variant.originalPrice || ""}
+              onChange={(e) =>
+                onChange("originalPrice", e.target.value ? parseFloat(e.target.value) : null)
+              }
+              placeholder="Giá gốc nếu có giảm giá"
+              className="mt-1"
+              min="0"
+            />
+          )}
         </div>
       </div>
 

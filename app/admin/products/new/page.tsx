@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAdminCategories, useAdminCreateProduct } from "@/lib/api/hooks";
+import { useAdminCategories, useAdminCreateProduct, useAdminBulkUpdateProductSpecifications } from "@/lib/api/hooks";
 import { ProductForm, ProductFormValues } from "../ProductForm";
+import { ProductSpecificationsDraft, type DraftSpec } from "@/components/admin/ProductSpecificationsDraft";
 import { toast } from "sonner";
 import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 
@@ -11,6 +13,8 @@ export default function AdminProductCreatePage() {
   const router = useRouter();
   const { data: categories } = useAdminCategories();
   const createProduct = useAdminCreateProduct();
+  const bulkUpdateSpecs = useAdminBulkUpdateProductSpecifications();
+  const [draftSpecs, setDraftSpecs] = useState<DraftSpec[]>([]);
 
   const handleSubmit = async (values: ProductFormValues) => {
     console.log("═══════════════════════════════════════════════════════");
@@ -54,10 +58,13 @@ export default function AdminProductCreatePage() {
         name: values.name || "",
         description: values.description || null,
         categoryId: finalCategoryId,
-        price: typeof values.price === "number" ? values.price : Number(values.price) || 0,
-        originalPrice: values.originalPrice !== undefined && values.originalPrice !== null 
-          ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
-          : null,
+        price: typeof values.price === "number" && !Number.isNaN(values.price) ? values.price : Number(values.price) || 0,
+        originalPrice:
+          values.originalPrice !== undefined &&
+          values.originalPrice !== null &&
+          !Number.isNaN(Number(values.originalPrice))
+            ? (typeof values.originalPrice === "number" ? values.originalPrice : Number(values.originalPrice))
+            : null,
         stockQuantity: coerceStockQuantity(values.stockQuantity),
         brand: values.brand || null,
         isActive:
@@ -90,7 +97,6 @@ export default function AdminProductCreatePage() {
                 ? (typeof v.originalPrice === "number" ? v.originalPrice : Number(v.originalPrice))
                 : null,
               stockQuantity: coerceStockQuantity(v.stockQuantity),
-              sku: v.sku?.trim() || "",
               isActive: Boolean(v.isActive),
             };
           });
@@ -122,13 +128,29 @@ export default function AdminProductCreatePage() {
         isValidUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productData.categoryId || ""),
       });
       
-      await createProduct.mutateAsync(productData);
+      const created = await createProduct.mutateAsync(productData);
+      
+      if (draftSpecs.length > 0 && created?.id) {
+        try {
+          await bulkUpdateSpecs.mutateAsync({
+            productId: created.id,
+            data: {
+              specifications: draftSpecs.map((s, i) => ({
+                key: s.key,
+                value: s.value,
+                displayOrder: i + 1,
+              })),
+            },
+          });
+        } catch (specError: any) {
+          toast.error(specError?.message || "Tạo sản phẩm thành công nhưng không lưu được thông số kỹ thuật.");
+        }
+      }
       
       console.log("✅ CREATE PRODUCT - SUCCESS");
       console.log("═══════════════════════════════════════════════════════");
       toast.success("Tạo sản phẩm thành công");
       
-      // Wait a bit to ensure cache is updated before redirecting
       await new Promise((resolve) => setTimeout(resolve, 300));
       router.push("/admin/products");
     } catch (error: any) {
@@ -168,6 +190,9 @@ export default function AdminProductCreatePage() {
             }
             if (validationErrors.length > 0) {
               serverErrorMessage = "Lỗi dữ liệu: " + validationErrors.join("; ");
+              if (/Description.*5000|5000.*character/i.test(serverErrorMessage)) {
+                serverErrorMessage += " — Để dùng mô tả dài hơn 5.000 ký tự, cần tăng giới hạn trường Description ở backend (API).";
+              }
             }
           }
           
@@ -200,7 +225,11 @@ export default function AdminProductCreatePage() {
           }
         }
         if (validationErrors.length > 0) {
-          toast.error("Lỗi dữ liệu: " + validationErrors.join("; "));
+          let msg = "Lỗi dữ liệu: " + validationErrors.join("; ");
+          if (/Description.*5000|5000.*character/i.test(msg)) {
+            msg += " — Để dùng mô tả dài hơn 5.000 ký tự, cần tăng giới hạn trường Description ở backend (API).";
+          }
+          toast.error(msg);
           return;
         }
       }
@@ -215,7 +244,7 @@ export default function AdminProductCreatePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Tạo sản phẩm mới</CardTitle>
@@ -228,6 +257,8 @@ export default function AdminProductCreatePage() {
           />
         </CardContent>
       </Card>
+
+      <ProductSpecificationsDraft value={draftSpecs} onChange={setDraftSpecs} />
     </div>
   );
 }

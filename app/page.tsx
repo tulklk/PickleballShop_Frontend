@@ -41,31 +41,43 @@ export default function HomePage() {
   const { data: allProductsData, isLoading: isLoadingAllProducts } = useProducts({ PageSize: 50 });
   const { data: flashSaleProductsData, isLoading: isLoadingFlashSale } = useProducts({ PageSize: 20 });
 
-  // Prefetch category-specific products when categories are loaded
+  // Prefetch category-specific products when categories are loaded (same categoryName mapping as CategoryProductsSection)
   useEffect(() => {
-    if (categories && categories.length > 0) {
-      const categoryConfigs = [
-        { searchKey: "vợt" },
-        { searchKey: "giày" },
-        { searchKey: "phụ kiện" },
-        { searchKey: "bóng" },
-      ];
+    if (!categories?.length) return;
 
-      categoryConfigs.forEach((config) => {
-        const category = categories.find((c) =>
-          c.name?.toLowerCase().includes(config.searchKey.toLowerCase())
-        );
-        if (category?.id) {
-          // Prefetch in background
-          queryClient.prefetchQuery({
-            queryKey: ["products", { PageSize: 8, CategoryId: category.id }],
-            queryFn: () => apiClient.getProducts({ PageSize: 8, CategoryId: category.id }),
-            staleTime: 15 * 60 * 1000,
-            gcTime: 45 * 60 * 1000,
-          });
-        }
-      });
-    }
+    const categoryNames = ["Vợt Pickleball", "Giày Pickleball", "Phụ kiện Pickleball", "Bóng Pickleball"];
+
+    const flattenCategories = (cats: any[]): any[] => {
+      if (!cats?.length) return [];
+      const out: any[] = [];
+      for (const c of cats) {
+        if (c?.id) out.push(c);
+        if (c?.subCategories?.length) out.push(...flattenCategories(c.subCategories));
+      }
+      return out;
+    };
+
+    const allCats = flattenCategories(categories);
+
+    categoryNames.forEach((categoryName) => {
+      const targetNorm = categoryName.trim().toLowerCase();
+      if (!targetNorm) return;
+
+      const exact = allCats.find((c: any) => (c.name || "").trim().toLowerCase() === targetNorm);
+      const match = exact
+        ? exact
+        : allCats.find((c: any) => (c.name || "").trim().toLowerCase().startsWith(targetNorm))
+          ?? allCats.find((c: any) => (c.name || "").trim().toLowerCase().includes(targetNorm));
+
+      if (match?.id) {
+        queryClient.prefetchQuery({
+          queryKey: ["products", { PageSize: 8, CategoryId: match.id }],
+          queryFn: () => apiClient.getProducts({ PageSize: 8, CategoryId: match.id }),
+          staleTime: 15 * 60 * 1000,
+          gcTime: 45 * 60 * 1000,
+        });
+      }
+    });
   }, [categories, queryClient]);
 
   // Generate structured data (JSON-LD) for SEO
@@ -409,7 +421,7 @@ function FlashSaleSection({
                 ) : (
                   <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
                 )}
-                {saleProducts[0].originalPrice && (
+                {saleProducts[0].originalPrice != null && saleProducts[0].originalPrice > saleProducts[0].price && (
                   <span className="absolute top-2 right-2 bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg">
                     -{Math.round((1 - saleProducts[0].price / saleProducts[0].originalPrice) * 100)}%
                   </span>
@@ -423,7 +435,7 @@ function FlashSaleSection({
               </div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl font-bold text-red-600">{formatCurrency(saleProducts[0].price)}</span>
-                {saleProducts[0].originalPrice && (
+                {saleProducts[0].originalPrice != null && saleProducts[0].originalPrice > saleProducts[0].price && (
                   <span className="text-sm text-gray-400 line-through">{formatCurrency(saleProducts[0].originalPrice)}</span>
                 )}
               </div>
@@ -494,7 +506,7 @@ function FlashSaleSection({
                         ) : (
                           <div className="w-full h-full bg-gray-100" />
                         )}
-                        {product.originalPrice && (
+                        {product.originalPrice != null && product.originalPrice > product.price && (
                           <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-md">
                             -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                           </span>
@@ -504,7 +516,7 @@ function FlashSaleSection({
                       <div className="flex items-center gap-2">
                         <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
                       </div>
-                      {product.originalPrice && (
+                      {product.originalPrice != null && product.originalPrice > product.price && (
                         <span className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>
                       )}
                       <div className="flex mt-1">
@@ -536,7 +548,7 @@ function FlashSaleSection({
                         ) : (
                           <div className="w-full h-full bg-gray-100" />
                         )}
-                        {product.originalPrice && (
+                        {product.originalPrice != null && product.originalPrice > product.price && (
                           <span className="absolute top-1 left-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-md">
                             -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                           </span>
@@ -546,7 +558,7 @@ function FlashSaleSection({
                       <div className="flex items-center gap-2">
                         <span className="text-red-600 font-bold">{formatCurrency(product.price)}</span>
                       </div>
-                      {product.originalPrice && (
+                      {product.originalPrice != null && product.originalPrice > product.price && (
                         <span className="text-xs text-gray-400 line-through">{formatCurrency(product.originalPrice)}</span>
                       )}
                       <div className="flex mt-1">
@@ -640,7 +652,7 @@ function NewProductsSection({
         {/* Products Grid */}
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {products.map((product: any) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} showBrand={false} />
           ))}
         </div>
       </div>
@@ -662,11 +674,13 @@ function CategoryProductsSection({
   const finalIsLoadingCategories = isLoadingCategories !== undefined ? isLoadingCategories : localIsLoadingCategories;
 
   // Category configurations with banner images
+  // categoryName: exact name to match from API (Bóng Pickleball, Vợt Pickleball, etc.)
   const categoryConfigs = [
     { 
       name: "VỢT PICKLEBALL", 
+      categoryName: "Vợt Pickleball",
       searchKey: "vợt",
-      exactName: "vợt pickleball", // Try exact match first
+      exactName: "vợt pickleball",
       banner: banner7,
       bannerText: { 
         badge: "NEW ARRIVAL",
@@ -676,8 +690,9 @@ function CategoryProductsSection({
     },
     { 
       name: "GIÀY PICKLEBALL", 
+      categoryName: "Giày Pickleball",
       searchKey: "giày",
-      exactName: "giày pickleball", // Try exact match first
+      exactName: "giày pickleball",
       banner: banner8,
       bannerText: {
         badge: "15% OFF",
@@ -687,6 +702,7 @@ function CategoryProductsSection({
     },
     { 
       name: "PHỤ KIỆN PICKLEBALL", 
+      categoryName: "Phụ kiện Pickleball",
       searchKey: "phụ kiện",
       exactName: "phụ kiện pickleball",
       banner: banner9,
@@ -698,6 +714,7 @@ function CategoryProductsSection({
     },
     { 
       name: "BÓNG PICKLEBALL", 
+      categoryName: "Bóng Pickleball",
       searchKey: "bóng",
       exactName: "bóng pickleball",
       banner: banner12,
@@ -708,6 +725,55 @@ function CategoryProductsSection({
       }
     }
   ];
+
+  // Flatten categories that may have subCategories (from /api/Categories)
+  const flattenCategoriesFlat = (cats: any[]): any[] => {
+    if (!cats?.length) return [];
+    const out: any[] = [];
+    for (const c of cats) {
+      if (c?.id) out.push(c);
+      if (c?.subCategories?.length) out.push(...flattenCategoriesFlat(c.subCategories));
+    }
+    return out;
+  };
+  // Flatten category tree (from /api/categories/tree)
+  const flattenTree = (cats: any[]): any[] => {
+    if (!cats?.length) return [];
+    const out: any[] = [];
+    for (const c of cats) {
+      if (c?.id) out.push(c);
+      if (c?.children?.length) out.push(...flattenTree(c.children));
+    }
+    return out;
+  };
+
+  // Resolve category by name: exact match → startsWith → includes. Uses flat list + tree.
+  const findCategoryByName = (categoryName: string): { id: string; name: string | null } | null => {
+    const targetNorm = categoryName.trim().toLowerCase();
+    if (!targetNorm) return null;
+
+    const flatList = finalCategories?.length ? flattenCategoriesFlat(finalCategories) : [];
+    const treeList = categoryTree?.length ? flattenTree(categoryTree) : [];
+    const allCats = [...flatList];
+    const seenIds = new Set(flatList.map((c: any) => c.id));
+    for (const c of treeList) {
+      if (c?.id && !seenIds.has(c.id)) {
+        allCats.push(c);
+        seenIds.add(c.id);
+      }
+    }
+
+    const exact = allCats.find((c: any) => (c.name || "").trim().toLowerCase() === targetNorm);
+    if (exact?.id) return { id: exact.id, name: exact.name ?? null };
+
+    const startsWithMatch = allCats.find((c: any) => (c.name || "").trim().toLowerCase().startsWith(targetNorm));
+    if (startsWithMatch?.id) return { id: startsWithMatch.id, name: startsWithMatch.name ?? null };
+
+    const includesMatch = allCats.find((c: any) => (c.name || "").trim().toLowerCase().includes(targetNorm));
+    if (includesMatch?.id) return { id: includesMatch.id, name: includesMatch.name ?? null };
+
+    return null;
+  };
 
   // Show skeleton while loading categories
   if (finalIsLoadingCategories) {
@@ -734,105 +800,18 @@ function CategoryProductsSection({
     );
   }
 
-  // Helper: match category name by searchKey / exactName
-  const matchCategoryName = (name: string, searchKey: string, exactName?: string): boolean => {
-    if (!name) return false;
-    const n = name.toLowerCase();
-    const searchKeyLower = searchKey.toLowerCase();
-    const exactNameLower = exactName?.toLowerCase();
-    if (exactNameLower && (n === exactNameLower || n.includes(exactNameLower))) return true;
-    if (exactNameLower) {
-      const words = exactNameLower.split(/\s+/).filter((w) => w.length > 0);
-      if (words.every((word) => n.includes(word))) return true;
-    }
-    if (n === searchKeyLower || n.includes(searchKeyLower)) return true;
-    return false;
-  };
-
-  // Find category: prefer flat list first (stable as soon as categories load), then tree
-  const findCategoryInTree = (searchKey: string, exactName?: string): { id: string; name: string | null } | null => {
-    // 1) Prefer flat categories when available so sections don't depend on categoryTree load order
-    if (finalCategories && finalCategories.length > 0) {
-      const flatCategory = finalCategories.find((c: any) =>
-        matchCategoryName(c.name || "", searchKey, exactName)
-      );
-      if (flatCategory?.id) {
-        return { id: flatCategory.id, name: flatCategory.name };
-      }
-    }
-
-    // 2) Fallback: search in category tree (may load later)
-    if (!categoryTree || categoryTree.length === 0) return null;
-
-    const searchInParents = (cats: any[]): { id: string; name: string | null } | null => {
-      for (const cat of cats) {
-        if (matchCategoryName(cat.name || "", searchKey, exactName)) {
-          return { id: cat.id || "", name: cat.name };
-        }
-      }
-      return null;
-    };
-    const searchInChildren = (cats: any[]): { id: string; name: string | null } | null => {
-      for (const cat of cats) {
-        if (cat.children?.length) {
-          for (const child of cat.children) {
-            if (matchCategoryName(child.name || "", searchKey, exactName)) {
-              return { id: child.id || "", name: child.name };
-            }
-            const found = searchInChildren(child.children?.length ? [child] : []);
-            if (found) return found;
-          }
-        }
-      }
-      return null;
-    };
-
-    const parentMatch = searchInParents(categoryTree);
-    if (parentMatch) return parentMatch;
-    return searchInChildren(categoryTree);
-  };
-
   return (
     <>
       {categoryConfigs.map((config) => {
-        // First try to find in category tree (includes children)
-        // Use exactName if available for better matching
-        let category = findCategoryInTree(
-          config.searchKey, 
-          (config as any).exactName
-        );
-        
-        // If not found in tree, try flat categories as fallback
-        if (!category && finalCategories) {
-          const flatCategory = finalCategories.find((c: any) => {
-            const name = c.name?.toLowerCase() || "";
-            const exactNameLower = (config as any).exactName?.toLowerCase();
-            const searchKeyLower = config.searchKey.toLowerCase();
-            
-            // Priority: exact match > contains exactName > contains searchKey
-            if (exactNameLower) {
-              if (name === exactNameLower) return true;
-              if (name.includes(exactNameLower)) return true;
-            }
-            if (name === searchKeyLower) return true;
-            if (name.includes(searchKeyLower)) return true;
-            
-            return false;
-          });
-          if (flatCategory) {
-            category = { id: flatCategory.id, name: flatCategory.name };
-          }
-        }
-        
-        // Debug: Log if category not found
-        if (!category && process.env.NODE_ENV === 'development') {
-          console.log(`Category not found for: ${config.name} (searchKey: ${config.searchKey}, exactName: ${(config as any).exactName})`);
+        const category = findCategoryByName(config.categoryName);
+
+        if (process.env.NODE_ENV === "development" && !category) {
+          console.log(`Category not found for: ${config.name} (categoryName: ${config.categoryName})`);
         }
 
-        // Render section even if category not found, but with loading state
         if (!category) {
           return (
-            <CategoryProductSection 
+            <CategoryProductSection
               key={config.name}
               config={config}
               category={null}
@@ -841,7 +820,7 @@ function CategoryProductsSection({
         }
 
         return (
-          <CategoryProductSection 
+          <CategoryProductSection
             key={config.name}
             config={config}
             category={category}
@@ -1299,7 +1278,7 @@ function TrendingSection({
                   ) : product.primaryImageUrl ? (
                     <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
                   ) : null}
-                  {product.originalPrice && (
+                  {product.originalPrice != null && product.originalPrice > product.price && (
                     <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded">
                       -{Math.round((1 - product.price / product.originalPrice) * 100)}%
                     </span>
@@ -1314,7 +1293,7 @@ function TrendingSection({
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-red-600 font-bold text-sm">{formatCurrency(product.price)}</span>
-                    {product.originalPrice && (
+                    {product.originalPrice != null && product.originalPrice > product.price && (
                       <span className="text-gray-400 text-xs line-through">{formatCurrency(product.originalPrice)}</span>
                     )}
                   </div>

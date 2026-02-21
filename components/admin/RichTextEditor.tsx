@@ -10,6 +10,8 @@ interface RichTextEditorProps {
   placeholder?: string;
   minLength?: number;
   className?: string;
+  /** Cloudinary folder for image uploads (default: pickleball-shop/news) */
+  uploadFolder?: string;
 }
 
 export function RichTextEditor({
@@ -18,12 +20,20 @@ export function RichTextEditor({
   placeholder = "Nhập nội dung bài viết...",
   minLength = 100,
   className = "",
+  uploadFolder = "pickleball-shop/news",
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  /** Bỏ qua vài lần sync sau khi chèn ảnh để tránh state cũ ghi đè ảnh vừa chèn (React có thể re-render nhiều lần) */
+  const skipSyncCountRef = useRef(0);
 
+  // Chỉ đồng bộ value từ ngoài vào DOM khi editor không focus (đang gõ).
   useEffect(() => {
-    if (editorRef.current) {
+    if (skipSyncCountRef.current > 0) {
+      skipSyncCountRef.current -= 1;
+      return;
+    }
+    if (editorRef.current && document.activeElement !== editorRef.current) {
       editorRef.current.innerHTML = value || "";
     }
   }, [value]);
@@ -34,7 +44,7 @@ export function RichTextEditor({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", "pickleball-shop/news");
+      formData.append("folder", uploadFolder);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -113,38 +123,41 @@ export function RichTextEditor({
   const insertImageAtCursor = (imageUrl: string) => {
     if (!editorRef.current) return;
 
+    const el = editorRef.current;
     const selection = window.getSelection();
-    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-
-    if (range && selection) {
-      // Insert image at cursor
-      const img = document.createElement("img");
-      img.src = imageUrl;
-      img.style.maxWidth = "100%";
-      img.style.height = "auto";
-      img.style.display = "block";
-      img.style.margin = "1rem 0";
-      img.alt = "News image";
-
-      range.insertNode(img);
-      range.setStartAfter(img);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else {
-      // Append to end if no selection
-      const img = document.createElement("img");
-      img.src = imageUrl;
-      img.style.maxWidth = "100%";
-      img.style.height = "auto";
-      img.style.display = "block";
-      img.style.margin = "1rem 0";
-      img.alt = "News image";
-
-      editorRef.current.appendChild(img);
+    // Sau khi mở file dialog, selection có thể mất → luôn chèn vào cuối nội dung editor
+    let range: Range | null = null;
+    if (selection && selection.rangeCount > 0) {
+      const r = selection.getRangeAt(0);
+      if (el.contains(r.commonAncestorContainer)) range = r;
+    }
+    if (!range) {
+      range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
     }
 
-    // Update content
+    const img = document.createElement("img");
+    img.src = imageUrl;
+    img.setAttribute("src", imageUrl);
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    img.style.display = "block";
+    img.style.margin = "1rem 0";
+    img.alt = "Image";
+
+    range.insertNode(img);
+    range.setStartAfter(img);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    // Bỏ qua 3 lần sync tiếp theo (React có thể re-render nhiều lần / Strict Mode)
+    skipSyncCountRef.current = 3;
     updateContent();
+
+    // Focus lại editor để lần sync sau không ghi đè (vì activeElement === editor)
+    requestAnimationFrame(() => el.focus());
   };
 
   // Update content when editor changes
