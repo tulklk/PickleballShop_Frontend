@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Package, FolderTree, ShoppingBag, Users, BarChart3, Newspaper, TicketPercent } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, ShoppingBag, Users, BarChart3, Newspaper, TicketPercent, MessageSquare } from "lucide-react";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const adminNavItems = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/news", label: "News", icon: Newspaper },
   { href: "/admin/vouchers", label: "Vouchers", icon: TicketPercent },
+  { href: "/admin/chat", label: "Chat hỗ trợ", icon: MessageSquare },
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/users", label: "Users", icon: Users },
 ];

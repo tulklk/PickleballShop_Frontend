@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ChatBox } from "@/components/chat/ChatBox";
+import { SupportChatBox } from "@/components/chat/SupportChatBox";
 import { ZaloButton } from "@/components/chat/ZaloButton";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { Toaster } from "sonner";
@@ -106,6 +107,7 @@ export default function RootLayout({
             <Footer />
           </div>
           <ChatBox />
+          <SupportChatBox />
           <ZaloButton />
           <ScrollToTop />
           <Toaster position="top-right" />

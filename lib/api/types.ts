@@ -666,6 +666,46 @@ export interface ChatMessageResponse {
   }>;
 }
 
+// Support Chat (Admin <-> Customer)
+export interface SupportMessageDto {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string | null;
+  isFromAdmin: boolean;
+  content: string;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface SupportConversationDto {
+  id: string;
+  customerId: string;
+  customerName: string | null;
+  customerEmail: string | null;
+  lastMessageAt: string | null;
+  lastMessagePreview: string | null;
+  customerUnreadCount: number;
+  adminUnreadCount: number;
+  createdAt: string;
+}
+
+export interface SupportConversationMessagesDto {
+  conversation: SupportConversationDto | null;
+  messages: SupportMessageDto[];
+}
+
+export interface PagedResultDto<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
 // News
 export interface NewsListDto {
   id: string;

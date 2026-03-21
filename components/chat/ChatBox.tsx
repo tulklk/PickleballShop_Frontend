@@ -150,10 +150,10 @@ export function ChatBox() {
       <Button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-20 md:bottom-24 right-3 md:right-6 z-50 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-xl transition-transform duration-300 group flex items-center justify-center",
+          "fixed bottom-20 md:bottom-24 right-3 md:right-6 z-50 h-12 w-12 md:h-14 md:w-14 rounded-full shadow-xl border border-white/30 transition-transform duration-300 group flex items-center justify-center",
           isOpen
             ? "bg-red-500 hover:bg-red-600 hover:shadow-2xl hover:scale-105"
-            : "bg-emerald-600 hover:bg-emerald-600 hover:shadow-2xl hover:scale-105"
+            : "bg-emerald-600 hover:bg-emerald-600 hover:shadow-2xl hover:scale-105 animate-pulse"
         )}
         size="icon"
         aria-label={isOpen ? "Đóng chat" : "Mở chat"}
@@ -186,7 +186,7 @@ export function ChatBox() {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[550px] md:h-[520px] w-[calc(100vw-2rem)] md:w-[360px] max-w-[380px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden">
+        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[550px] md:h-[520px] w-[calc(100vw-2rem)] md:w-[360px] max-w-[380px] max-h-[calc(100vh-6rem)] flex flex-col shadow-2xl border-2 border-green-200 rounded-lg overflow-hidden chat-panel-enter">
           <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -215,13 +215,14 @@ export function ChatBox() {
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {messages.map((message) => (
+              {messages.map((message, index) => (
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-2",
+                    "flex gap-2 chat-bubble-in",
                     message.role === "user" ? "justify-end" : "justify-start"
                   )}
+                  style={{ animationDelay: `${Math.min(index, 8) * 24}ms` }}
                 >
                   {message.role === "assistant" && (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">

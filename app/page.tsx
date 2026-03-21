@@ -496,7 +496,10 @@ function FlashSaleSection({
                   href={getProductUrl(product)} 
                   className="shrink-0 w-[200px]"
                 >
-                  <Card className="bg-white hover:shadow-xl group">
+                  <Card
+                    className="bg-white group product-card-hover shimmer-on-hover animate-fade-in-up"
+                    style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+                  >
                     <CardContent className="p-3">
                       <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
                         {product.primaryImageUrl?.includes("cloudinary") ? (
@@ -538,7 +541,10 @@ function FlashSaleSection({
                   href={getProductUrl(product)} 
                   className="shrink-0 w-[200px]"
                 >
-                  <Card className="bg-white hover:shadow-xl group">
+                  <Card
+                    className="bg-white group product-card-hover shimmer-on-hover animate-fade-in-up"
+                    style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+                  >
                     <CardContent className="p-3">
                       <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
                         {product.primaryImageUrl?.includes("cloudinary") ? (
@@ -1049,13 +1055,14 @@ function CategoryProductSection({
 
         {/* Products Grid - 2 rows x 4 columns */}
         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {displayProducts.map((product: any) => (
+          {displayProducts.map((product: any, index: number) => (
             <Link 
               key={product.id} 
               href={getProductUrl(product)} 
-              className="group"
+              className="group animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
             >
-              <Card className="bg-white hover:shadow-lg h-full">
+              <Card className="bg-white h-full product-card-hover shimmer-on-hover">
                 <CardContent className="p-3">
                   <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
                     {product.primaryImageUrl?.includes("cloudinary") ? (

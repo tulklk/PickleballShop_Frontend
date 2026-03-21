@@ -68,14 +68,14 @@ export function ProductCard({ product, showBrand = true }: ProductCardProps) {
 
   return (
     <Link href={getProductUrl(product)}>
-      <Card className="group hover:shadow-lg transition-shadow h-full flex flex-col">
+      <Card className="group h-full flex flex-col product-card-hover shimmer-on-hover">
         <div className="relative aspect-square overflow-hidden rounded-t-lg bg-gray-100">
           {imageUrl !== "/placeholder-product.jpg" ? (
             <Image
               src={imageUrl}
               alt={product.name || "Product"}
               fill
-              className="object-cover group-hover:scale-105 transition-transform"
+              className="object-cover image-zoom"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           ) : (
