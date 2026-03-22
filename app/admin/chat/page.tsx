@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -40,8 +41,11 @@ const formatTime = (value?: string | null) => {
   });
 };
 
-export default function AdminSupportChatPage() {
+function AdminSupportChatInner() {
   const { accessToken } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const deepLinkKeyRef = useRef<string | null>(null);
   const [conversations, setConversations] = useState<SupportConversationDto[]>([]);
   const [messagesByCustomerId, setMessagesByCustomerId] = useState<
     Record<string, SupportMessageDto[]>
@@ -259,6 +263,23 @@ export default function AdminSupportChatPage() {
     };
   }, [accessToken, loadConversations]);
 
+  /** Mở hội thoại từ ?customerId= (toast thông báo admin). */
+  useEffect(() => {
+    const customerId = searchParams.get("customerId");
+    if (!customerId) {
+      deepLinkKeyRef.current = null;
+      return;
+    }
+    if (isLoadingConversations) return;
+    const key = `customerId=${customerId}`;
+    if (deepLinkKeyRef.current === key) return;
+    deepLinkKeyRef.current = key;
+
+    void selectConversation(customerId).finally(() => {
+      router.replace("/admin/chat", { scroll: false });
+    });
+  }, [searchParams, isLoadingConversations, selectConversation, router]);
+
   /** Khi khách gửi qua REST (SignalR lỗi), server có thể không broadcast — đồng bộ định kỳ. */
   useEffect(() => {
     if (!accessToken || !activeConversationCustomerId) return;
@@ -448,5 +469,19 @@ export default function AdminSupportChatPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function AdminSupportChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[240px] items-center justify-center p-6 text-sm text-slate-500">
+          Đang tải chat...
+        </div>
+      }
+    >
+      <AdminSupportChatInner />
+    </Suspense>
   );
 }

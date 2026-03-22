@@ -130,7 +130,8 @@ All API calls are wrapped in React Query hooks for:
 
 ## Environment Variables
 
-- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend.fly.dev)
+- `NEXT_PUBLIC_API_BASE_URL`: Base URL for the backend API (default: https://pickleballshop-backend.fly.dev). Used by REST, SignalR support chat, and **admin notifications** hub (`/hubs/admin-notifications`).
+- `NEXT_PUBLIC_API_URL`: Optional alias for the same base URL if you prefer the shorter name (see `src/services/adminNotificationsHub.ts` / `supportChatService`).
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuth 2.0 Client ID for Google Sign-In (required for Google login feature)
 
 ## Building for Production

@@ -706,6 +706,29 @@ export interface PagedResultDto<T> {
   hasNextPage: boolean;
 }
 
+/** SignalR hub `/hubs/admin-notifications` — đơn mới */
+export interface NewOrderNotification {
+  orderId: string;
+  orderNumber: string;
+  totalAmount: number;
+  createdAt: string;
+  isGuestOrder: boolean;
+  customerEmail: string | null;
+  customerName: string | null;
+  paymentMethod: string | null;
+}
+
+/** SignalR hub `/hubs/admin-notifications` — tin hỗ trợ mới từ khách */
+export interface NewSupportMessageNotification {
+  messageId: string;
+  conversationId: string;
+  customerId: string;
+  customerName: string;
+  contentPreview: string | null;
+  createdAt: string;
+  adminUnreadCount: number;
+}
+
 // News
 export interface NewsListDto {
   id: string;

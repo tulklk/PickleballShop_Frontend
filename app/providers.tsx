@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider } from "next-themes";
 import { useMemo, useState } from "react";
+import { AdminNotificationsProvider } from "@/components/admin/AdminNotificationsProvider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -51,9 +52,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Render without GoogleOAuthProvider if clientId is missing
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-        </ThemeProvider>
+        <AdminNotificationsProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            {children}
+          </ThemeProvider>
+        </AdminNotificationsProvider>
       </QueryClientProvider>
     );
   }
@@ -61,9 +64,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <GoogleOAuthProvider clientId={googleClientId}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-        </ThemeProvider>
+        <AdminNotificationsProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            {children}
+          </ThemeProvider>
+        </AdminNotificationsProvider>
       </GoogleOAuthProvider>
     </QueryClientProvider>
   );

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart, FileSearch, Plus, Minus } from "lucide-react";
+import { ShoppingCart, User, Search, ChevronDown, LogOut, Package, Settings, Menu, X, Heart, FileSearch, Plus, Minus, Bell, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -17,8 +17,20 @@ import { getGuestCartItemCount } from "@/lib/utils/guestCart";
 import { Poppins } from "next/font/google";
 import { CartPreview } from "./CartPreview";
 import { getProductUrl } from "@/lib/utils/productUrl";
+import { useAdminNotificationCounts } from "@/components/admin/AdminNotificationsProvider";
 
 import logo from "@/app/img/logopickleball.png";
+
+/** Nhãn thông báo đơn hàng / tin nhắn trong menu chuông (admin) */
+function orderBellLabel(count: number) {
+  if (count <= 0) return "Chưa có đơn hàng mới";
+  return `Bạn có ${count} đơn hàng mới`;
+}
+
+function messageBellLabel(count: number) {
+  if (count <= 0) return "Chưa có tin nhắn mới";
+  return `Bạn có ${count} tin nhắn mới`;
+}
 
 const poppins = Poppins({
   weight: ["600", "700"],
@@ -30,6 +42,12 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isAdmin } = useAuth();
+  const {
+    newOrdersCount,
+    newSupportCount,
+    clearOrderNotifications,
+    clearSupportNotifications,
+  } = useAdminNotificationCounts();
   const queryClient = useQueryClient();
   // Get full user data with avatarUrl, enabled only when authenticated
   const { data: userMe } = useUserMe();
@@ -220,6 +238,9 @@ export function Navbar() {
   const [showCartPreview, setShowCartPreview] = useState(false);
   const cartRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showAdminNotifDropdown, setShowAdminNotifDropdown] = useState(false);
+  const adminNotifRef = useRef<HTMLDivElement>(null);
+  const adminNotifTotal = newOrdersCount + newSupportCount;
 
   const handleCartMouseEnter = () => {
     if (timeoutRef.current) {
@@ -259,6 +280,20 @@ export function Navbar() {
       setShowUserDropdown(false);
     }, 200);
   };
+
+  useEffect(() => {
+    if (!showAdminNotifDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        adminNotifRef.current &&
+        !adminNotifRef.current.contains(e.target as Node)
+      ) {
+        setShowAdminNotifDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showAdminNotifDropdown]);
 
   // Group categories for dropdown menu
   const menuCategories = [
@@ -525,6 +560,74 @@ export function Navbar() {
                 </div>
               )}
             </div>
+
+            {isAuthenticated && isAdmin && (
+              <div ref={adminNotifRef} className="relative">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="relative hover:bg-emerald-50"
+                  aria-label="Thông báo quản trị"
+                  onClick={() =>
+                    setShowAdminNotifDropdown((open) => !open)
+                  }
+                >
+                  <Bell className="h-5 w-5" strokeWidth={1.75} />
+                  {adminNotifTotal > 0 && (
+                    <span className="pointer-events-none absolute -right-0.5 -top-0.5 flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full border-2 border-white bg-red-600 px-1 text-[10px] font-bold leading-none text-white shadow-sm">
+                      {adminNotifTotal > 99 ? "99+" : adminNotifTotal}
+                    </span>
+                  )}
+                </Button>
+                {showAdminNotifDropdown && (
+                  <div className="absolute right-0 top-full z-50 mt-2 min-w-[min(100vw-2rem,320px)] max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white py-2 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Tam giác nối lên chuông */}
+                    <div
+                      className="absolute -top-1.5 right-4 h-3 w-3 rotate-45 border-l border-t border-gray-200 bg-white"
+                      aria-hidden
+                    />
+                    <p className="relative px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Thông báo
+                    </p>
+                    <Link
+                      href="/admin/orders"
+                      className="relative flex items-start gap-3 px-3 py-2.5 text-sm hover:bg-emerald-50"
+                      onClick={() => {
+                        setShowAdminNotifDropdown(false);
+                        clearOrderNotifications();
+                      }}
+                    >
+                      <Package
+                        className={`mt-0.5 h-4 w-4 shrink-0 ${newOrdersCount > 0 ? "text-emerald-600" : "text-gray-400"}`}
+                      />
+                      <span
+                        className={`flex-1 leading-snug ${newOrdersCount > 0 ? "font-medium text-gray-900" : "text-muted-foreground"}`}
+                      >
+                        {orderBellLabel(newOrdersCount)}
+                      </span>
+                    </Link>
+                    <Link
+                      href="/admin/chat"
+                      className="relative flex items-start gap-3 px-3 py-2.5 text-sm hover:bg-emerald-50"
+                      onClick={() => {
+                        setShowAdminNotifDropdown(false);
+                        clearSupportNotifications();
+                      }}
+                    >
+                      <MessageCircle
+                        className={`mt-0.5 h-4 w-4 shrink-0 ${newSupportCount > 0 ? "text-emerald-600" : "text-gray-400"}`}
+                      />
+                      <span
+                        className={`flex-1 leading-snug ${newSupportCount > 0 ? "font-medium text-gray-900" : "text-muted-foreground"}`}
+                      >
+                        {messageBellLabel(newSupportCount)}
+                      </span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
 
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
