@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { useLogin, useGoogleAuthLogin, useResendVerificationEmail } from "@/lib/api/hooks";
-import { useAuth } from "@/lib/auth/useAuth";
+import { isAdminUser } from "@/lib/auth/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,6 @@ export default function LoginPage() {
   const loginMutation = useLogin();
   const googleLoginMutation = useGoogleAuthLogin();
   const resendVerificationMutation = useResendVerificationEmail();
-  const { isAdmin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -60,10 +59,10 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await loginMutation.mutateAsync(data);
+      const auth = await loginMutation.mutateAsync(data);
       setUnverifiedEmail(null); // Clear unverified email on success
       toast.success("Đăng nhập thành công!");
-      router.push(isAdmin ? "/admin" : "/");
+      router.push(isAdminUser(auth.user) ? "/admin" : "/");
     } catch (error: any) {
       const errorMessage = error?.data?.message || "Đăng nhập thất bại";
       const lowerMessage = errorMessage.toLowerCase();
@@ -120,9 +119,9 @@ export default function LoginPage() {
     }
 
     try {
-      await googleLoginMutation.mutateAsync(credentialResponse.credential);
+      const auth = await googleLoginMutation.mutateAsync(credentialResponse.credential);
       toast.success("Đăng nhập thành công!");
-      router.push(isAdmin ? "/admin" : "/");
+      router.push(isAdminUser(auth.user) ? "/admin" : "/");
     } catch (error: any) {
       console.error("Google login error:", error);
       toast.error(error?.data?.message || "Đăng nhập Google thất bại");

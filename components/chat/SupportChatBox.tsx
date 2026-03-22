@@ -57,6 +57,11 @@ export function SupportChatBox() {
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("disconnected");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const conversationRef = useRef<SupportConversationDto | null>(null);
+
+  useEffect(() => {
+    conversationRef.current = conversation;
+  }, [conversation]);
 
   const currentUserId = user?.id ?? "";
 
@@ -106,17 +111,23 @@ export function SupportChatBox() {
     };
 
     const onReceiveMessage = (incoming: SupportMessageDto) => {
-      if (!incoming.conversationId) {
+      if (!incoming?.id) return;
+      const myConvId = conversationRef.current?.id;
+      if (
+        myConvId &&
+        incoming.conversationId &&
+        incoming.conversationId !== myConvId
+      ) {
         return;
       }
       setMessages((prev) => mergeUniqueMessages(prev, [incoming]));
     };
 
     const init = async () => {
-      await loadConversation();
-      const connected = await supportChatHub.connect(accessToken);
       supportChatHub.onStatusChange(onStatusChange);
       supportChatHub.onReceiveMessage(onReceiveMessage);
+      await loadConversation();
+      const connected = await supportChatHub.connect(accessToken);
       if (connected) {
         await supportChatHub.joinConversation();
         await markRead();
@@ -151,12 +162,21 @@ export function SupportChatBox() {
 
     setIsSending(true);
     try {
-      await supportChatHub.sendMessage(currentUserId, content);
-      setInput("");
-    } catch {
+      if (supportChatHub.getStatus() === "connected") {
+        try {
+          await supportChatHub.sendMessage(currentUserId, content);
+          setInput("");
+          return;
+        } catch (hubErr) {
+          console.warn("[SupportChatBox] Hub send failed, using REST:", hubErr);
+        }
+      }
+
       const response = await supportChatService.sendMyMessage(content);
       setMessages((prev) => mergeUniqueMessages(prev, [response]));
       setInput("");
+    } catch (error) {
+      console.warn("[SupportChatBox] Send failed:", error);
     } finally {
       setIsSending(false);
     }
@@ -167,6 +187,51 @@ export function SupportChatBox() {
     if (connectionStatus === "connected") return "Đang trực tuyến";
     return "Mất kết nối";
   }, [connectionStatus]);
+
+  /** Thử kết nối lại định kỳ khi panel mở nhưng hub rớt (mạng/proxy chặn WebSocket). */
+  useEffect(() => {
+    if (!isOpen || !accessToken || !isAuthenticated) return;
+    if (connectionStatus === "connected") return;
+
+    const id = setInterval(() => {
+      void supportChatHub.connect(accessToken).then(async (ok) => {
+        if (ok) {
+          await supportChatHub.joinConversation();
+          await markRead().catch(() => undefined);
+        }
+      });
+    }, 8000);
+
+    return () => clearInterval(id);
+  }, [isOpen, accessToken, isAuthenticated, connectionStatus, markRead]);
+
+  /** Đồng bộ tin admin (REST hoặc khi backend không gửi conversationId trên SignalR). */
+  useEffect(() => {
+    if (!isOpen || !accessToken || !isAuthenticated) return;
+
+    const sync = async () => {
+      try {
+        const data = await supportChatService.getMyConversation({
+          page: 1,
+          pageSize: 50,
+        });
+        setConversation(data.conversation);
+        setMessages((prev) =>
+          mergeUniqueMessages(prev, data.messages || [])
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const interval = setInterval(sync, 4000);
+    void sync();
+    return () => clearInterval(interval);
+  }, [isOpen, accessToken, isAuthenticated]);
+
+  if (isAdmin) {
+    return null;
+  }
 
   return (
     <>
@@ -195,8 +260,8 @@ export function SupportChatBox() {
       </Button>
 
       {isOpen && (
-        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 h-[520px] w-[calc(100vw-2rem)] md:w-[360px] max-w-[380px] flex flex-col shadow-2xl border-2 border-emerald-200 rounded-lg overflow-hidden chat-panel-enter">
-          <CardHeader className="bg-linear-to-r from-emerald-600 to-emerald-500 text-white p-4 rounded-t-lg">
+        <Card className="fixed bottom-28 md:bottom-32 right-3 md:right-6 z-40 flex h-[520px] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden border-2 border-emerald-200 shadow-2xl chat-panel-enter md:w-[360px]">
+          <CardHeader className="shrink-0 rounded-t-lg bg-linear-to-r from-emerald-600 to-emerald-500 p-4 text-white">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">
                 Chat hỗ trợ khách hàng
@@ -205,8 +270,8 @@ export function SupportChatBox() {
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50 p-4 [scrollbar-gutter:stable]">
               {!isAuthenticated ? (
                 <div className="h-full flex flex-col items-center justify-center text-center gap-3">
                   <p className="text-sm text-slate-600">
@@ -272,7 +337,7 @@ export function SupportChatBox() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-slate-200 p-4 bg-white">
+            <div className="shrink-0 border-t border-slate-200 bg-white p-4">
               {connectionStatus === "reconnecting" && (
                 <p className="mb-2 text-xs text-amber-600">
                   Kết nối đang gián đoạn, hệ thống đang thử kết nối lại...

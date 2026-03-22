@@ -2,6 +2,7 @@ import {
   HubConnection,
   HubConnectionBuilder,
   HubConnectionState,
+  HttpTransportType,
   LogLevel,
 } from "@microsoft/signalr";
 import type { SupportMessageDto } from "@/lib/api/types";
@@ -17,10 +18,15 @@ const getApiBaseUrl = () => {
   return url.replace(/\/$/, "");
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 class SupportChatHubManager {
   private connection: HubConnection | null = null;
   private token: string | null = null;
   private currentConversationCustomerId: string | undefined;
+  /** `null` = JoinConversation(undefined) (khách); string = admin theo customerId. */
+  private lastJoinConversationArg: string | null = null;
+  private hasJoinedConversationGroup = false;
   private messageHandlers = new Set<ReceiveMessageCallback>();
   private statusHandlers = new Set<StatusCallback>();
   private status: ConnectionStatus = "disconnected";
@@ -28,6 +34,52 @@ class SupportChatHubManager {
   private emitStatus(status: ConnectionStatus) {
     this.status = status;
     this.statusHandlers.forEach((cb) => cb(status));
+  }
+
+  private createConnection(hubUrl: string, longPollingOnly: boolean) {
+    const transport = longPollingOnly
+      ? HttpTransportType.LongPolling
+      : HttpTransportType.WebSockets |
+        HttpTransportType.ServerSentEvents |
+        HttpTransportType.LongPolling;
+
+    return new HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        accessTokenFactory: () => this.token || "",
+        transport,
+        skipNegotiation: false,
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .configureLogging(LogLevel.Warning)
+      .build();
+  }
+
+  private wireConnectionEvents(conn: HubConnection) {
+    conn.on("ReceiveMessage", (message: SupportMessageDto) => {
+      this.messageHandlers.forEach((cb) => cb(message));
+    });
+
+    conn.onreconnecting(() => {
+      this.emitStatus("reconnecting");
+    });
+
+    conn.onreconnected(async () => {
+      this.emitStatus("connected");
+      if (this.hasJoinedConversationGroup) {
+        try {
+          await this.connection?.invoke(
+            "JoinConversation",
+            this.lastJoinConversationArg === null ? undefined : this.lastJoinConversationArg
+          );
+        } catch (e) {
+          console.warn("[SupportChatHub] Re-join after reconnect failed:", e);
+        }
+      }
+    });
+
+    conn.onclose(() => {
+      this.emitStatus("disconnected");
+    });
   }
 
   async connect(token: string): Promise<boolean> {
@@ -38,58 +90,63 @@ class SupportChatHubManager {
       return true;
     }
 
-    if (!this.connection) {
-      const hubUrl = `${getApiBaseUrl()}/hubs/support-chat`;
-      this.connection = new HubConnectionBuilder()
-        .withUrl(hubUrl, {
-          accessTokenFactory: () => this.token || "",
-        })
-        .withAutomaticReconnect()
-        .configureLogging(LogLevel.Warning)
-        .build();
+    const hubUrl = `${getApiBaseUrl()}/hubs/support-chat`;
 
-      this.connection.on("ReceiveMessage", (message: SupportMessageDto) => {
-        this.messageHandlers.forEach((cb) => cb(message));
-      });
-
-      this.connection.onreconnecting(() => {
-        this.emitStatus("reconnecting");
-      });
-
-      this.connection.onreconnected(async () => {
-        this.emitStatus("connected");
-        if (this.currentConversationCustomerId !== undefined) {
-          await this.joinConversation(this.currentConversationCustomerId);
+    const tryStart = async (longPollingOnly: boolean): Promise<boolean> => {
+      if (this.connection) {
+        try {
+          await this.connection.stop();
+        } catch {
+          /* ignore */
         }
-      });
+        this.connection = null;
+      }
 
-      this.connection.onclose(() => {
-        this.emitStatus("disconnected");
-      });
-    }
+      this.connection = this.createConnection(hubUrl, longPollingOnly);
+      this.wireConnectionEvents(this.connection);
 
-    if (this.connection.state === HubConnectionState.Disconnected) {
       this.emitStatus("reconnecting");
+      await this.connection.start();
+      this.emitStatus("connected");
+      if (this.hasJoinedConversationGroup) {
+        await this.connection.invoke(
+          "JoinConversation",
+          this.lastJoinConversationArg === null ? undefined : this.lastJoinConversationArg
+        );
+      }
+      return true;
+    };
+
+    const maxAttempts = 2;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const longPollingOnly = attempt === 1;
       try {
-        await this.connection.start();
-        this.emitStatus("connected");
-        if (this.currentConversationCustomerId !== undefined) {
-          await this.joinConversation(this.currentConversationCustomerId);
-        }
-        return true;
+        return await tryStart(longPollingOnly);
       } catch (error) {
-        console.warn("[SupportChatHub] Connect failed:", error);
-        this.emitStatus("disconnected");
-        return false;
+        console.warn(
+          `[SupportChatHub] Connect failed (attempt ${attempt + 1}/${maxAttempts}, longPollingOnly=${longPollingOnly}):`,
+          error
+        );
+        if (attempt < maxAttempts - 1) {
+          await sleep(800 * (attempt + 1));
+        }
       }
     }
 
-    return this.connection.state === HubConnectionState.Connected;
+    this.emitStatus("disconnected");
+    return false;
   }
 
   async disconnect() {
     if (this.connection) {
-      await this.connection.stop();
+      try {
+        await this.connection.stop();
+      } catch {
+        /* ignore */
+      }
+      this.connection = null;
+      this.hasJoinedConversationGroup = false;
+      this.lastJoinConversationArg = null;
       this.emitStatus("disconnected");
     }
   }
@@ -99,6 +156,8 @@ class SupportChatHubManager {
       return false;
     }
     this.currentConversationCustomerId = customerId;
+    this.lastJoinConversationArg = customerId === undefined ? null : customerId;
+    this.hasJoinedConversationGroup = true;
     await this.connection.invoke("JoinConversation", customerId);
     return true;
   }
@@ -111,6 +170,8 @@ class SupportChatHubManager {
     if (this.currentConversationCustomerId === customerId) {
       this.currentConversationCustomerId = undefined;
     }
+    this.hasJoinedConversationGroup = false;
+    this.lastJoinConversationArg = null;
   }
 
   async sendMessage(customerId: string, content: string) {

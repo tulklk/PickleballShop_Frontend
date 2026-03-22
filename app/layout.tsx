@@ -21,11 +21,10 @@ export const metadata: Metadata = {
   description: "IKA Sport - Cửa hàng chuyên cung cấp vợt Pickleball, giày Pickleball, bóng và phụ kiện chính hãng. Giao hàng toàn quốc, bảo hành chính hãng. Hotline: 0824.01.01.88",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon.png", type: "image/png", sizes: "any" },
       { url: "/img/logopickleball.png", type: "image/png", sizes: "192x192" },
     ],
-    shortcut: "/favicon.ico",
+    shortcut: "/icon.png",
     apple: "/img/logopickleball.png",
   },
   keywords: [

@@ -58,6 +58,16 @@ export default function AdminSupportChatPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const activeConversationCustomerIdRef = useRef<string | null>(null);
+  const conversationsRef = useRef<SupportConversationDto[]>([]);
+
+  useEffect(() => {
+    activeConversationCustomerIdRef.current = activeConversationCustomerId;
+  }, [activeConversationCustomerId]);
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   const activeMessages = useMemo(() => {
     if (!activeConversationCustomerId) return [];
@@ -179,31 +189,41 @@ export default function AdminSupportChatPage() {
     };
 
     const onReceiveMessage = (message: SupportMessageDto) => {
-      const customerId = message.isFromAdmin
-        ? activeConversationCustomerId
-        : message.senderId;
-      if (!customerId) {
+      const conv = conversationsRef.current.find((c) => c.id === message.conversationId);
+      let targetCustomerId: string | null = null;
+
+      if (conv?.customerId) {
+        targetCustomerId = String(conv.customerId);
+      } else if (!message.isFromAdmin) {
+        targetCustomerId = message.senderId ? String(message.senderId) : null;
+      } else {
+        const activeId = activeConversationCustomerIdRef.current;
+        targetCustomerId = activeId ? String(activeId) : null;
+      }
+
+      if (!targetCustomerId) {
         return;
       }
 
       setMessagesByCustomerId((prev) => {
-        const current = prev[customerId] || [];
+        const current = prev[targetCustomerId] || [];
         return {
           ...prev,
-          [customerId]: mergeUniqueMessages(current, [message]),
+          [targetCustomerId]: mergeUniqueMessages(current, [message]),
         };
       });
 
       setConversations((prev) => {
-        const index = prev.findIndex((item) => item.customerId === customerId);
+        const index = prev.findIndex((item) => item.customerId === targetCustomerId);
         if (index === -1) return prev;
 
         const updated = [...prev];
         const current = updated[index];
-        const unread =
-          activeConversationCustomerId === customerId
-            ? 0
-            : (current.adminUnreadCount || 0) + (message.isFromAdmin ? 0 : 1);
+        const viewing =
+          activeConversationCustomerIdRef.current === targetCustomerId;
+        const unread = viewing
+          ? 0
+          : (current.adminUnreadCount || 0) + (message.isFromAdmin ? 0 : 1);
 
         updated[index] = {
           ...current,
@@ -239,6 +259,41 @@ export default function AdminSupportChatPage() {
     };
   }, [accessToken, loadConversations]);
 
+  /** Khi khách gửi qua REST (SignalR lỗi), server có thể không broadcast — đồng bộ định kỳ. */
+  useEffect(() => {
+    if (!accessToken || !activeConversationCustomerId) return;
+
+    const sync = async () => {
+      const customerId = activeConversationCustomerId;
+      try {
+        const data = await supportChatService.getAdminConversationMessages(customerId, {
+          page: 1,
+          pageSize: 50,
+        });
+        setMessagesByCustomerId((prev) => ({
+          ...prev,
+          [customerId]: mergeUniqueMessages(prev[customerId] || [], data.messages || []),
+        }));
+        if (data.conversation) {
+          setActiveConversationMeta(data.conversation);
+          setConversations((prev) => {
+            const idx = prev.findIndex((c) => c.customerId === customerId);
+            if (idx === -1) return [data.conversation!, ...prev];
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...data.conversation! };
+            return next;
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const interval = setInterval(sync, 4000);
+    void sync();
+    return () => clearInterval(interval);
+  }, [accessToken, activeConversationCustomerId]);
+
   const handleSend = async () => {
     const customerId = activeConversationCustomerId;
     const content = input.trim();
@@ -246,29 +301,38 @@ export default function AdminSupportChatPage() {
     setIsSending(true);
 
     try {
-      await supportChatHub.sendMessage(customerId, content);
-      setInput("");
-    } catch {
+      if (supportChatHub.getStatus() === "connected") {
+        try {
+          await supportChatHub.sendMessage(customerId, content);
+          setInput("");
+          return;
+        } catch (hubErr) {
+          console.warn("[AdminSupportChatPage] Hub send failed, using REST:", hubErr);
+        }
+      }
+
       const response = await supportChatService.sendAdminMessage(customerId, content);
       setMessagesByCustomerId((prev) => ({
         ...prev,
         [customerId]: mergeUniqueMessages(prev[customerId] || [], [response]),
       }));
       setInput("");
+    } catch (error) {
+      console.warn("[AdminSupportChatPage] Send failed:", error);
     } finally {
       setIsSending(false);
     }
   };
 
   return (
-    <div className="h-[calc(100vh-2rem)] p-4 md:p-6">
-      <div className="h-full rounded-2xl border bg-white grid grid-cols-1 md:grid-cols-[320px_1fr] overflow-hidden">
-        <aside className="border-r bg-slate-50 flex flex-col">
-          <div className="p-4 border-b">
+    <div className="flex h-[calc(100vh-1rem)] min-h-0 flex-col p-4 md:h-[calc(100vh-2rem)] md:p-6">
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-2xl border bg-white md:grid-cols-[320px_1fr] md:grid-rows-[minmax(0,1fr)]">
+        <aside className="flex min-h-0 flex-col border-r bg-slate-50 md:h-full md:max-h-full">
+          <div className="shrink-0 border-b p-4">
             <h1 className="text-xl font-semibold">Chat hỗ trợ</h1>
           </div>
 
-          <div className="overflow-y-auto flex-1">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
             {isLoadingConversations ? (
               <p className="p-4 text-sm text-slate-500">Đang tải hội thoại...</p>
             ) : conversations.length === 0 ? (
@@ -310,8 +374,8 @@ export default function AdminSupportChatPage() {
           </div>
         </aside>
 
-        <section className="flex flex-col h-full">
-          <div className="p-4 border-b">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col md:h-full">
+          <div className="shrink-0 border-b p-4">
             <h2 className="font-semibold">
               {activeConversationMeta?.customerName ||
                 activeConversationMeta?.customerEmail ||
@@ -321,7 +385,7 @@ export default function AdminSupportChatPage() {
 
           <div
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 bg-white space-y-4"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-white p-4 [scrollbar-gutter:stable]"
           >
             {!activeConversationCustomerId ? (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm">
@@ -354,7 +418,7 @@ export default function AdminSupportChatPage() {
             )}
           </div>
 
-          <div className="p-4 border-t bg-slate-50">
+          <div className="shrink-0 border-t bg-slate-50 p-4">
             {connectionStatus === "reconnecting" && (
               <p className="mb-2 text-xs text-amber-600">
                 Mất kết nối tạm thời, đang tự động kết nối lại...
