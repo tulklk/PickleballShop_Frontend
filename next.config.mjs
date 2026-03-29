@@ -3,6 +3,7 @@ const nextConfig = {
   // Next 14.2: dùng experimental (tên `serverExternalPackages` chỉ từ ~14.3+)
   experimental: {
     serverComponentsExternalPackages: ["sharp"],
+    optimizePackageImports: ["lucide-react"],
   },
 
   // Build Vercel: không fail vì ESLint chưa cấu hình đầy đủ — vẫn kiểm tra TypeScript

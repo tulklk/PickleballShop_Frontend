@@ -28,6 +28,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
 import { getProductUrl } from "@/lib/utils/productUrl";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 function getVariantDisplayInfo(v: ProductVariantDto | null): string | null {
   if (!v) return null;
@@ -217,8 +218,9 @@ export default function ProductDetailPage() {
       } else if (errorMessage.includes("stock") || errorMessage.includes("Insufficient")) {
         toast.error("Sản phẩm không đủ số lượng trong kho");
       } else if (error?.status === 500 || error?.status >= 500) {
-        // If API fails, fallback to guest cart
-        console.warn("API failed, saving to guest cart as fallback:", error);
+        if (DEBUG_API) {
+          console.warn("API failed, saving to guest cart as fallback:", error);
+        }
         addToGuestCart({
           productId: product.id,
           productVariantId: variantId ?? undefined,

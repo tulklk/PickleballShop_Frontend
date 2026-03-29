@@ -14,6 +14,18 @@ import { toast } from "sonner";
 import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 import { useAuth } from "@/lib/auth/useAuth";
 import { Button } from "@/components/ui/button";
+import { DEBUG_API } from "@/lib/utils/debugApi";
+
+const _c = globalThis.console;
+function devLog(...args: unknown[]) {
+  if (DEBUG_API) _c.log(...args);
+}
+function devWarn(...args: unknown[]) {
+  if (DEBUG_API) _c.warn(...args);
+}
+function devError(...args: unknown[]) {
+  if (DEBUG_API) _c.error(...args);
+}
 
 export default function AdminProductEditPage() {
   const params = useParams();
@@ -47,12 +59,12 @@ export default function AdminProductEditPage() {
       return;
     }
     
-    console.log("═══════════════════════════════════════════════════════");
-    console.log("🔄 UPDATE PRODUCT - START");
-    console.log("═══════════════════════════════════════════════════════");
-    console.log("📋 Product ID:", productId);
-    console.log("📝 Form Values Received:", JSON.stringify(values, null, 2));
-    console.log("📝 Form Values Types:", {
+    devLog("═══════════════════════════════════════════════════════");
+    devLog("🔄 UPDATE PRODUCT - START");
+    devLog("═══════════════════════════════════════════════════════");
+    devLog("📋 Product ID:", productId);
+    devLog("📝 Form Values Received:", JSON.stringify(values, null, 2));
+    devLog("📝 Form Values Types:", {
       name: typeof values.name,
       description: typeof values.description,
       categoryId: typeof values.categoryId,
@@ -70,7 +82,7 @@ export default function AdminProductEditPage() {
       // Validate categoryId before proceeding
       const finalCategoryId = values.categoryId || "";
       if (!finalCategoryId || finalCategoryId.trim() === "") {
-        console.error("❌ Category ID is missing in update!");
+        devError("❌ Category ID is missing in update!");
         toast.error("Vui lòng chọn danh mục sản phẩm");
         return;
       }
@@ -78,7 +90,7 @@ export default function AdminProductEditPage() {
       // Validate UUID format
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(finalCategoryId)) {
-        console.error("❌ Category ID is not a valid UUID:", finalCategoryId);
+        devError("❌ Category ID is not a valid UUID:", finalCategoryId);
         toast.error("Danh mục không hợp lệ. Vui lòng chọn lại danh mục.");
         return;
       }
@@ -135,8 +147,8 @@ export default function AdminProductEditPage() {
         // If variants is undefined, don't add variants field = keep existing variants
       }
       
-      console.log("📤 Prepared Product Data:", JSON.stringify(productData, null, 2));
-      console.log("📊 Data Types Check:", {
+      devLog("📤 Prepared Product Data:", JSON.stringify(productData, null, 2));
+      devLog("📊 Data Types Check:", {
         name: typeof productData.name,
         description: typeof productData.description,
         categoryId: typeof productData.categoryId,
@@ -151,7 +163,7 @@ export default function AdminProductEditPage() {
         imageUrlsLength: productData.imageUrls.length,
         imageUrlsContent: productData.imageUrls,
       });
-      console.log("🔍 Category ID Validation:", {
+      devLog("🔍 Category ID Validation:", {
         categoryId: productData.categoryId,
         isEmpty: !productData.categoryId || productData.categoryId === "",
         isValidUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productData.categoryId || ""),
@@ -162,23 +174,23 @@ export default function AdminProductEditPage() {
         data: productData,
       });
       
-      console.log("✅ UPDATE PRODUCT - SUCCESS");
-      console.log("═══════════════════════════════════════════════════════");
+      devLog("✅ UPDATE PRODUCT - SUCCESS");
+      devLog("═══════════════════════════════════════════════════════");
       toast.success("Cập nhật sản phẩm thành công");
       
       // Wait a bit to ensure cache is updated before redirecting
       await new Promise((resolve) => setTimeout(resolve, 300));
       router.push("/admin/products");
     } catch (error: any) {
-      console.warn("❌ UPDATE PRODUCT - ERROR");
-      console.warn("Error object:", error);
-      console.warn("Error message:", error?.message);
-      console.warn("Error status:", error?.status);
-      console.warn("Error data:", JSON.stringify(error?.data, null, 2));
+      devWarn("❌ UPDATE PRODUCT - ERROR");
+      devWarn("Error object:", error);
+      devWarn("Error message:", error?.message);
+      devWarn("Error status:", error?.status);
+      devWarn("Error data:", JSON.stringify(error?.data, null, 2));
       
       // Handle 401 Unauthorized - redirect to login
       if (error?.status === 401) {
-        console.warn("🔴 Authentication failed - redirecting to login");
+        devWarn("🔴 Authentication failed - redirecting to login");
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
         setTimeout(() => {
           router.push(`/login?redirect=/admin/products/${productId}`);
@@ -188,13 +200,13 @@ export default function AdminProductEditPage() {
       
       // Log validation errors if available
       if (error?.data?.errors) {
-        console.warn("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
+        devWarn("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
       }
       if (error?.data?.title) {
-        console.warn("🔴 Error Title:", error.data.title);
+        devWarn("🔴 Error Title:", error.data.title);
       }
       
-      console.log("═══════════════════════════════════════════════════════");
+      devLog("═══════════════════════════════════════════════════════");
       let errorMessage = error?.data?.message || error?.message || error?.data?.error || "Không thể cập nhật sản phẩm";
       if (error?.data?.errors) {
         const parts: string[] = [];

@@ -61,6 +61,7 @@ import type {
   UpdateProductSpecificationRequest,
   BulkUpdateProductSpecificationsRequest,
 } from "./types";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 // Ensure URL has protocol and no trailing slash
 const getApiBaseUrl = () => {
@@ -97,7 +98,9 @@ class ApiClient {
   constructor(baseURL: string) {
     // Ensure baseURL has protocol
     if (!baseURL.startsWith("http://") && !baseURL.startsWith("https://")) {
-      console.warn(`[API Client] Base URL missing protocol, defaulting to https://`);
+      if (DEBUG_API) {
+        console.warn(`[API Client] Base URL missing protocol, defaulting to https://`);
+      }
       this.baseURL = `https://${baseURL}`;
     } else {
       this.baseURL = baseURL;
@@ -110,8 +113,7 @@ class ApiClient {
       this.accessToken = localStorage.getItem("accessToken");
     }
     
-    // Debug logging in development
-    if (process.env.NODE_ENV === "development") {
+    if (DEBUG_API) {
       console.log(`[API Client] Initialized with base URL: ${this.baseURL}`);
     }
   }
@@ -171,8 +173,7 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
-    // Debug logging in development
-    if (process.env.NODE_ENV === "development") {
+    if (DEBUG_API) {
       console.log(`[API Request] ${options.method || "GET"} ${url}`);
     }
 
@@ -297,13 +298,12 @@ class ApiClient {
         }
       }
       
-      // Debug logging (use console.warn to avoid Next.js error overlay)
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.warn(`[API Error] ${response.status} ${response.statusText}`, {
           url,
           errorMessage,
           errorData,
-          errorText: errorText ? errorText.substring(0, 500) : "", // Log first 500 chars if available
+          errorText: errorText ? errorText.substring(0, 500) : "",
         });
       }
       
@@ -315,7 +315,7 @@ class ApiClient {
     let text = await response.text();
     
     if (!text || text.trim() === "") {
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.log(`[API Response] Empty response for ${url} - returning empty result`);
       }
       // For void return types (like PUT/DELETE), return undefined
@@ -333,7 +333,7 @@ class ApiClient {
     
     // Check if response looks like HTML (error page)
     if (text.trim().startsWith("<") || text.toLowerCase().includes("<!doctype")) {
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.warn(`[API Response] HTML response received for ${url}. First 500 chars:`, text.substring(0, 500));
       }
       // Try to extract error message from HTML
@@ -344,7 +344,7 @@ class ApiClient {
     
     // Check content type
     if (contentType && !contentType.includes("application/json") && !contentType.includes("text/json")) {
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.warn(`[API Response] Non-JSON content-type for ${url}:`, contentType);
         console.warn(`[API Response] Response preview:`, text.substring(0, 200));
       }
@@ -386,7 +386,7 @@ class ApiClient {
 
       // Use trimmedText for parsing to avoid issues with leading/trailing whitespace
       const json = JSON.parse(trimmedText);
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.log(`[API Response] Successfully parsed JSON for ${url} (${trimmedText.length} chars)`);
       }
       return json;
@@ -396,12 +396,11 @@ class ApiClient {
       const positionMatch = errorMessage.match(/position (\d+)/);
       const errorPosition = positionMatch ? parseInt(positionMatch[1]) : null;
       
-      // Use console.warn instead of console.error to avoid Next.js error overlay
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.warn(`[API Response] Failed to parse JSON for ${url}:`);
         console.warn(`  Error:`, errorMessage);
         console.warn(`  Response length:`, text.length);
-        
+
         if (errorPosition !== null && errorPosition !== undefined) {
           const start = Math.max(0, errorPosition - 150);
           const end = Math.min(text.length, errorPosition + 150);
@@ -409,11 +408,10 @@ class ApiClient {
           console.warn(`  Context around error position:`);
           console.warn(`  ...${text.substring(start, end)}...`);
           console.warn(`  Character at position ${errorPosition}:`, `"${text[errorPosition]}" (char code: ${text.charCodeAt(errorPosition)})`);
-          
-          // Try to find the line and column
+
           const beforeError = text.substring(0, errorPosition);
           const lineNumber = (beforeError.match(/\n/g) || []).length + 1;
-          const lastNewline = beforeError.lastIndexOf('\n');
+          const lastNewline = beforeError.lastIndexOf("\n");
           const columnNumber = errorPosition - lastNewline;
           console.warn(`  Approximate line: ${lineNumber}, column: ${columnNumber}`);
         } else {
@@ -699,7 +697,9 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    console.log("API createOrder raw response:", response);
+    if (DEBUG_API) {
+      console.log("API createOrder raw response:", response);
+    }
     return response;
   }
 
@@ -723,7 +723,9 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    console.log("API createGuestOrder raw response:", response);
+    if (DEBUG_API) {
+      console.log("API createGuestOrder raw response:", response);
+    }
     return response;
   }
 
@@ -820,12 +822,12 @@ class ApiClient {
     
     try {
       const result = await this.request<Order[]>(endpoint);
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.log("[adminGetOrders] Success:", result);
       }
       return result;
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.error("[adminGetOrders] Error:", error);
       }
       throw error;
@@ -839,8 +841,8 @@ class ApiClient {
       // Backend may return OrderDto format (with shippingAddress) or Order format (with individual fields)
       // Accept any format and transform to Order
       const result = await this.request<any>(endpoint);
-      
-      if (process.env.NODE_ENV === "development") {
+
+      if (DEBUG_API) {
         console.log("[adminGetOrderById] Raw response:", result);
       }
       
@@ -877,7 +879,7 @@ class ApiClient {
           })) || null,
         };
         
-        if (process.env.NODE_ENV === "development") {
+        if (DEBUG_API) {
           console.log("[adminGetOrderById] Transformed to Order:", order);
         }
         
@@ -887,7 +889,7 @@ class ApiClient {
       // It's already Order format (has individual shipping fields)
       return result as Order;
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.error("[adminGetOrderById] Error:", error);
         console.error("[adminGetOrderById] Endpoint:", endpoint);
         if (error instanceof ApiError) {
@@ -949,12 +951,16 @@ class ApiClient {
   }
 
   async adminCreateProduct(data: Product): Promise<Product> {
-    console.log("🔵 [adminCreateProduct] Input data:", JSON.stringify(data, null, 2));
-    
+    if (DEBUG_API) {
+      console.log("🔵 [adminCreateProduct] Input data:", JSON.stringify(data, null, 2));
+    }
+
     // Validate categoryId - must not be empty
     const categoryIdValue = data.categoryId || "";
     if (!categoryIdValue || categoryIdValue.trim() === "") {
-      console.error("❌ [adminCreateProduct] categoryId is empty!");
+      if (DEBUG_API) {
+        console.error("❌ [adminCreateProduct] categoryId is empty!");
+      }
       throw new Error("Category ID is required");
     }
     
@@ -1004,49 +1010,61 @@ class ApiClient {
         });
         
         payload.variants = formattedVariants;
-        console.log("🔵 [adminCreateProduct] Formatted variants:", JSON.stringify(formattedVariants, null, 2));
+        if (DEBUG_API) {
+          console.log("🔵 [adminCreateProduct] Formatted variants:", JSON.stringify(formattedVariants, null, 2));
+        }
       } else if (variants === null || (Array.isArray(variants) && variants.length === 0)) {
         // Send null for empty array or explicitly null
         payload.variants = null;
       }
     }
 
-    console.log("🔵 [adminCreateProduct] Final payload:", JSON.stringify(payload, null, 2));
-    console.log("🔵 [adminCreateProduct] Payload types:", {
-      name: typeof payload.name,
-      categoryId: typeof payload.categoryId,
-      price: typeof payload.price,
-      stockQuantity: typeof payload.stockQuantity,
-      isActive: typeof payload.isActive,
-      imageUrls: typeof payload.imageUrls,
-      imageUrlsIsArray: Array.isArray(payload.imageUrls),
-      imageUrlsLength: payload.imageUrls ? payload.imageUrls.length : 0,
-    });
-    console.log("🔵 [adminCreateProduct] Sending POST to /api/admin/AdminProducts");
+    if (DEBUG_API) {
+      console.log("🔵 [adminCreateProduct] Final payload:", JSON.stringify(payload, null, 2));
+      console.log("🔵 [adminCreateProduct] Payload types:", {
+        name: typeof payload.name,
+        categoryId: typeof payload.categoryId,
+        price: typeof payload.price,
+        stockQuantity: typeof payload.stockQuantity,
+        isActive: typeof payload.isActive,
+        imageUrls: typeof payload.imageUrls,
+        imageUrlsIsArray: Array.isArray(payload.imageUrls),
+        imageUrlsLength: payload.imageUrls ? payload.imageUrls.length : 0,
+      });
+      console.log("🔵 [adminCreateProduct] Sending POST to /api/admin/AdminProducts");
+    }
 
     try {
       const result = await this.request<Product>("/api/admin/AdminProducts", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      console.log("✅ [adminCreateProduct] Success:", result);
+      if (DEBUG_API) {
+        console.log("✅ [adminCreateProduct] Success:", result);
+      }
       return result;
     } catch (error: any) {
-      console.error("❌ [adminCreateProduct] Error:", error);
-      console.error("❌ [adminCreateProduct] Error status:", error?.status);
-      console.error("❌ [adminCreateProduct] Error data:", JSON.stringify(error?.data, null, 2));
+      if (DEBUG_API) {
+        console.error("❌ [adminCreateProduct] Error:", error);
+        console.error("❌ [adminCreateProduct] Error status:", error?.status);
+        console.error("❌ [adminCreateProduct] Error data:", JSON.stringify(error?.data, null, 2));
+      }
       throw error;
     }
   }
 
   async adminUpdateProduct(id: string, data: Product): Promise<void> {
-    console.log("🟡 [adminUpdateProduct] Product ID:", id);
-    console.log("🟡 [adminUpdateProduct] Input data:", JSON.stringify(data, null, 2));
-    
+    if (DEBUG_API) {
+      console.log("🟡 [adminUpdateProduct] Product ID:", id);
+      console.log("🟡 [adminUpdateProduct] Input data:", JSON.stringify(data, null, 2));
+    }
+
     // Validate categoryId - must not be empty
     const categoryIdValue = data.categoryId || "";
     if (!categoryIdValue || categoryIdValue.trim() === "") {
-      console.error("❌ [adminUpdateProduct] categoryId is empty!");
+      if (DEBUG_API) {
+        console.error("❌ [adminUpdateProduct] categoryId is empty!");
+      }
       throw new Error("Category ID is required");
     }
     
@@ -1092,32 +1110,38 @@ class ApiClient {
       }
     }
 
-    console.log("🟡 [adminUpdateProduct] Final payload:", JSON.stringify(payload, null, 2));
-    console.log("🟡 [adminUpdateProduct] Payload types:", {
-      name: typeof payload.name,
-      categoryId: typeof payload.categoryId,
-      categoryIdValue: payload.categoryId,
-      categoryIdIsEmpty: !payload.categoryId || payload.categoryId === "",
-      price: typeof payload.price,
-      stockQuantity: typeof payload.stockQuantity,
-      isActive: typeof payload.isActive,
-      imageUrls: typeof payload.imageUrls,
-      imageUrlsIsArray: Array.isArray(payload.imageUrls),
-      imageUrlsLength: payload.imageUrls ? payload.imageUrls.length : 0,
-    });
-    console.log("🟡 [adminUpdateProduct] Sending PUT to /api/admin/AdminProducts/" + id);
+    if (DEBUG_API) {
+      console.log("🟡 [adminUpdateProduct] Final payload:", JSON.stringify(payload, null, 2));
+      console.log("🟡 [adminUpdateProduct] Payload types:", {
+        name: typeof payload.name,
+        categoryId: typeof payload.categoryId,
+        categoryIdValue: payload.categoryId,
+        categoryIdIsEmpty: !payload.categoryId || payload.categoryId === "",
+        price: typeof payload.price,
+        stockQuantity: typeof payload.stockQuantity,
+        isActive: typeof payload.isActive,
+        imageUrls: typeof payload.imageUrls,
+        imageUrlsIsArray: Array.isArray(payload.imageUrls),
+        imageUrlsLength: payload.imageUrls ? payload.imageUrls.length : 0,
+      });
+      console.log("🟡 [adminUpdateProduct] Sending PUT to /api/admin/AdminProducts/" + id);
+    }
 
     try {
       const result = await this.request<void>(`/api/admin/AdminProducts/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      console.log("✅ [adminUpdateProduct] Success");
+      if (DEBUG_API) {
+        console.log("✅ [adminUpdateProduct] Success");
+      }
       return result;
     } catch (error: any) {
-      console.error("❌ [adminUpdateProduct] Error:", error);
-      console.error("❌ [adminUpdateProduct] Error status:", error?.status);
-      console.error("❌ [adminUpdateProduct] Error data:", JSON.stringify(error?.data, null, 2));
+      if (DEBUG_API) {
+        console.error("❌ [adminUpdateProduct] Error:", error);
+        console.error("❌ [adminUpdateProduct] Error status:", error?.status);
+        console.error("❌ [adminUpdateProduct] Error data:", JSON.stringify(error?.data, null, 2));
+      }
       throw error;
     }
   }
@@ -1147,7 +1171,7 @@ class ApiClient {
   }
 
   async updateUser(id: string, data: UpdateUserRequest): Promise<void> {
-    if (process.env.NODE_ENV === "development") {
+    if (DEBUG_API) {
       console.log("[ApiClient] updateUser called:", {
         id,
         data,

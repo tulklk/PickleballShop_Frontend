@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 import { useAuth } from "@/lib/auth/useAuth";
 import type {
   LoginRequest,
@@ -71,8 +72,9 @@ async function syncGuestCart() {
           quantity: item.quantity,
         });
       } catch (error) {
-        console.warn("Failed to sync cart item:", error);
-        // Keep failed items to retry later
+        if (DEBUG_API) {
+          console.warn("Failed to sync cart item:", error);
+        }
         failedItems.push(item);
       }
     }
@@ -83,10 +85,14 @@ async function syncGuestCart() {
     } else {
       // Save failed items back to guest cart for retry
       localStorage.setItem("guestCart", JSON.stringify(failedItems));
-      console.warn(`Failed to sync ${failedItems.length} items. They will be kept in guest cart.`);
+      if (DEBUG_API) {
+        console.warn(`Failed to sync ${failedItems.length} items. They will be kept in guest cart.`);
+      }
     }
   } catch (error) {
-    console.warn("Failed to sync guest cart:", error);
+    if (DEBUG_API) {
+      console.warn("Failed to sync guest cart:", error);
+    }
     // Don't clear guest cart on error
   }
 }
@@ -461,14 +467,14 @@ export function useCart() {
       if (isAuthenticated) {
         try {
           const cart = await apiClient.getCart();
-          // Debug logging in development
-          if (process.env.NODE_ENV === "development") {
+          if (DEBUG_API) {
             console.log("[useCart] Fetched cart from API:", cart);
           }
           return cart;
         } catch (error) {
-          // If API fails, fallback to guest cart
-          console.warn("Failed to get cart from API, using guest cart:", error);
+          if (DEBUG_API) {
+            console.warn("Failed to get cart from API, using guest cart:", error);
+          }
           const { getGuestCart } = await import("@/lib/utils/guestCart");
           const guestCart = getGuestCart();
           const items = guestCart.map((item, index) => ({
@@ -525,8 +531,7 @@ export function useAddCartItem() {
   return useMutation({
     mutationFn: async (data: AddCartItemRequest) => {
       const result = await apiClient.addCartItem(data);
-      // Debug logging in development
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.log("[useAddCartItem] Added item to cart:", result);
       }
       return result;
@@ -544,14 +549,12 @@ export function useAddCartItem() {
         queryKey: ["cart", isAuthenticated],
         type: "active"
       });
-      // Debug logging in development
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.log("[useAddCartItem] Invalidated and refetched cart queries");
       }
     },
     onError: (error: any) => {
-      // Log error for debugging
-      if (process.env.NODE_ENV === "development") {
+      if (DEBUG_API) {
         console.warn("[Add Cart Item Error]", {
           status: error?.status,
           message: error?.message,
@@ -939,7 +942,9 @@ export function useWishlist() {
         }
         return [] as WishlistItem[];
       } catch (error) {
-        console.error("Failed to fetch wishlist:", error);
+        if (DEBUG_API) {
+          console.error("Failed to fetch wishlist:", error);
+        }
         return [] as WishlistItem[];
       }
     },
@@ -1007,8 +1012,9 @@ export function useUpdateUser() {
         // Also update the user/me cache
         queryClient.setQueryData(["user", "me"], updatedUser);
       } catch (error) {
-        console.warn("Failed to refetch user after update:", error);
-        // Even if refetch fails, still invalidate to force refetch on next access
+        if (DEBUG_API) {
+          console.warn("Failed to refetch user after update:", error);
+        }
       }
     },
   });

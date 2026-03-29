@@ -15,6 +15,7 @@ import {
   supportChatHub,
   type ConnectionStatus,
 } from "@/src/services/supportChatHub";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const mergeUniqueMessages = (
   prev: SupportMessageDto[],
@@ -95,7 +96,9 @@ function AdminSupportChatInner() {
       });
       setConversations(result.items || []);
     } catch (error) {
-      console.warn("[AdminSupportChatPage] Failed to load conversations:", error);
+      if (DEBUG_API) {
+        console.warn("[AdminSupportChatPage] Failed to load conversations:", error);
+      }
       setConversations([]);
     } finally {
       setIsLoadingConversations(false);
@@ -156,10 +159,12 @@ function AdminSupportChatInner() {
         });
         loaded = true;
       } catch (error) {
-        console.warn(
-          `[AdminSupportChatPage] Failed to load conversation ${customerId}:`,
-          error
-        );
+        if (DEBUG_API) {
+          console.warn(
+            `[AdminSupportChatPage] Failed to load conversation ${customerId}:`,
+            error
+          );
+        }
       }
 
       if (loaded) {
@@ -167,10 +172,12 @@ function AdminSupportChatInner() {
           await supportChatHub.joinConversation(customerId);
           await markConversationRead(customerId);
         } catch (error) {
-          console.warn(
-            `[AdminSupportChatPage] Join/markRead failed for ${customerId}:`,
-            error
-          );
+          if (DEBUG_API) {
+            console.warn(
+              `[AdminSupportChatPage] Join/markRead failed for ${customerId}:`,
+              error
+            );
+          }
         }
       }
       setIsLoadingMessages(false);
@@ -251,7 +258,9 @@ function AdminSupportChatInner() {
     };
 
     init().catch((error) => {
-      console.warn("[AdminSupportChatPage] Init failed:", error);
+      if (DEBUG_API) {
+        console.warn("[AdminSupportChatPage] Init failed:", error);
+      }
       setConnectionStatus("disconnected");
     });
 
@@ -328,7 +337,9 @@ function AdminSupportChatInner() {
           setInput("");
           return;
         } catch (hubErr) {
-          console.warn("[AdminSupportChatPage] Hub send failed, using REST:", hubErr);
+          if (DEBUG_API) {
+            console.warn("[AdminSupportChatPage] Hub send failed, using REST:", hubErr);
+          }
         }
       }
 
@@ -339,7 +350,9 @@ function AdminSupportChatInner() {
       }));
       setInput("");
     } catch (error) {
-      console.warn("[AdminSupportChatPage] Send failed:", error);
+      if (DEBUG_API) {
+        console.warn("[AdminSupportChatPage] Send failed:", error);
+      }
     } finally {
       setIsSending(false);
     }

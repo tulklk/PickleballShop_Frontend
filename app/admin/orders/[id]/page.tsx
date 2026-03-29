@@ -11,6 +11,7 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { OrderStatus, PaymentStatus, PaymentMethod, OrderStatusLabels, normalizeOrderStatus } from "@/lib/api/types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 function getOrderStatusText(status: OrderStatus | string): string {
   const normalizedStatus = normalizeOrderStatus(status);
@@ -126,9 +127,8 @@ export default function AdminOrderDetailPage() {
     }
   };
 
-  // Debug logging - MUST be called before any early returns (Rules of Hooks)
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
+    if (DEBUG_API) {
       console.log("[AdminOrderDetailPage] order:", order);
       console.log("[AdminOrderDetailPage] isLoading:", isLoading);
       console.log("[AdminOrderDetailPage] error:", error);
@@ -147,8 +147,10 @@ export default function AdminOrderDetailPage() {
   }
 
   if (error) {
-    console.error("[AdminOrderDetailPage] Error details:", error);
-    
+    if (DEBUG_API) {
+      console.error("[AdminOrderDetailPage] Error details:", error);
+    }
+
     // Extract error message from ApiError if available
     let errorMessage = "Đã xảy ra lỗi không xác định";
     let errorDetails: any = null;

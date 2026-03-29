@@ -4,13 +4,16 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { ChatBox } from "@/components/chat/ChatBox";
-import { SupportChatBox } from "@/components/chat/SupportChatBox";
-import { ZaloButton } from "@/components/chat/ZaloButton";
-import { ScrollToTop } from "@/components/layout/ScrollToTop";
+import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import { Toaster } from "sonner";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  adjustFontFallback: true,
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com"),
@@ -96,19 +99,38 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const apiOrigin =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "";
+  let apiDnsPrefetchHref: string | null = null;
+  if (apiOrigin) {
+    try {
+      apiDnsPrefetchHref = new URL(apiOrigin).origin;
+    } catch {
+      apiDnsPrefetchHref = null;
+    }
+  }
+
   return (
-    <html lang="vi" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="vi" suppressHydrationWarning className={inter.variable}>
+      <head>
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        {apiDnsPrefetchHref ? (
+          <link rel="dns-prefetch" href={apiDnsPrefetchHref} />
+        ) : null}
+      </head>
+      <body className={`${inter.className} antialiased`}>
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main id="main-content" className="flex-1">
+              {children}
+            </main>
             <Footer />
           </div>
-          <ChatBox />
-          <SupportChatBox />
-          <ZaloButton />
-          <ScrollToTop />
+          <DeferredClientWidgets />
           <Toaster position="top-right" />
         </Providers>
       </body>

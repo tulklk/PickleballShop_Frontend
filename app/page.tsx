@@ -18,6 +18,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatDate } from "@/lib/utils/formatDate";
 import { toast } from "sonner";
 import { getProductUrl } from "@/lib/utils/productUrl";
+import { optimizeCloudinarySrc } from "@/lib/utils/cloudinaryImage";
 
 // Import homepage images
 import banner1 from "@/app/img/homepage_img/1.jpg";
@@ -26,7 +27,6 @@ import banner3 from "@/app/img/homepage_img/3.jpg";
 import banner4 from "@/app/img/homepage_img/4.jpg";
 import banner5 from "@/app/img/homepage_img/5.jpg";
 import banner11 from "@/app/img/homepage_img/11.jpg";
-import banner6 from "@/app/img/homepage_img/6.png";
 import banner7 from "@/app/img/homepage_img/7.jpg";
 import banner8 from "@/app/img/homepage_img/8.jpg";
 import banner9 from "@/app/img/homepage_img/9.jpg";
@@ -80,8 +80,8 @@ export default function HomePage() {
     });
   }, [categories, queryClient]);
 
-  // Generate structured data (JSON-LD) for SEO
-  const siteUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://pickleballshop.com");
+  // Generate structured data (JSON-LD) for SEO — stable URL for SSR + client (avoid hydration mismatch)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pickleballshop.com";
   
   const organizationStructuredData = {
     "@context": "https://schema.org",
@@ -163,7 +163,8 @@ function HeroBannerSlider() {
   }, [banners.length]);
 
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden" aria-label="Banner trang chủ">
+      <h1 className="sr-only">IKA Sport — cửa hàng Pickleball chính hãng tại Việt Nam</h1>
       <div className="flex relative">
         {/* Main Banner */}
         <div className="relative w-full lg:w-2/3 h-[300px] md:h-[450px] overflow-hidden">
@@ -178,37 +179,57 @@ function HeroBannerSlider() {
                 src={banner}
                 alt={`Banner ${idx + 1}`}
                 fill
-                sizes="100vw"
+                sizes="(max-width: 1024px) 100vw, 67vw"
                 className="object-cover"
                 priority={idx === 0}
+                fetchPriority={idx === 0 ? "high" : "low"}
+                loading={idx === 0 ? "eager" : "lazy"}
               />
             </div>
           ))}
           
           {/* Navigation Arrows */}
           <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+            type="button"
+            aria-label="Banner trước"
+            className="absolute left-4 top-1/2 z-10 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 p-2 shadow-lg hover:bg-white"
             onClick={() => setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length)}
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-6 w-6" aria-hidden />
           </button>
           <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg z-10"
+            type="button"
+            aria-label="Banner sau"
+            className="absolute right-4 top-1/2 z-10 flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 p-2 shadow-lg hover:bg-white"
             onClick={() => setCurrentSlide((prev) => (prev + 1) % banners.length)}
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-6 w-6" aria-hidden />
           </button>
 
           {/* Dots */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          <div
+            className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-1"
+            role="tablist"
+            aria-label="Chọn banner"
+          >
             {banners.map((_, idx) => (
               <button
+                type="button"
                 key={idx}
-                className={`w-3 h-3 rounded-full ${
-                  idx === currentSlide ? "bg-emerald-500 w-8" : "bg-white/60 hover:bg-white/80"
-                }`}
+                role="tab"
+                aria-selected={idx === currentSlide}
+                aria-label={`Chuyển đến banner ${idx + 1}`}
+                className="flex h-11 min-w-11 items-center justify-center rounded-full p-1 touch-manipulation"
                 onClick={() => setCurrentSlide(idx)}
-              />
+              >
+                <span
+                  className={`block rounded-full transition-all ${
+                    idx === currentSlide
+                      ? "h-2.5 w-8 bg-emerald-500"
+                      : "h-2.5 w-2.5 bg-white/70 hover:bg-white"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -222,6 +243,7 @@ function HeroBannerSlider() {
               fill
               sizes="(max-width: 1024px) 0vw, 33vw"
               className="object-cover"
+              loading="lazy"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent flex items-end p-4">
               <Button className="bg-primary text-primary-foreground hover:bg-primary/90">XEM NGAY</Button>
@@ -234,6 +256,7 @@ function HeroBannerSlider() {
               fill
               sizes="(max-width: 1024px) 0vw, 33vw"
               className="object-cover"
+              loading="lazy"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent" />
             <div className="absolute bottom-6 left-6 z-10">
@@ -255,7 +278,7 @@ function FeatureBanners() {
         {/* Big left banner - Sản phẩm mới */}
         <Link
           href="/products"
-          className="relative overflow-hidden rounded-2xl group lg:col-span-2 bg-black"
+          className="relative block min-h-[260px] md:min-h-[300px] overflow-hidden rounded-2xl group lg:col-span-2 bg-black"
         >
           <Image
             src={banner10}
@@ -263,6 +286,7 @@ function FeatureBanners() {
             fill
             sizes="(max-width: 768px) 100vw, 66vw"
             className="object-cover opacity-90"
+            loading="lazy"
           />
           <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-between p-6 md:p-8">
             <div className="space-y-2">
@@ -285,7 +309,7 @@ function FeatureBanners() {
         {/* Right banner - Tiêu điểm tháng */}
         <Link
           href="/products"
-          className="relative overflow-hidden rounded-2xl group bg-black"
+          className="relative block min-h-[260px] md:min-h-[300px] overflow-hidden rounded-2xl group bg-black"
         >
           <Image
             src={banner9}
@@ -293,6 +317,7 @@ function FeatureBanners() {
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             className="object-cover opacity-90"
+            loading="lazy"
           />
           <div className="absolute inset-0 bg-black/70 flex flex-col justify-between p-6">
             <div className="space-y-1">
@@ -363,7 +388,7 @@ function FlashSaleSection({
   };
 
   // Show skeleton while loading
-  if (isLoading) {
+  if (finalIsLoading) {
     return (
       <section className="container mx-auto px-3 md:px-4 py-4 md:py-6">
         <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
@@ -416,10 +441,21 @@ function FlashSaleSection({
           {saleProducts[0] && (
             <>
               <div className="relative aspect-square mb-4 overflow-hidden rounded-lg group">
-                {saleProducts[0].primaryImageUrl?.includes("cloudinary") ? (
-                  <img src={saleProducts[0].primaryImageUrl} alt="" className="w-full h-full object-contain" />
+                {saleProducts[0].primaryImageUrl ? (
+                  <Image
+                    src={
+                      saleProducts[0].primaryImageUrl.includes("res.cloudinary.com")
+                        ? optimizeCloudinarySrc(saleProducts[0].primaryImageUrl, { maxWidth: 560 })
+                        : saleProducts[0].primaryImageUrl
+                    }
+                    alt={saleProducts[0].name || "Sản phẩm flash sale"}
+                    fill
+                    sizes="(max-width: 768px) 90vw, 28vw"
+                    className="object-contain"
+                    loading="lazy"
+                  />
                 ) : (
-                  <Image src={saleProducts[0].primaryImageUrl || ""} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
+                  <div className="h-full w-full bg-gray-100" />
                 )}
                 {saleProducts[0].originalPrice != null && saleProducts[0].originalPrice > saleProducts[0].price && (
                   <span className="absolute top-2 right-2 bg-emerald-500 text-white text-sm font-bold px-2 py-1 rounded shadow-lg">
@@ -478,11 +514,21 @@ function FlashSaleSection({
               <span className="text-yellow-300">⚡</span> FLASH SALE GIÁ SỐC
             </h3>
             <div className="flex gap-2">
-          <button onClick={() => scroll("left")} className="bg-white/20 hover:bg-white/40 rounded-full p-2">
-            <ChevronLeft className="h-5 w-5 text-white" />
+          <button
+            type="button"
+            aria-label="Cuộn flash sale sang trái"
+            onClick={() => scroll("left")}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/20 p-2 hover:bg-white/40"
+          >
+            <ChevronLeft className="h-5 w-5 text-white" aria-hidden />
           </button>
-          <button onClick={() => scroll("right")} className="bg-white/20 hover:bg-white/40 rounded-full p-2">
-            <ChevronRight className="h-5 w-5 text-white" />
+          <button
+            type="button"
+            aria-label="Cuộn flash sale sang phải"
+            onClick={() => scroll("right")}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/20 p-2 hover:bg-white/40"
+          >
+            <ChevronRight className="h-5 w-5 text-white" aria-hidden />
           </button>
             </div>
           </div>
@@ -502,10 +548,19 @@ function FlashSaleSection({
                   >
                     <CardContent className="p-3">
                       <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-                        {product.primaryImageUrl?.includes("cloudinary") ? (
-                          <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
-                        ) : product.primaryImageUrl ? (
-                          <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
+                        {product.primaryImageUrl ? (
+                          <Image
+                            src={
+                              product.primaryImageUrl.includes("res.cloudinary.com")
+                                ? optimizeCloudinarySrc(product.primaryImageUrl, { maxWidth: 400 })
+                                : product.primaryImageUrl
+                            }
+                            alt={product.name || "Sản phẩm"}
+                            fill
+                            sizes="200px"
+                            className="object-contain"
+                            loading="lazy"
+                          />
                         ) : (
                           <div className="w-full h-full bg-gray-100" />
                         )}
@@ -547,10 +602,19 @@ function FlashSaleSection({
                   >
                     <CardContent className="p-3">
                       <div className="relative aspect-square mb-2 overflow-hidden rounded-lg">
-                        {product.primaryImageUrl?.includes("cloudinary") ? (
-                          <img src={product.primaryImageUrl} alt="" className="w-full h-full object-contain" />
-                        ) : product.primaryImageUrl ? (
-                          <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
+                        {product.primaryImageUrl ? (
+                          <Image
+                            src={
+                              product.primaryImageUrl.includes("res.cloudinary.com")
+                                ? optimizeCloudinarySrc(product.primaryImageUrl, { maxWidth: 400 })
+                                : product.primaryImageUrl
+                            }
+                            alt={product.name || "Sản phẩm"}
+                            fill
+                            sizes="200px"
+                            className="object-contain"
+                            loading="lazy"
+                          />
                         ) : (
                           <div className="w-full h-full bg-gray-100" />
                         )}
@@ -649,9 +713,16 @@ function NewProductsSection({
 
       <div className="flex gap-4">
         {/* Left Banner */}
-        <div className="hidden lg:block w-1/4">
-          <div className="relative h-full rounded-xl overflow-hidden">
-            <Image src={banner10} alt="New Products" fill sizes="(max-width: 1024px) 0vw, 25vw" className="object-cover" />
+        <div className="hidden lg:block w-1/4 self-stretch">
+          <div className="relative min-h-[480px] h-full rounded-xl overflow-hidden">
+            <Image
+              src={banner10}
+              alt="Sản phẩm mới"
+              fill
+              sizes="(max-width: 1024px) 0vw, 25vw"
+              className="object-cover"
+              loading="lazy"
+            />
           </div>
         </div>
 
@@ -811,10 +882,6 @@ function CategoryProductsSection({
       {categoryConfigs.map((config) => {
         const category = findCategoryByName(config.categoryName);
 
-        if (process.env.NODE_ENV === "development" && !category) {
-          console.log(`Category not found for: ${config.name} (categoryName: ${config.categoryName})`);
-        }
-
         if (!category) {
           return (
             <CategoryProductSection
@@ -910,9 +977,6 @@ function CategoryProductSection({
               return await apiClient.getProducts({ PageSize: 8, CategoryId: childId });
             } catch (error: any) {
               if (error?.status === 500) {
-                if (process.env.NODE_ENV === "development") {
-                  console.warn(`[CategoryProductSection] Failed to fetch products for category ${childId}:`, error);
-                }
                 return { items: [], totalCount: 0, page: 1, pageSize: 8, totalPages: 0, hasPreviousPage: false, hasNextPage: false };
               }
               throw error;
@@ -1029,7 +1093,8 @@ function CategoryProductSection({
               alt={config.name} 
               fill 
               sizes="(max-width: 1024px) 0vw, 25vw"
-              className="object-cover" 
+              className="object-cover"
+              loading="lazy"
             />
             {/* Overlay content */}
             <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/30 flex flex-col justify-between p-6">
@@ -1065,19 +1130,18 @@ function CategoryProductSection({
               <Card className="bg-white h-full product-card-hover shimmer-on-hover">
                 <CardContent className="p-3">
                   <div className="relative aspect-square mb-3 bg-gray-50 rounded-lg overflow-hidden">
-                    {product.primaryImageUrl?.includes("cloudinary") ? (
-                      <img 
-                        src={product.primaryImageUrl} 
-                        alt={product.name || ""} 
-                        className="w-full h-full object-contain" 
-                      />
-                    ) : product.primaryImageUrl ? (
-                      <Image 
-                        src={product.primaryImageUrl} 
-                        alt={product.name || ""} 
-                        fill 
+                    {product.primaryImageUrl ? (
+                      <Image
+                        src={
+                          product.primaryImageUrl.includes("res.cloudinary.com")
+                            ? optimizeCloudinarySrc(product.primaryImageUrl, { maxWidth: 480 })
+                            : product.primaryImageUrl
+                        }
+                        alt={product.name || "Sản phẩm"}
+                        fill
                         sizes="(max-width: 768px) 50vw, 25vw"
-                        className="object-contain" 
+                        className="object-contain"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
@@ -1200,7 +1264,10 @@ function TrendingSection({
   }
 
   return (
-    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8" aria-labelledby="trending-section-heading">
+      <h2 id="trending-section-heading" className="sr-only">
+        Xu hướng và sản phẩm được quan tâm
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
         {/* Trending */}
         <div>
@@ -1212,11 +1279,20 @@ function TrendingSection({
                 href={getProductUrl(product)} 
                 className="flex gap-3 group"
               >
-                <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                  {product.primaryImageUrl?.includes("cloudinary") ? (
-                    <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : product.primaryImageUrl ? (
-                    <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                  {product.primaryImageUrl ? (
+                    <Image
+                      src={
+                        product.primaryImageUrl.includes("res.cloudinary.com")
+                          ? optimizeCloudinarySrc(product.primaryImageUrl, { maxWidth: 160 })
+                          : product.primaryImageUrl
+                      }
+                      alt={product.name || "Sản phẩm"}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                      loading="lazy"
+                    />
                   ) : null}
                   {product.originalPrice && product.originalPrice > product.price && (
                     <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded shadow-md">
@@ -1248,11 +1324,20 @@ function TrendingSection({
                 href={getProductUrl(product)} 
                 className="flex gap-3 group"
               >
-                <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                  {product.primaryImageUrl?.includes("cloudinary") ? (
-                    <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : product.primaryImageUrl ? (
-                    <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                  {product.primaryImageUrl ? (
+                    <Image
+                      src={
+                        product.primaryImageUrl.includes("res.cloudinary.com")
+                          ? optimizeCloudinarySrc(product.primaryImageUrl, { maxWidth: 160 })
+                          : product.primaryImageUrl
+                      }
+                      alt={product.name || "Sản phẩm"}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                      loading="lazy"
+                    />
                   ) : null}
                 </div>
                 <div className="flex-1">
@@ -1279,11 +1364,20 @@ function TrendingSection({
                 href={getProductUrl(product)} 
                 className="flex gap-3 group"
               >
-                <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                  {product.primaryImageUrl?.includes("cloudinary") ? (
-                    <img src={product.primaryImageUrl} alt="" className="w-full h-full object-cover" />
-                  ) : product.primaryImageUrl ? (
-                    <Image src={product.primaryImageUrl} alt="" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover" />
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                  {product.primaryImageUrl ? (
+                    <Image
+                      src={
+                        product.primaryImageUrl.includes("res.cloudinary.com")
+                          ? optimizeCloudinarySrc(product.primaryImageUrl, { maxWidth: 160 })
+                          : product.primaryImageUrl
+                      }
+                      alt={product.name || "Sản phẩm"}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                      loading="lazy"
+                    />
                   ) : null}
                   {product.originalPrice != null && product.originalPrice > product.price && (
                     <span className="absolute top-1 left-1 bg-red-500 text-white text-[10px] px-1 rounded">
@@ -1362,7 +1456,10 @@ function CategoryLinksGrid({
   }
 
   return (
-    <section className="container mx-auto px-4 py-8">
+    <section className="container mx-auto px-4 py-8" aria-labelledby="category-links-heading">
+      <h2 id="category-links-heading" className="sr-only">
+        Danh mục sản phẩm nổi bật
+      </h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         {rootCategories.slice(0, 5).map((category: any) => (
           <Link
@@ -1371,7 +1468,7 @@ function CategoryLinksGrid({
             className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 group"
           >
             <div className="text-center">
-              <h3 className="font-semibold text-gray-900 group-hover:text-emerald-600">{category.name}</h3>
+              <p className="font-semibold text-gray-900 group-hover:text-emerald-600">{category.name}</p>
               <p className="text-sm text-gray-500 mt-1">{category.productCount || 0} sản phẩm</p>
             </div>
           </Link>
@@ -1443,29 +1540,25 @@ function LatestNewsSection() {
             <div className="flex flex-col h-full">
               {/* Image */}
               <div className="relative w-full aspect-4/3 rounded-lg overflow-hidden mb-4">
-                {featuredArticle.thumbnailUrl.includes("cloudinary.com") ||
-                featuredArticle.thumbnailUrl.startsWith("http") ? (
-                  <img
-                    src={featuredArticle.thumbnailUrl}
-                    alt={featuredArticle.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                ) : (
-                  <Image
-                    src={featuredArticle.thumbnailUrl}
-                    alt={featuredArticle.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                )}
+                <Image
+                  src={
+                    featuredArticle.thumbnailUrl.includes("res.cloudinary.com")
+                      ? optimizeCloudinarySrc(featuredArticle.thumbnailUrl, { maxWidth: 900 })
+                      : featuredArticle.thumbnailUrl
+                  }
+                  alt={featuredArticle.title}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  loading="lazy"
+                />
               </div>
 
               {/* Article Details Below */}
               <div className="flex-1">
-                <h4 className="text-lg font-bold text-brand-green-500 mb-2 group-hover:text-brand-green-600 transition-colors">
+                <h3 className="text-lg font-bold text-brand-green-500 mb-2 group-hover:text-brand-green-600 transition-colors">
                   {featuredArticle.title}
-                </h4>
+                </h3>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
                   <Clock className="h-4 w-4" />
                   <span>
@@ -1492,23 +1585,19 @@ function LatestNewsSection() {
             >
               <div className="flex gap-4">
                 {/* Thumbnail */}
-                <div className="relative w-24 h-20 shrink-0 rounded overflow-hidden">
-                  {article.thumbnailUrl.includes("cloudinary.com") ||
-                  article.thumbnailUrl.startsWith("http") ? (
-                    <img
-                      src={article.thumbnailUrl}
-                      alt={article.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Image
-                      src={article.thumbnailUrl}
-                      alt={article.title}
-                      fill
-                      className="object-cover"
-                      sizes="96px"
-                    />
-                  )}
+                <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded">
+                  <Image
+                    src={
+                      article.thumbnailUrl.includes("res.cloudinary.com")
+                        ? optimizeCloudinarySrc(article.thumbnailUrl, { maxWidth: 240 })
+                        : article.thumbnailUrl
+                    }
+                    alt={article.title}
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                    loading="lazy"
+                  />
                 </div>
 
                 {/* Content */}
@@ -1518,9 +1607,9 @@ function LatestNewsSection() {
                       {article.category}
                     </span>
                   </div>
-                  <h5 className="text-sm font-bold text-black mb-1 group-hover:text-brand-green-500 transition-colors line-clamp-2">
+                  <h4 className="text-sm font-bold text-black mb-1 group-hover:text-brand-green-500 transition-colors line-clamp-2">
                     {article.title}
-                  </h5>
+                  </h4>
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Clock className="h-3 w-3" />
                     <span>
@@ -1557,20 +1646,26 @@ function NewsletterSection() {
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between md:gap-8">
           {/* Contact Info */}
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
-            <div className="flex items-center gap-3 cursor-pointer group">
-              <Phone className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700 shrink-0" />
+            <a
+              href="tel:+84824010188"
+              className="flex items-center gap-3 rounded-lg outline-none ring-offset-2 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <Phone className="h-8 w-8 shrink-0 text-emerald-600" aria-hidden />
               <div>
                 <p className="font-semibold text-gray-900">Hotline</p>
-                <p className="text-emerald-600 font-bold group-hover:text-emerald-700">0824.01.01.88</p>
+                <p className="font-bold text-emerald-600">0824.01.01.88</p>
               </div>
-            </div>
-            <div className="flex items-center gap-3 cursor-pointer group">
-              <Mail className="h-8 w-8 text-emerald-600 group-hover:text-emerald-700 shrink-0" />
+            </a>
+            <a
+              href="mailto:support@ikasport.com"
+              className="flex items-center gap-3 rounded-lg outline-none ring-offset-2 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <Mail className="h-8 w-8 shrink-0 text-emerald-600" aria-hidden />
               <div>
                 <p className="font-semibold text-gray-900">Email</p>
-                <p className="text-emerald-600 group-hover:text-emerald-700">support@ikasport.com</p>
+                <p className="text-emerald-600">support@ikasport.com</p>
               </div>
-            </div>
+            </a>
           </div>
 
           {/* Newsletter */}
@@ -1614,16 +1709,19 @@ function TrustBadges() {
   ];
 
   return (
-    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8">
+    <section className="container mx-auto px-3 md:px-4 py-4 md:py-8" aria-labelledby="trust-badges-heading">
+      <h2 id="trust-badges-heading" className="sr-only">
+        Cam kết với khách hàng
+      </h2>
       <div className="flex flex-col md:grid md:grid-cols-3 gap-4 md:gap-6">
         {badges.map((badge) => (
           <div 
             key={badge.title} 
             className="flex items-center gap-4 md:justify-center justify-start cursor-pointer group hover:shadow-lg rounded-lg p-4"
           >
-            <badge.icon className="h-12 w-12 text-emerald-600 group-hover:text-emerald-700 shrink-0" />
+            <badge.icon className="h-12 w-12 text-emerald-600 group-hover:text-emerald-700 shrink-0" aria-hidden />
             <div className="text-left md:text-center">
-              <h4 className="font-bold text-gray-900">{badge.title}</h4>
+              <h3 className="font-bold text-gray-900">{badge.title}</h3>
               <p className="text-sm text-gray-600">{badge.desc}</p>
             </div>
           </div>

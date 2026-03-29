@@ -8,6 +8,18 @@ import { ProductForm, ProductFormValues } from "../ProductForm";
 import { ProductSpecificationsDraft, type DraftSpec } from "@/components/admin/ProductSpecificationsDraft";
 import { toast } from "sonner";
 import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
+import { DEBUG_API } from "@/lib/utils/debugApi";
+
+const _c = globalThis.console;
+function devLog(...args: unknown[]) {
+  if (DEBUG_API) _c.log(...args);
+}
+function devWarn(...args: unknown[]) {
+  if (DEBUG_API) _c.warn(...args);
+}
+function devError(...args: unknown[]) {
+  if (DEBUG_API) _c.error(...args);
+}
 
 export default function AdminProductCreatePage() {
   const router = useRouter();
@@ -17,11 +29,11 @@ export default function AdminProductCreatePage() {
   const [draftSpecs, setDraftSpecs] = useState<DraftSpec[]>([]);
 
   const handleSubmit = async (values: ProductFormValues) => {
-    console.log("═══════════════════════════════════════════════════════");
-    console.log("➕ CREATE PRODUCT - START");
-    console.log("═══════════════════════════════════════════════════════");
-    console.log("📝 Form Values Received:", JSON.stringify(values, null, 2));
-    console.log("📝 Form Values Types:", {
+    devLog("═══════════════════════════════════════════════════════");
+    devLog("➕ CREATE PRODUCT - START");
+    devLog("═══════════════════════════════════════════════════════");
+    devLog("📝 Form Values Received:", JSON.stringify(values, null, 2));
+    devLog("📝 Form Values Types:", {
       name: typeof values.name,
       description: typeof values.description,
       categoryId: typeof values.categoryId,
@@ -39,7 +51,7 @@ export default function AdminProductCreatePage() {
       // Validate categoryId before proceeding
       const finalCategoryId = values.categoryId || "";
       if (!finalCategoryId || finalCategoryId.trim() === "") {
-        console.error("❌ Category ID is missing in create!");
+        devError("❌ Category ID is missing in create!");
         toast.error("Vui lòng chọn danh mục sản phẩm");
         return;
       }
@@ -47,7 +59,7 @@ export default function AdminProductCreatePage() {
       // Validate UUID format
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(finalCategoryId)) {
-        console.error("❌ Category ID is not a valid UUID:", finalCategoryId);
+        devError("❌ Category ID is not a valid UUID:", finalCategoryId);
         toast.error("Danh mục không hợp lệ. Vui lòng chọn lại danh mục.");
         return;
       }
@@ -106,8 +118,8 @@ export default function AdminProductCreatePage() {
         productData.variants = null;
       }
       
-      console.log("📤 Prepared Product Data:", JSON.stringify(productData, null, 2));
-      console.log("📊 Data Types Check:", {
+      devLog("📤 Prepared Product Data:", JSON.stringify(productData, null, 2));
+      devLog("📊 Data Types Check:", {
         name: typeof productData.name,
         description: typeof productData.description,
         categoryId: typeof productData.categoryId,
@@ -122,7 +134,7 @@ export default function AdminProductCreatePage() {
         imageUrlsLength: productData.imageUrls.length,
         imageUrlsContent: productData.imageUrls,
       });
-      console.log("🔍 Category ID Validation:", {
+      devLog("🔍 Category ID Validation:", {
         categoryId: productData.categoryId,
         isEmpty: !productData.categoryId || productData.categoryId === "",
         isValidUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productData.categoryId || ""),
@@ -147,22 +159,22 @@ export default function AdminProductCreatePage() {
         }
       }
       
-      console.log("✅ CREATE PRODUCT - SUCCESS");
-      console.log("═══════════════════════════════════════════════════════");
+      devLog("✅ CREATE PRODUCT - SUCCESS");
+      devLog("═══════════════════════════════════════════════════════");
       toast.success("Tạo sản phẩm thành công");
       
       await new Promise((resolve) => setTimeout(resolve, 300));
       router.push("/admin/products");
     } catch (error: any) {
-      console.warn("❌ CREATE PRODUCT - ERROR");
-      console.warn("Error object:", error);
-      console.warn("Error message:", error?.message);
-      console.warn("Error status:", error?.status);
-      console.warn("Error data:", JSON.stringify(error?.data, null, 2));
+      devWarn("❌ CREATE PRODUCT - ERROR");
+      devWarn("Error object:", error);
+      devWarn("Error message:", error?.message);
+      devWarn("Error status:", error?.status);
+      devWarn("Error data:", JSON.stringify(error?.data, null, 2));
       
       // Handle 401 Unauthorized - redirect to login
       if (error?.status === 401) {
-        console.warn("🔴 Authentication failed - redirecting to login");
+        devWarn("🔴 Authentication failed - redirecting to login");
         toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
         setTimeout(() => {
           router.push("/login?redirect=/admin/products/new");
@@ -172,7 +184,7 @@ export default function AdminProductCreatePage() {
       
       // Handle 500 Internal Server Error - show detailed error
       if (error?.status === 500) {
-        console.warn("🔴 Server Error (500):", error?.data);
+        devWarn("🔴 Server Error (500):", error?.data);
         
         // Try to extract detailed error message
         let serverErrorMessage = "Lỗi máy chủ. Vui lòng kiểm tra dữ liệu và thử lại.";
@@ -214,7 +226,7 @@ export default function AdminProductCreatePage() {
       
       // Log validation errors if available
       if (error?.data?.errors) {
-        console.warn("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
+        devWarn("🔴 Validation Errors:", JSON.stringify(error.data.errors, null, 2));
         // Format validation errors for display
         const validationErrors: string[] = [];
         for (const [key, value] of Object.entries(error.data.errors)) {
@@ -234,10 +246,10 @@ export default function AdminProductCreatePage() {
         }
       }
       if (error?.data?.title) {
-        console.warn("🔴 Error Title:", error.data.title);
+        devWarn("🔴 Error Title:", error.data.title);
       }
       
-      console.log("═══════════════════════════════════════════════════════");
+      devLog("═══════════════════════════════════════════════════════");
       const errorMessage = error?.data?.message || error?.message || error?.data?.error || "Không thể tạo sản phẩm";
       toast.error(errorMessage);
     }

@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Shirt,
 } from "lucide-react";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const categoryIcons: Record<string, any> = {
   "Tin tức": FileText,
@@ -46,7 +47,7 @@ export interface NewsSidebarProps {
 function NewsSidebar({ activeCategory }: NewsSidebarProps) {
   const { data: categories = [], isLoading, error } = useNewsCategories();
   
-  if (error) {
+  if (error && DEBUG_API) {
     console.error("Error loading news categories:", error);
   }
 

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { RequireAuth } from "@/lib/auth/guards";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 interface BankTransferData {
   bankTransferInfo: BankTransferInfo;
@@ -47,7 +48,9 @@ function BankTransferSuccessContent() {
         const data = JSON.parse(storedData) as BankTransferData;
         setBankTransferData(data);
       } catch (error) {
-        console.error("Failed to parse bank transfer data:", error);
+        if (DEBUG_API) {
+          console.error("Failed to parse bank transfer data:", error);
+        }
       }
     }
     setIsLoading(false);

@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import type { ProductListDto, ProductDto } from "@/lib/api/types";
 import { Star } from "lucide-react";
 import { getProductUrl } from "@/lib/utils/productUrl";
+import { optimizeCloudinarySrc } from "@/lib/utils/cloudinaryImage";
 
 interface ProductCardProps {
   product: ProductListDto | ProductDto;
@@ -56,7 +57,12 @@ export function ProductCard({ product, showBrand = true }: ProductCardProps) {
     return "/placeholder-product.jpg";
   };
 
-  const imageUrl = getImageUrl();
+  const rawImageUrl = getImageUrl();
+  const imageUrl =
+    rawImageUrl !== "/placeholder-product.jpg" &&
+    rawImageUrl.includes("res.cloudinary.com")
+      ? optimizeCloudinarySrc(rawImageUrl, { maxWidth: 640 })
+      : rawImageUrl;
 
   const price = product.price;
   const originalPrice = "originalPrice" in product ? product.originalPrice : null;
@@ -73,10 +79,10 @@ export function ProductCard({ product, showBrand = true }: ProductCardProps) {
           {imageUrl !== "/placeholder-product.jpg" ? (
             <Image
               src={imageUrl}
-              alt={product.name || "Product"}
+              alt={product.name || "Sản phẩm"}
               fill
               className="object-cover image-zoom"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200">

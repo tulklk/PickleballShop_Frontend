@@ -9,6 +9,7 @@ import type {
   NewOrderNotification,
   NewSupportMessageNotification,
 } from "@/lib/api/types";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 type ConnectionStatus = "connected" | "reconnecting" | "disconnected";
 type NewOrderCallback = (payload: NewOrderNotification) => void;
@@ -113,10 +114,12 @@ class AdminNotificationsHubManager {
       try {
         return await tryStart(longPollingOnly);
       } catch (error) {
-        console.warn(
-          `[AdminNotificationsHub] Connect failed (attempt ${attempt + 1}/${maxAttempts}, longPollingOnly=${longPollingOnly}):`,
-          error
-        );
+        if (DEBUG_API) {
+          console.warn(
+            `[AdminNotificationsHub] Connect failed (attempt ${attempt + 1}/${maxAttempts}, longPollingOnly=${longPollingOnly}):`,
+            error
+          );
+        }
         if (attempt < maxAttempts - 1) {
           await sleep(800 * (attempt + 1));
         }

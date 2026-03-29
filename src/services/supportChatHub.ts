@@ -6,6 +6,7 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 import type { SupportMessageDto } from "@/lib/api/types";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 type ConnectionStatus = "connected" | "reconnecting" | "disconnected";
 type ReceiveMessageCallback = (message: SupportMessageDto) => void;
@@ -72,7 +73,9 @@ class SupportChatHubManager {
             this.lastJoinConversationArg === null ? undefined : this.lastJoinConversationArg
           );
         } catch (e) {
-          console.warn("[SupportChatHub] Re-join after reconnect failed:", e);
+          if (DEBUG_API) {
+            console.warn("[SupportChatHub] Re-join after reconnect failed:", e);
+          }
         }
       }
     });
@@ -123,10 +126,12 @@ class SupportChatHubManager {
       try {
         return await tryStart(longPollingOnly);
       } catch (error) {
-        console.warn(
-          `[SupportChatHub] Connect failed (attempt ${attempt + 1}/${maxAttempts}, longPollingOnly=${longPollingOnly}):`,
-          error
-        );
+        if (DEBUG_API) {
+          console.warn(
+            `[SupportChatHub] Connect failed (attempt ${attempt + 1}/${maxAttempts}, longPollingOnly=${longPollingOnly}):`,
+            error
+          );
+        }
         if (attempt < maxAttempts - 1) {
           await sleep(800 * (attempt + 1));
         }

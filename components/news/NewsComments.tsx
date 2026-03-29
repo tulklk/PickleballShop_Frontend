@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 interface NewsCommentsProps {
   newsId: string;
@@ -55,7 +56,9 @@ export function NewsComments({ newsId, slug }: NewsCommentsProps) {
       });
     } catch (error) {
       toast.error("Có lỗi xảy ra khi gửi bình luận. Vui lòng thử lại.");
-      console.error("Error submitting comment:", error);
+      if (DEBUG_API) {
+        console.error("Error submitting comment:", error);
+      }
     } finally {
       setIsSubmitting(false);
     }

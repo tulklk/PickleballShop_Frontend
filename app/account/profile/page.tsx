@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { formatDate } from "@/lib/utils/formatDate";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(1, "Họ tên không được để trống"),
@@ -85,7 +86,9 @@ function ProfileContent() {
       });
       toast.success("Cập nhật thông tin thành công");
     } catch (error: any) {
-      console.error("Update profile error:", error);
+      if (DEBUG_API) {
+        console.error("Update profile error:", error);
+      }
       toast.error(error?.data?.message || "Có lỗi xảy ra khi cập nhật thông tin");
     }
   };
@@ -127,8 +130,10 @@ function ProfileContent() {
         const data = await response.json();
         const avatarUrl = data.url;
         
-        console.log("[Avatar Upload] Cloudinary upload successful:", avatarUrl);
-        
+        if (DEBUG_API) {
+          console.log("[Avatar Upload] Cloudinary upload successful:", avatarUrl);
+        }
+
         // Store the uploaded avatar URL to prevent it from being overwritten
         setLastUploadedAvatar(avatarUrl);
         
@@ -146,31 +151,39 @@ function ProfileContent() {
               avatar: avatarUrl,
             };
             
-            console.log("[Avatar Upload] Updating user with payload:", {
-              userId: user.id,
-              payload: updatePayload,
-            });
-            
+            if (DEBUG_API) {
+              console.log("[Avatar Upload] Updating user with payload:", {
+                userId: user.id,
+                payload: updatePayload,
+              });
+            }
+
             await updateUser.mutateAsync({
               id: user.id,
               data: updatePayload,
             });
             
-            console.log("[Avatar Upload] User update successful");
+            if (DEBUG_API) {
+              console.log("[Avatar Upload] User update successful");
+            }
             toast.success("Tải ảnh đại diện thành công");
           } catch (updateError: any) {
-            console.error("[Avatar Upload] Update error:", updateError);
-            console.error("[Avatar Upload] Error details:", {
-              message: updateError?.message,
-              status: updateError?.status,
-              data: updateError?.data,
-            });
+            if (DEBUG_API) {
+              console.error("[Avatar Upload] Update error:", updateError);
+              console.error("[Avatar Upload] Error details:", {
+                message: updateError?.message,
+                status: updateError?.status,
+                data: updateError?.data,
+              });
+            }
             toast.error(updateError?.data?.message || updateError?.message || "Lưu ảnh đại diện thất bại");
             // Clear lastUploadedAvatar on error
             setLastUploadedAvatar(null);
           }
         } else {
-          console.warn("[Avatar Upload] User data not available");
+          if (DEBUG_API) {
+            console.warn("[Avatar Upload] User data not available");
+          }
           toast.success("Tải ảnh đại diện thành công");
         }
       } catch (error: any) {

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const categorySchema = z.object({
   name: z.string().trim().min(1, "Tên danh mục là bắt buộc"),
@@ -87,7 +88,9 @@ export default function CreateCategoryPage() {
       const errorMessage =
         error?.data?.message || error?.message || "Không thể lưu danh mục";
       toast.error(errorMessage);
-      console.error("Category save error:", error);
+      if (DEBUG_API) {
+        console.error("Category save error:", error);
+      }
     }
   };
 

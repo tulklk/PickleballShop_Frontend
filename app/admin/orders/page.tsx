@@ -19,6 +19,7 @@ import { OrderStatus, PaymentStatus, OrderStatusLabels, normalizeOrderStatus } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 function getOrderStatusText(status: OrderStatus | string): string {
   const normalizedStatus = normalizeOrderStatus(status);
@@ -106,9 +107,8 @@ export default function AdminOrdersPage() {
     }
   }, [totalPages, currentPage]);
 
-  // Debug logging
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
+    if (DEBUG_API) {
       console.log("[AdminOrdersPage] orders:", orders);
       console.log("[AdminOrdersPage] orders length:", orders?.length);
       console.log("[AdminOrdersPage] isLoading:", isLoading);
@@ -125,7 +125,9 @@ export default function AdminOrdersPage() {
   }
 
   if (error) {
-    console.error("[AdminOrdersPage] Error details:", error);
+    if (DEBUG_API) {
+      console.error("[AdminOrdersPage] Error details:", error);
+    }
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="border-red-200 bg-red-50">

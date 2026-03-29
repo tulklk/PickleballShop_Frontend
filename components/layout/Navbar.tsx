@@ -17,6 +17,7 @@ import { getGuestCartItemCount } from "@/lib/utils/guestCart";
 import { Poppins } from "next/font/google";
 import { CartPreview } from "./CartPreview";
 import { getProductUrl } from "@/lib/utils/productUrl";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 import { useAdminNotificationCounts } from "@/components/admin/AdminNotificationsProvider";
 
 import logo from "@/app/img/logopickleball.png";
@@ -137,8 +138,9 @@ export function Navbar() {
       try {
         await logoutMutation.mutateAsync({ refreshToken });
       } catch (error) {
-        // Even if logout API fails, clear local session
-        console.error("Logout error:", error);
+        if (DEBUG_API) {
+          console.error("Logout error:", error);
+        }
       }
     }
     // Clear all tokens (useLogout hook already does this, but ensure it's done)
@@ -181,7 +183,9 @@ export function Navbar() {
         setSuggestions(result?.items || []);
         setShowSuggestions(true);
       } catch (error) {
-        console.warn("Search suggestions error:", error);
+        if (DEBUG_API) {
+          console.warn("Search suggestions error:", error);
+        }
         setSuggestions([]);
         setShowSuggestions(false);
       } finally {
@@ -322,10 +326,13 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="min-h-11 min-w-11 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
+              aria-label={isMobileMenuOpen ? "Đóng menu điều hướng" : "Mở menu điều hướng"}
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
             </Button>
             
             <Link href="/" className="flex items-center gap-2 md:gap-3">
@@ -527,9 +534,10 @@ export function Navbar() {
               variant="ghost"
               size="icon"
               onClick={() => setShowSearchOverlay(true)}
-              className="hover:bg-emerald-50"
+              className="min-h-11 min-w-11 hover:bg-emerald-50"
+              aria-label="Mở tìm kiếm sản phẩm"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-5 w-5" aria-hidden />
             </Button>
             {/* Cart with Preview Dropdown */}
             <div
@@ -538,9 +546,16 @@ export function Navbar() {
               onMouseEnter={handleCartMouseEnter}
               onMouseLeave={handleCartMouseLeave}
             >
-              <Link href="/cart">
-                <Button variant="ghost" size="icon" className="relative">
-                  <ShoppingCart className="h-5 w-5" />
+              <Link
+                href="/cart"
+                aria-label={
+                  cartItemCount > 0
+                    ? `Giỏ hàng, ${cartItemCount} sản phẩm`
+                    : "Giỏ hàng"
+                }
+              >
+                <Button variant="ghost" size="icon" className="relative min-h-11 min-w-11">
+                  <ShoppingCart className="h-5 w-5" aria-hidden />
                   {cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                       {cartItemCount}
@@ -753,6 +768,7 @@ export function Navbar() {
         
         {/* Mobile Menu Slide-in Panel - Matching Image Design */}
         <div 
+          id="mobile-navigation"
           className={`fixed top-0 left-0 h-screen w-[85%] max-w-[320px] bg-white z-[100] md:hidden transform transition-transform duration-300 ease-out shadow-2xl ${
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
@@ -1039,9 +1055,10 @@ export function Navbar() {
                     setSearchQuery("");
                     setSuggestions([]);
                   }}
-                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-200 shrink-0"
+                  className="min-h-11 min-w-11 shrink-0 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+                  aria-label="Đóng tìm kiếm"
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6" aria-hidden />
                 </Button>
               </form>
               

@@ -40,6 +40,7 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { findRootCategoryName } from "@/lib/utils/categoryUtils";
 import type { CategoryTreeDto } from "@/lib/api/types";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 export default function AdminProductsPage() {
   const { isAdmin } = useAuth();
@@ -186,7 +187,9 @@ export default function AdminProductsPage() {
       setProductToDelete(null);
       setProductName("");
     } catch (error: any) {
-      console.error("Delete product error:", error);
+      if (DEBUG_API) {
+        console.error("Delete product error:", error);
+      }
       const errorMessage = error?.message || error?.data?.message || "Không thể xóa sản phẩm. Vui lòng đảm bảo bạn đã đăng nhập bằng tài khoản admin.";
       toast.error(errorMessage);
     }

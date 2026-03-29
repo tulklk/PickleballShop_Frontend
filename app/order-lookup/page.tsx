@@ -23,6 +23,7 @@ import { apiClient } from "@/lib/api/client";
 import { formatDateTime } from "@/lib/utils/formatDate";
 import type { OrderDto } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 function getStatusConfig(orderStatus: string | null) {
   if (!orderStatus) return { label: "Không xác định", color: "gray", icon: Clock };
@@ -91,7 +92,9 @@ export default function OrderLookupPage() {
         setNotFound(true);
       }
     } catch (error: any) {
-      console.error("Order lookup error:", error);
+      if (DEBUG_API) {
+        console.error("Order lookup error:", error);
+      }
       if (error?.status === 404) {
         setNotFound(true);
       } else {

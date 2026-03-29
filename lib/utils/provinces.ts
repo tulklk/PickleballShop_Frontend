@@ -1,3 +1,5 @@
+import { DEBUG_API } from "@/lib/utils/debugApi";
+
 // Types for Vietnamese administrative divisions API
 export interface Ward {
   name: string;
@@ -39,7 +41,9 @@ export async function getProvinces(): Promise<Province[]> {
     const data: Province[] = await response.json();
     return data;
   } catch (error) {
-    console.error("Error fetching provinces:", error);
+    if (DEBUG_API) {
+      console.error("Error fetching provinces:", error);
+    }
     throw error;
   }
 }
@@ -56,7 +60,9 @@ export async function getDistricts(provinceCode: number): Promise<District[]> {
     const data: Province = await response.json();
     return data.districts || [];
   } catch (error) {
-    console.error("Error fetching districts:", error);
+    if (DEBUG_API) {
+      console.error("Error fetching districts:", error);
+    }
     throw error;
   }
 }
@@ -73,7 +79,9 @@ export async function getWards(districtCode: number): Promise<Ward[]> {
     const data: District = await response.json();
     return data.wards || [];
   } catch (error) {
-    console.error("Error fetching wards:", error);
+    if (DEBUG_API) {
+      console.error("Error fetching wards:", error);
+    }
     throw error;
   }
 }

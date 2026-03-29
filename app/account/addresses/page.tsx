@@ -18,6 +18,7 @@ import {
 import { Select, SelectItem } from "@/components/ui/select";
 import type { Province, District, Ward } from "@/lib/utils/provinces";
 import { getProvinces, getDistricts, getWards } from "@/lib/utils/provinces";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 export default function AccountAddressesPage() {
   return <AccountAddressesContent />;
@@ -55,7 +56,9 @@ function AccountAddressesContent() {
         const data = await getProvinces();
         setProvinces(data);
       } catch (error) {
-        console.error("Failed to load provinces for account addresses:", error);
+        if (DEBUG_API) {
+          console.error("Failed to load provinces for account addresses:", error);
+        }
         toast.error("Không thể tải danh sách tỉnh/thành phố. Vui lòng thử lại.");
       } finally {
         setIsLoadingProvinces(false);
@@ -86,7 +89,9 @@ function AccountAddressesContent() {
         const fetched = await getDistricts(selectedProvinceCode);
         setDistricts(fetched);
       } catch (error) {
-        console.error("Failed to load districts for account addresses:", error);
+        if (DEBUG_API) {
+          console.error("Failed to load districts for account addresses:", error);
+        }
         toast.error("Không thể tải danh sách quận/huyện. Vui lòng thử lại.");
       } finally {
         setIsLoadingDistricts(false);
@@ -113,7 +118,9 @@ function AccountAddressesContent() {
         const fetched = await getWards(selectedDistrictCode);
         setWards(fetched);
       } catch (error) {
-        console.error("Failed to load wards for account addresses:", error);
+        if (DEBUG_API) {
+          console.error("Failed to load wards for account addresses:", error);
+        }
         toast.error("Không thể tải danh sách phường/xã. Vui lòng thử lại.");
       } finally {
         setIsLoadingWards(false);

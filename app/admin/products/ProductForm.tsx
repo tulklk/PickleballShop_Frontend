@@ -17,6 +17,11 @@ import { VariantFormItem, ProductVariantFormData } from "@/components/admin/Vari
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
+import { DEBUG_API } from "@/lib/utils/debugApi";
+
+const devLog = DEBUG_API ? console.log.bind(console) : () => {};
+const devWarn = DEBUG_API ? console.warn.bind(console) : () => {};
+const devError = DEBUG_API ? console.error.bind(console) : () => {};
 
 const DESCRIPTION_MAX_LENGTH = 50_000;
 
@@ -170,7 +175,7 @@ export function ProductForm({
         typeof url === "string" && url.trim().length > 0
       );
       if (JSON.stringify(validUrls) !== JSON.stringify(imageUrls)) {
-        console.log("Syncing imageUrls from form to state:", validUrls);
+        devLog("Syncing imageUrls from form to state:", validUrls);
         setImageUrls(validUrls);
       }
     }
@@ -194,9 +199,9 @@ export function ProductForm({
       const categoryId = initialData.categoryId || "";
       if (categoryId && typeof categoryId === 'string') {
         setValue("categoryId", categoryId, { shouldValidate: true, shouldDirty: true });
-        console.log("Set initial categoryId:", categoryId);
+        devLog("Set initial categoryId:", categoryId);
       } else {
-        console.warn("Invalid categoryId:", categoryId);
+        devWarn("Invalid categoryId:", categoryId);
       }
       
       setValue("price", initialData.price);
@@ -215,7 +220,7 @@ export function ProductForm({
         : [];
       setImageUrls(validImageUrls);
       setValue("imageUrls", validImageUrls, { shouldValidate: true });
-      console.log("Loaded initial imageUrls:", validImageUrls);
+      devLog("Loaded initial imageUrls:", validImageUrls);
       
       // Load variants if product has variants
       const productDto = initialData as ProductDto;
@@ -313,12 +318,12 @@ export function ProductForm({
       setImageUrls(updated);
       setValue("imageUrls", updated, { shouldValidate: true });
       
-      console.log("Uploaded URLs:", validUrls);
-      console.log("Updated imageUrls:", updated);
+      devLog("Uploaded URLs:", validUrls);
+      devLog("Updated imageUrls:", updated);
       
       toast.success(`Đã upload ${validUrls.length} ảnh thành công`);
     } catch (error: any) {
-      console.error("Upload error:", error);
+      devError("Upload error:", error);
       toast.error(error.message || "Lỗi khi upload ảnh");
     } finally {
       setUploading(false);
@@ -331,7 +336,7 @@ export function ProductForm({
     const updated = imageUrls.filter((_, i) => i !== index);
     setImageUrls(updated);
     setValue("imageUrls", updated, { shouldValidate: true });
-    console.log("Removed image, updated imageUrls:", updated);
+    devLog("Removed image, updated imageUrls:", updated);
   };
 
   // Variants management functions (use effectivePrice so variant gets correct selling price)
@@ -444,21 +449,21 @@ export function ProductForm({
   };
 
   const onSubmitForm = async (values: ProductFormValues) => {
-    console.log("=== Form Submit ===");
-    console.log("Form values:", JSON.stringify(values, null, 2));
-    console.log("Image URLs state (current):", imageUrls);
-    console.log("Image URLs from form values:", values.imageUrls);
-    console.log("Category ID from form values:", values.categoryId);
-    console.log("Category ID from watch:", categoryId);
-    console.log("Category ID type:", typeof values.categoryId);
-    console.log("Category ID isEmpty:", !values.categoryId || values.categoryId === "");
+    devLog("=== Form Submit ===");
+    devLog("Form values:", JSON.stringify(values, null, 2));
+    devLog("Image URLs state (current):", imageUrls);
+    devLog("Image URLs from form values:", values.imageUrls);
+    devLog("Category ID from form values:", values.categoryId);
+    devLog("Category ID from watch:", categoryId);
+    devLog("Category ID type:", typeof values.categoryId);
+    devLog("Category ID isEmpty:", !values.categoryId || values.categoryId === "");
     
     // Validate categoryId before submit - use form values from Controller
     const finalCategoryId = values.categoryId || "";
     if (!finalCategoryId || finalCategoryId.trim() === "") {
-      console.error("❌ Category ID is missing in form values!");
-      console.error("Form values.categoryId:", values.categoryId);
-      console.error("Watch categoryId:", categoryId);
+      devError("❌ Category ID is missing in form values!");
+      devError("Form values.categoryId:", values.categoryId);
+      devError("Watch categoryId:", categoryId);
       toast.error("Vui lòng chọn danh mục sản phẩm");
       return;
     }
@@ -466,12 +471,12 @@ export function ProductForm({
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(finalCategoryId)) {
-      console.error("❌ Category ID is not a valid UUID:", finalCategoryId);
+      devError("❌ Category ID is not a valid UUID:", finalCategoryId);
       toast.error("Danh mục không hợp lệ. Vui lòng chọn lại danh mục.");
       return;
     }
     
-    console.log("✅ Category ID validated:", finalCategoryId);
+    devLog("✅ Category ID validated:", finalCategoryId);
     
     // Validate variants
     const variantError = validateVariants();
@@ -509,19 +514,19 @@ export function ProductForm({
         variants: hasVariants ? variants : null,
       };
       
-      console.log("=== Final Submit Data ===");
-      console.log("Submit data:", JSON.stringify(submitData, null, 2));
-      console.log("Variants:", {
+      devLog("=== Final Submit Data ===");
+      devLog("Submit data:", JSON.stringify(submitData, null, 2));
+      devLog("Variants:", {
         hasVariants,
         variantsCount: variants.length,
         variants: variants,
       });
-      console.log("Category ID validation:", {
+      devLog("Category ID validation:", {
         value: submitData.categoryId,
         isEmpty: !submitData.categoryId || submitData.categoryId === "",
         isValidUUID: uuidRegex.test(submitData.categoryId),
       });
-      console.log("ImageUrls:", {
+      devLog("ImageUrls:", {
         type: typeof submitData.imageUrls,
         isArray: Array.isArray(submitData.imageUrls),
         length: submitData.imageUrls?.length || 0,
@@ -530,7 +535,7 @@ export function ProductForm({
       
       await onSubmit(submitData);
     } catch (error) {
-      console.error("Form submission error:", error);
+      devError("Form submission error:", error);
       // Error is already handled in parent component
       throw error; // Re-throw to let parent handle it
     }

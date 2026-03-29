@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 // Increase timeout for Next.js API route
 export const maxDuration = 60;
@@ -12,11 +13,13 @@ export async function POST(request: NextRequest) {
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
     if (!cloudName || !apiKey || !apiSecret) {
-      console.error("Cloudinary config missing:", {
-        hasCloudName: !!cloudName,
-        hasApiKey: !!apiKey,
-        hasApiSecret: !!apiSecret,
-      });
+      if (DEBUG_API) {
+        console.error("Cloudinary config missing:", {
+          hasCloudName: !!cloudName,
+          hasApiKey: !!apiKey,
+          hasApiSecret: !!apiSecret,
+        });
+      }
       return NextResponse.json(
         {
           error: "Cloudinary chưa được cấu hình. Vui lòng kiểm tra file .env.local và restart server.",
@@ -43,7 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Upload] Starting upload for file: ${file.name}, size: ${file.size} bytes, folder: ${folder}`);
+    if (DEBUG_API) {
+      console.log(`[Upload] Starting upload for file: ${file.name}, size: ${file.size} bytes, folder: ${folder}`);
+    }
 
     // Convert File to buffer
     const bytes = await file.arrayBuffer();
@@ -77,7 +82,9 @@ export async function POST(request: NextRequest) {
       publicId: (result as any).public_id,
     });
   } catch (error: any) {
-    console.error("[Upload] Error:", error);
+    if (DEBUG_API) {
+      console.error("[Upload] Error:", error);
+    }
     const errorMessage = error.message || "Lỗi khi upload ảnh";
     
     // Provide more specific error messages

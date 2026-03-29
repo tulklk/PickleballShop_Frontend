@@ -18,6 +18,7 @@ import type {
   NewSupportMessageNotification,
 } from "@/lib/api/types";
 import { adminNotificationsHub } from "@/src/services/adminNotificationsHub";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 type AdminNotificationContextValue = {
   newOrdersCount: number;
@@ -126,9 +127,11 @@ export function AdminNotificationsProvider({ children }: { children: React.React
       if (!mounted) return;
       if (!ok && !connectFailedLogged.current) {
         connectFailedLogged.current = true;
-        console.warn(
-          "[AdminNotifications] Hub không kết nối được (kiểm tra quyền Admin / CORS / network)."
-        );
+        if (DEBUG_API) {
+          console.warn(
+            "[AdminNotifications] Hub không kết nối được (kiểm tra quyền Admin / CORS / network)."
+          );
+        }
       }
     });
 

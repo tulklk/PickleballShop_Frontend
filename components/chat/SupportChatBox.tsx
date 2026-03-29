@@ -18,6 +18,7 @@ import {
   type ConnectionStatus,
 } from "@/src/services/supportChatHub";
 import { cn } from "@/lib/utils";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const mergeUniqueMessages = (
   prev: SupportMessageDto[],
@@ -79,7 +80,9 @@ export function SupportChatBox() {
       setConversation(data.conversation);
       setMessages(data.messages || []);
     } catch (error) {
-      console.warn("[SupportChatBox] Failed to load conversation:", error);
+      if (DEBUG_API) {
+        console.warn("[SupportChatBox] Failed to load conversation:", error);
+      }
       setConversation(null);
       setMessages([]);
     } finally {
@@ -136,7 +139,9 @@ export function SupportChatBox() {
     };
 
     init().catch((error) => {
-      console.warn("[SupportChatBox] Init failed:", error);
+      if (DEBUG_API) {
+        console.warn("[SupportChatBox] Init failed:", error);
+      }
       setConnectionStatus("disconnected");
     });
 
@@ -152,7 +157,9 @@ export function SupportChatBox() {
   useEffect(() => {
     if (!isOpen || !isAuthenticated) return;
     markRead().catch((error) => {
-      console.warn("[SupportChatBox] markRead failed:", error);
+      if (DEBUG_API) {
+        console.warn("[SupportChatBox] markRead failed:", error);
+      }
     });
   }, [isOpen, isAuthenticated, messages.length, markRead]);
 
@@ -168,7 +175,9 @@ export function SupportChatBox() {
           setInput("");
           return;
         } catch (hubErr) {
-          console.warn("[SupportChatBox] Hub send failed, using REST:", hubErr);
+          if (DEBUG_API) {
+            console.warn("[SupportChatBox] Hub send failed, using REST:", hubErr);
+          }
         }
       }
 
@@ -176,7 +185,9 @@ export function SupportChatBox() {
       setMessages((prev) => mergeUniqueMessages(prev, [response]));
       setInput("");
     } catch (error) {
-      console.warn("[SupportChatBox] Send failed:", error);
+      if (DEBUG_API) {
+        console.warn("[SupportChatBox] Send failed:", error);
+      }
     } finally {
       setIsSending(false);
     }

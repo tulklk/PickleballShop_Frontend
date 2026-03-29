@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 // System prompt với context về pickleball products
 const SYSTEM_PROMPT = `Bạn là trợ lý AI chuyên tư vấn về sản phẩm Pickleball cho cửa hàng IKA PickleBall Shop. 
@@ -76,7 +77,9 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("OpenAI API error:", errorData);
+      if (DEBUG_API) {
+        console.error("OpenAI API error:", errorData);
+      }
       
       // Fallback nếu API lỗi
       const userMessage = messages[messages.length - 1]?.content || "";
@@ -89,7 +92,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: aiMessage });
   } catch (error) {
-    console.error("Chat API error:", error);
+    if (DEBUG_API) {
+      console.error("Chat API error:", error);
+    }
     
     // Fallback response
     const body = await request.json().catch(() => ({}));

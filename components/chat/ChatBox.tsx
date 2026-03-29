@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import logo from "@/app/img/logopickleball.png";
 import { cn } from "@/lib/utils";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 import { useChatMessage } from "@/lib/api/hooks";
 import type { ChatMessage as ChatMessageType, ChatMessageResponse } from "@/lib/api/types";
 
@@ -126,7 +127,9 @@ export function ChatBox() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error("Chat error:", error);
+      if (DEBUG_API) {
+        console.error("Chat error:", error);
+      }
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -164,6 +167,7 @@ export function ChatBox() {
             src={logo}
             alt="IKA Sport"
             fill
+            sizes="40px"
             className={cn(
               "object-contain transition-all duration-200",
               isOpen

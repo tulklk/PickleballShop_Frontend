@@ -25,6 +25,7 @@ import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentMethod } from "@/lib/api/types";
 import { getDefaultUserAddress } from "@/lib/utils/userAddresses";
 import type { SavedAddress } from "@/lib/utils/userAddresses";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 import { 
@@ -121,7 +122,9 @@ function CheckoutContent() {
         const data = await getProvinces();
         setProvinces(data);
       } catch (error) {
-        console.error("Failed to load provinces:", error);
+        if (DEBUG_API) {
+          console.error("Failed to load provinces:", error);
+        }
         toast.error("Không thể tải danh sách tỉnh thành. Vui lòng thử lại.");
       } finally {
         setIsLoadingProvinces(false);
@@ -163,7 +166,9 @@ function CheckoutContent() {
       }
 
       if (!provinceCode) {
-        console.warn("Province code not found for:", selectedCity);
+        if (DEBUG_API) {
+          console.warn("Province code not found for:", selectedCity);
+        }
         return;
       }
 
@@ -176,23 +181,32 @@ function CheckoutContent() {
         // Try to get districts from already loaded province first
         const province = provinces.find((p) => p.code === provinceCode);
         if (province && province.districts && province.districts.length > 0) {
-          console.log("Using districts from loaded province:", province.name, province.districts.length);
+          if (DEBUG_API) {
+            console.log("Using districts from loaded province:", province.name, province.districts.length);
+          }
           setDistricts(province.districts);
         } else {
-          // Always fetch districts from API to ensure we have them
-          console.log("Fetching districts from API for province code:", provinceCode);
+          if (DEBUG_API) {
+            console.log("Fetching districts from API for province code:", provinceCode);
+          }
           const fetchedDistricts = await getDistricts(provinceCode);
-          console.log("Fetched districts:", fetchedDistricts.length);
+          if (DEBUG_API) {
+            console.log("Fetched districts:", fetchedDistricts.length);
+          }
           if (fetchedDistricts.length > 0) {
             setDistricts(fetchedDistricts);
           } else {
-            console.warn("No districts found for province code:", provinceCode);
+            if (DEBUG_API) {
+              console.warn("No districts found for province code:", provinceCode);
+            }
             setDistricts([]);
             toast.error("Tỉnh/thành phố này không có quận/huyện nào.");
           }
         }
       } catch (error) {
-        console.error("Failed to load districts:", error);
+        if (DEBUG_API) {
+          console.error("Failed to load districts:", error);
+        }
         toast.error("Không thể tải danh sách quận/huyện. Vui lòng thử lại.");
         setDistricts([]);
       } finally {
@@ -219,23 +233,32 @@ function CheckoutContent() {
         // Try to get wards from already loaded district first
         const district = districts.find((d) => d.code === selectedDistrictCode);
         if (district && district.wards && district.wards.length > 0) {
-          console.log("Using wards from loaded district:", district.name, district.wards.length);
+          if (DEBUG_API) {
+            console.log("Using wards from loaded district:", district.name, district.wards.length);
+          }
           setWards(district.wards);
         } else {
-          // Always fetch wards from API to ensure we have the latest data
-          console.log("Fetching wards from API for district code:", selectedDistrictCode);
+          if (DEBUG_API) {
+            console.log("Fetching wards from API for district code:", selectedDistrictCode);
+          }
           const fetchedWards = await getWards(selectedDistrictCode);
-          console.log("Fetched wards:", fetchedWards.length);
+          if (DEBUG_API) {
+            console.log("Fetched wards:", fetchedWards.length);
+          }
           if (fetchedWards.length > 0) {
             setWards(fetchedWards);
           } else {
-            console.warn("No wards found for district code:", selectedDistrictCode);
+            if (DEBUG_API) {
+              console.warn("No wards found for district code:", selectedDistrictCode);
+            }
             setWards([]);
             toast.error("Quận/huyện này không có phường/xã nào.");
           }
         }
       } catch (error) {
-        console.error("Failed to load wards:", error);
+        if (DEBUG_API) {
+          console.error("Failed to load wards:", error);
+        }
         toast.error("Không thể tải danh sách phường/xã. Vui lòng thử lại.");
         setWards([]);
       } finally {
@@ -371,8 +394,9 @@ function CheckoutContent() {
           voucherCode: appliedVoucherCode || undefined,
         });
 
-        // Log response for debugging
-        console.log("Create order response:", orderResponse);
+        if (DEBUG_API) {
+          console.log("Create order response:", orderResponse);
+        }
 
         // Handle different response structures from backend
         const orderData = (orderResponse as any)?.order || orderResponse;
@@ -380,7 +404,9 @@ function CheckoutContent() {
         orderId = orderData?.id;
 
         if (!orderId) {
-          console.error("Order ID is undefined. Response:", orderResponse);
+          if (DEBUG_API) {
+            console.error("Order ID is undefined. Response:", orderResponse);
+          }
           toast.error("Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
           return;
         }
@@ -406,7 +432,9 @@ function CheckoutContent() {
 
         // If payment method is not COD and no payment data, create payment
         const paymentResponse = await createPayment.mutateAsync(orderId);
-        console.log("Create payment response:", paymentResponse);
+        if (DEBUG_API) {
+          console.log("Create payment response:", paymentResponse);
+        }
         
         // Check if it's COD from response
         if (paymentResponse.isCod) {
@@ -460,14 +488,18 @@ function CheckoutContent() {
           voucherCode: appliedVoucherCode || undefined,
         });
 
-        console.log("Create guest order response:", orderResponse);
+        if (DEBUG_API) {
+          console.log("Create guest order response:", orderResponse);
+        }
 
         const orderData = (orderResponse as any)?.order || orderResponse;
         paymentData = (orderResponse as any)?.payment;
         orderId = orderData?.id;
 
         if (!orderId) {
-          console.error("Order ID is undefined. Response:", orderResponse);
+          if (DEBUG_API) {
+            console.error("Order ID is undefined. Response:", orderResponse);
+          }
           toast.error("Không thể lấy thông tin đơn hàng. Vui lòng thử lại.");
           return;
         }
@@ -491,7 +523,9 @@ function CheckoutContent() {
 
         // If payment method is not COD and no payment data, create guest payment
         const paymentResponse = await createGuestPayment.mutateAsync(orderId);
-        console.log("Create guest payment response:", paymentResponse);
+        if (DEBUG_API) {
+          console.log("Create guest payment response:", paymentResponse);
+        }
         
         // Check if it's COD from response
         if (paymentResponse.isCod) {
@@ -520,7 +554,9 @@ function CheckoutContent() {
         router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
       }
     } catch (error: any) {
-      console.error("Checkout error:", error);
+      if (DEBUG_API) {
+        console.error("Checkout error:", error);
+      }
       toast.error(error?.data?.message || error?.message || "Không thể tạo đơn hàng. Vui lòng thử lại.");
     }
   };
@@ -695,7 +731,9 @@ function CheckoutContent() {
                         const parts = value.split("|");
                         const provinceCode = parseInt(parts[0]);
                         const provinceName = parts[1] || value;
-                        console.log("Selected province:", provinceName, "Code:", provinceCode);
+                        if (DEBUG_API) {
+                          console.log("Selected province:", provinceName, "Code:", provinceCode);
+                        }
                         setSelectedProvinceCode(provinceCode);
                         setValue("city", provinceName);
                         setValue("district", "");
@@ -744,7 +782,9 @@ function CheckoutContent() {
                         const parts = value.split("|");
                         const districtCode = parseInt(parts[0]);
                         const districtName = parts[1] || value;
-                        console.log("Selected district:", districtName, "Code:", districtCode);
+                        if (DEBUG_API) {
+                          console.log("Selected district:", districtName, "Code:", districtCode);
+                        }
                         setSelectedDistrictCode(districtCode);
                         setValue("district", districtName);
                         setValue("ward", "");
@@ -810,6 +850,11 @@ function CheckoutContent() {
                     <CreditCard className="h-4 w-4" />
                     Phương thức thanh toán
                   </Label>
+                  <input
+                    type="hidden"
+                    id="paymentMethod"
+                    {...register("paymentMethod", { valueAsNumber: true })}
+                  />
                   <div className="grid grid-cols-1 gap-3">
                     {/* COD Option */}
                     <button
@@ -1063,7 +1108,9 @@ function CheckoutContent() {
                           setFinalTotal(response.finalTotal);
                           toast.success("Áp dụng mã giảm giá thành công");
                         } catch (error: any) {
-                          console.error("Apply voucher error:", error);
+                          if (DEBUG_API) {
+                            console.error("Apply voucher error:", error);
+                          }
                           setAppliedVoucherCode(null);
                           setDiscountAmount(0);
                           setFinalTotal(null);

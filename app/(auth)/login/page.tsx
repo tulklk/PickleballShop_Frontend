@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Trophy, Mail, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TypingText } from "@/components/shared/TypingText";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -123,7 +124,9 @@ export default function LoginPage() {
       toast.success("Đăng nhập thành công!");
       router.push(isAdminUser(auth.user) ? "/admin" : "/");
     } catch (error: any) {
-      console.error("Google login error:", error);
+      if (DEBUG_API) {
+        console.error("Google login error:", error);
+      }
       toast.error(error?.data?.message || "Đăng nhập Google thất bại");
     }
   };
@@ -132,7 +135,9 @@ export default function LoginPage() {
     loginMutation.isPending || googleLoginMutation.isPending;
 
   const handleGoogleError = () => {
-    console.error("Google Sign-In error occurred");
+    if (DEBUG_API) {
+      console.error("Google Sign-In error occurred");
+    }
     toast.error("Đăng nhập Google thất bại. Vui lòng thử lại.");
   };
 

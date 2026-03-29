@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Edit, Trash2, UserCheck, UserX, Mail, Phone } from "lucide-react";
 import { DeleteConfirmationDialog } from "@/components/shared/DeleteConfirmationDialog";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 import {
   Dialog,
   DialogContent,
@@ -149,7 +150,9 @@ export default function AdminUsersPage() {
       setEditDialogOpen(false);
       setUserToEdit(null);
     } catch (error: any) {
-      console.error("Update user error:", error);
+      if (DEBUG_API) {
+        console.error("Update user error:", error);
+      }
       toast.error(error?.data?.message || "Có lỗi xảy ra khi cập nhật thông tin");
     }
   };
@@ -163,7 +166,9 @@ export default function AdminUsersPage() {
       setDeleteDialogOpen(false);
       setSelectedUser(null);
     } catch (error: any) {
-      console.error("Delete user error:", error);
+      if (DEBUG_API) {
+        console.error("Delete user error:", error);
+      }
       toast.error(error?.data?.message || "Có lỗi xảy ra khi xóa người dùng");
     }
   };
@@ -178,7 +183,9 @@ export default function AdminUsersPage() {
         user.isActive ? "Đã vô hiệu hóa người dùng" : "Đã kích hoạt người dùng"
       );
     } catch (error: any) {
-      console.error("Toggle user status error:", error);
+      if (DEBUG_API) {
+        console.error("Toggle user status error:", error);
+      }
       toast.error(error?.data?.message || "Có lỗi xảy ra khi thay đổi trạng thái");
     }
   };

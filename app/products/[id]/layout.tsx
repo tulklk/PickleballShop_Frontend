@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { apiClient } from "@/lib/api/client";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 import { isUUID, extractIdFromSlug } from "@/lib/utils/productUrl";
 
 type Props = {
@@ -98,7 +99,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch (error) {
-    console.error("Error generating product metadata:", error);
+    if (DEBUG_API) {
+      console.error("Error generating product metadata:", error);
+    }
     return {
       title: "Sản phẩm",
     };

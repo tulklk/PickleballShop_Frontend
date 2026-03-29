@@ -1,6 +1,7 @@
 "use client";
 
 import type { AddCartItemRequest } from "@/lib/api/types";
+import { DEBUG_API } from "@/lib/utils/debugApi";
 
 const GUEST_CART_KEY = "guestCart";
 
@@ -47,7 +48,9 @@ export function addToGuestCart(item: GuestCartItemInput): void {
 
     localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cart));
   } catch (error) {
-    console.warn("Failed to save guest cart:", error);
+    if (DEBUG_API) {
+      console.warn("Failed to save guest cart:", error);
+    }
   }
 }
 
@@ -56,7 +59,9 @@ export function clearGuestCart(): void {
   try {
     localStorage.removeItem(GUEST_CART_KEY);
   } catch (error) {
-    console.warn("Failed to clear guest cart:", error);
+    if (DEBUG_API) {
+      console.warn("Failed to clear guest cart:", error);
+    }
   }
 }
 
