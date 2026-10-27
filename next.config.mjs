@@ -1,8 +1,11 @@
+import { securityHeaders, noStoreHeaders, noStoreSources } from "./security-headers.mjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Next 14.2: dùng experimental (tên `serverExternalPackages` chỉ từ ~14.3+)
+  // Không lộ header "X-Powered-By: Next.js"
+  poweredByHeader: false,
+  serverExternalPackages: ["sharp"],
   experimental: {
-    serverComponentsExternalPackages: ["sharp"],
     optimizePackageImports: ["lucide-react"],
   },
 
@@ -39,19 +42,28 @@ const nextConfig = {
   async rewrites() {
     return [{ source: "/favicon.ico", destination: "/icon.png" }];
   },
+  // Header bảo mật tĩnh (CSP có nonce nằm trong middleware.ts).
+  async headers() {
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Dữ liệu cá nhân/phiên không được cache bởi CDN/proxy dùng chung.
+      ...noStoreSources.map((source) => ({ source, headers: noStoreHeaders })),
+    ];
+  },
   images: {
+    // Chỉ cho phép ảnh từ nguồn của shop (Cloudinary của shop + backend). Đã bỏ via.placeholder.com (không dùng).
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "via.placeholder.com",
-      },
-      {
-        protocol: "https",
         hostname: "pickleballshop-backend.fly.dev",
+        pathname: "/**",
       },
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+        pathname: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+          ? `/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/**`
+          : "/**",
       },
     ],
   },

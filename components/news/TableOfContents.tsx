@@ -21,12 +21,12 @@ export function TableOfContents({ content, className = "" }: TableOfContentsProp
   useEffect(() => {
     if (!content) return;
 
-    // Create a temporary div to parse HTML
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = content;
+    // DOMParser tạo document "inert": không tải ảnh, không chạy script/onerror
+    // (khác với div.innerHTML — nơi <img onerror> vẫn được thực thi).
+    const doc = new DOMParser().parseFromString(content, "text/html");
 
     // Find all headings (h1, h2, h3)
-    const headings = tempDiv.querySelectorAll("h1, h2, h3");
+    const headings = doc.body.querySelectorAll("h1, h2, h3");
     const items: TocItem[] = [];
 
     headings.forEach((heading, index) => {

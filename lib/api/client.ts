@@ -524,11 +524,11 @@ class ApiClient {
   }
 
   async getCategoryById(id: string): Promise<CategoryDto> {
-    return this.request<CategoryDto>(`/api/Categories/${id}`);
+    return this.request<CategoryDto>(`/api/Categories/${encodeURIComponent(id)}`);
   }
 
   async getCategoryBySlug(slug: string): Promise<CategoryDto> {
-    return this.request<CategoryDto>(`/api/Categories/slug/${slug}`);
+    return this.request<CategoryDto>(`/api/Categories/slug/${encodeURIComponent(slug)}`);
   }
 
   // Products endpoints
@@ -559,23 +559,23 @@ class ApiClient {
   }
 
   async getProductById(id: string): Promise<ProductDto> {
-    return this.request<ProductDto>(`/api/Products/${id}`);
+    return this.request<ProductDto>(`/api/Products/${encodeURIComponent(id)}`);
   }
 
   async getProductBySlug(slug: string): Promise<ProductDto> {
     // Backend now supports slug or id in a single endpoint
-    return this.request<ProductDto>(`/api/Products/${slug}`);
+    return this.request<ProductDto>(`/api/Products/${encodeURIComponent(slug)}`);
   }
 
   async getProductComments(productId: string): Promise<ProductComment[]> {
-    const res = await this.request<any>(`/api/Products/${productId}/comments`);
+    const res = await this.request<any>(`/api/Products/${encodeURIComponent(productId)}/comments`);
     if (Array.isArray(res)) return res as ProductComment[];
     if (res && Array.isArray(res.comments)) return res.comments as ProductComment[];
     return [];
   }
 
   async addProductComment(productId: string, content: string): Promise<void> {
-    return this.request<void>(`/api/Products/${productId}/comments`, {
+    return this.request<void>(`/api/Products/${encodeURIComponent(productId)}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -583,7 +583,7 @@ class ApiClient {
   }
 
   async replyProductComment(productId: string, parentCommentId: string, content: string): Promise<void> {
-    return this.request<void>(`/api/Products/${productId}/comments/${parentCommentId}/reply`, {
+    return this.request<void>(`/api/Products/${encodeURIComponent(productId)}/comments/${encodeURIComponent(parentCommentId)}/reply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -592,14 +592,14 @@ class ApiClient {
 
   // Comment APIs by slug
   async getProductCommentsBySlug(slug: string): Promise<ProductComment[]> {
-    const res = await this.request<any>(`/api/Products/slug/${slug}/comments`);
+    const res = await this.request<any>(`/api/Products/slug/${encodeURIComponent(slug)}/comments`);
     if (Array.isArray(res)) return res as ProductComment[];
     if (res && Array.isArray(res.comments)) return res.comments as ProductComment[];
     return [];
   }
 
   async addProductCommentBySlug(slug: string, content: string): Promise<void> {
-    return this.request<void>(`/api/Products/slug/${slug}/comments`, {
+    return this.request<void>(`/api/Products/slug/${encodeURIComponent(slug)}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -607,7 +607,7 @@ class ApiClient {
   }
 
   async replyProductCommentBySlug(slug: string, parentCommentId: string, content: string): Promise<void> {
-    return this.request<void>(`/api/Products/slug/${slug}/comments/${parentCommentId}/reply`, {
+    return this.request<void>(`/api/Products/slug/${encodeURIComponent(slug)}/comments/${encodeURIComponent(parentCommentId)}/reply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
@@ -615,18 +615,18 @@ class ApiClient {
   }
 
   async deleteProductCommentBySlug(slug: string, commentId: string): Promise<void> {
-    return this.request<void>(`/api/Products/slug/${slug}/comments/${commentId}`, {
+    return this.request<void>(`/api/Products/slug/${encodeURIComponent(slug)}/comments/${encodeURIComponent(commentId)}`, {
       method: "DELETE",
     });
   }
 
   // Product Reviews endpoints
   async getProductReviews(productIdOrSlug: string): Promise<ProductReviewResponse> {
-    return this.request<ProductReviewResponse>(`/api/products/${productIdOrSlug}/reviews`);
+    return this.request<ProductReviewResponse>(`/api/products/${encodeURIComponent(productIdOrSlug)}/reviews`);
   }
 
   async createProductReview(productIdOrSlug: string, data: CreateProductReviewRequest): Promise<ProductReview> {
-    return this.request<ProductReview>(`/api/products/${productIdOrSlug}/reviews`, {
+    return this.request<ProductReview>(`/api/products/${encodeURIComponent(productIdOrSlug)}/reviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -673,14 +673,14 @@ class ApiClient {
     cartItemId: string,
     data: UpdateCartItemRequest
   ): Promise<CartItemDto> {
-    return this.request<CartItemDto>(`/api/Cart/items/${cartItemId}`, {
+    return this.request<CartItemDto>(`/api/Cart/items/${encodeURIComponent(cartItemId)}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async deleteCartItem(cartItemId: string): Promise<void> {
-    return this.request<void>(`/api/Cart/items/${cartItemId}`, {
+    return this.request<void>(`/api/Cart/items/${encodeURIComponent(cartItemId)}`, {
       method: "DELETE",
     });
   }
@@ -708,11 +708,11 @@ class ApiClient {
   }
 
   async getOrderById(id: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/Orders/${id}`);
+    return this.request<OrderDto>(`/api/Orders/${encodeURIComponent(id)}`);
   }
 
   async createPayment(orderId: string): Promise<CreatePaymentResponse> {
-    return this.request<CreatePaymentResponse>(`/api/Orders/${orderId}/payment`, {
+    return this.request<CreatePaymentResponse>(`/api/Orders/${encodeURIComponent(orderId)}/payment`, {
       method: "POST",
     });
   }
@@ -730,16 +730,7 @@ class ApiClient {
   }
 
   async getGuestOrder(id: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/guest/orders/${id}`);
-  }
-
-  async lookupGuestOrder(params: { phoneNumber: string; orderNumber?: string }): Promise<OrderDto[]> {
-    const searchParams = new URLSearchParams();
-    searchParams.append("phoneNumber", params.phoneNumber);
-    if (params.orderNumber) {
-      searchParams.append("orderNumber", params.orderNumber);
-    }
-    return this.request<OrderDto[]>(`/api/guest/orders/lookup?${searchParams.toString()}`);
+    return this.request<OrderDto>(`/api/guest/orders/${encodeURIComponent(id)}`);
   }
 
   async getGuestOrderByNumber(orderNumber: string): Promise<OrderDto> {
@@ -747,7 +738,7 @@ class ApiClient {
   }
 
   async createGuestPayment(orderId: string): Promise<CreatePaymentResponse> {
-    return this.request<CreatePaymentResponse>(`/api/guest/orders/${orderId}/payment`, {
+    return this.request<CreatePaymentResponse>(`/api/guest/orders/${encodeURIComponent(orderId)}/payment`, {
       method: "POST",
     });
   }
@@ -759,7 +750,7 @@ class ApiClient {
   }
 
   async adminGetCategoryById(id: string): Promise<CategoryTreeDto> {
-    return this.request<CategoryTreeDto>(`/api/admin/AdminCategories/${id}`);
+    return this.request<CategoryTreeDto>(`/api/admin/AdminCategories/${encodeURIComponent(id)}`);
   }
 
   async adminCreateCategory(data: AdminCreateCategoryRequest): Promise<ProductCategory> {
@@ -791,14 +782,14 @@ class ApiClient {
       })),
     };
 
-    return this.request<void>(`/api/admin/AdminCategories/${id}`, {
+    return this.request<void>(`/api/admin/AdminCategories/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
   }
 
   async adminDeleteCategory(id: string): Promise<void> {
-    return this.request<void>(`/api/admin/AdminCategories/${id}`, {
+    return this.request<void>(`/api/admin/AdminCategories/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
   }
@@ -835,7 +826,7 @@ class ApiClient {
   }
 
   async adminGetOrderById(id: string): Promise<Order> {
-    const endpoint = `/api/admin/AdminOrders/${id}`;
+    const endpoint = `/api/admin/AdminOrders/${encodeURIComponent(id)}`;
     
     try {
       // Backend may return OrderDto format (with shippingAddress) or Order format (with individual fields)
@@ -905,7 +896,7 @@ class ApiClient {
     id: string,
     data: UpdateOrderStatusRequest
   ): Promise<void> {
-    return this.request<void>(`/api/admin/AdminOrders/${id}/status`, {
+    return this.request<void>(`/api/admin/AdminOrders/${encodeURIComponent(id)}/status`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
@@ -947,7 +938,7 @@ class ApiClient {
   }
 
   async adminGetProductById(id: string): Promise<Product> {
-    return this.request<Product>(`/api/admin/AdminProducts/${id}`);
+    return this.request<Product>(`/api/admin/AdminProducts/${encodeURIComponent(id)}`);
   }
 
   async adminCreateProduct(data: Product): Promise<Product> {
@@ -1128,7 +1119,7 @@ class ApiClient {
     }
 
     try {
-      const result = await this.request<void>(`/api/admin/AdminProducts/${id}`, {
+      const result = await this.request<void>(`/api/admin/AdminProducts/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
@@ -1147,7 +1138,7 @@ class ApiClient {
   }
 
   async adminDeleteProduct(id: string): Promise<void> {
-    return this.request<void>(`/api/admin/AdminProducts/${id}`, {
+    return this.request<void>(`/api/admin/AdminProducts/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
   }
@@ -1163,7 +1154,7 @@ class ApiClient {
   }
 
   async getUser(id: string): Promise<User> {
-    return this.request<User>(`/api/Users/${id}`);
+    return this.request<User>(`/api/Users/${encodeURIComponent(id)}`);
   }
 
   async getUsers(): Promise<User[]> {
@@ -1178,14 +1169,14 @@ class ApiClient {
         stringified: JSON.stringify(data),
       });
     }
-    return this.request<void>(`/api/Users/${id}`, {
+    return this.request<void>(`/api/Users/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async deleteUser(id: string): Promise<void> {
-    return this.request<void>(`/api/Users/${id}`, {
+    return this.request<void>(`/api/Users/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
   }
@@ -1199,7 +1190,7 @@ class ApiClient {
   async adminUpdateUserStatus(id: string, isActive: boolean): Promise<void> {
     // Dedicated endpoint for updating user's active status
     const payload = { isActive: Boolean(isActive) };
-    return this.request<void>(`/api/admin/AdminUsers/${id}/status`, {
+    return this.request<void>(`/api/admin/AdminUsers/${encodeURIComponent(id)}/status`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
@@ -1211,13 +1202,13 @@ class ApiClient {
   }
 
   async addToWishlist(productId: string): Promise<void> {
-    return this.request<void>(`/api/Wishlist/${productId}`, {
+    return this.request<void>(`/api/Wishlist/${encodeURIComponent(productId)}`, {
       method: "POST",
     });
   }
 
   async removeFromWishlist(productId: string): Promise<void> {
-    return this.request<void>(`/api/Wishlist/${productId}`, {
+    return this.request<void>(`/api/Wishlist/${encodeURIComponent(productId)}`, {
       method: "DELETE",
     });
   }
@@ -1257,7 +1248,7 @@ class ApiClient {
   }
 
   async getNewsDetail(idOrSlug: string): Promise<NewsDto> {
-    return this.request<NewsDto>(`/api/news/${idOrSlug}`);
+    return this.request<NewsDto>(`/api/news/${encodeURIComponent(idOrSlug)}`);
   }
 
   async getNewsCategories(): Promise<string[]> {
@@ -1296,7 +1287,7 @@ class ApiClient {
   }
 
   async adminUpdateNews(id: string, data: UpdateNewsRequest): Promise<NewsDto> {
-    return this.request<NewsDto>(`/api/admin/adminnews/${id}`, {
+    return this.request<NewsDto>(`/api/admin/adminnews/${encodeURIComponent(id)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -1304,7 +1295,7 @@ class ApiClient {
   }
 
   async adminDeleteNews(id: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/api/admin/adminnews/${id}`, {
+    return this.request<{ message: string }>(`/api/admin/adminnews/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
   }
@@ -1332,7 +1323,7 @@ class ApiClient {
   }
 
   async adminGetVoucherById(id: string): Promise<Voucher> {
-    return this.request<Voucher>(`/api/admin/vouchers/${id}`);
+    return this.request<Voucher>(`/api/admin/vouchers/${encodeURIComponent(id)}`);
   }
 
   async adminCreateVoucher(data: CreateVoucherRequest): Promise<Voucher> {
@@ -1346,20 +1337,20 @@ class ApiClient {
     id: string,
     data: UpdateVoucherRequest
   ): Promise<Voucher> {
-    return this.request<Voucher>(`/api/admin/vouchers/${id}`, {
+    return this.request<Voucher>(`/api/admin/vouchers/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async adminDeleteVoucher(id: string): Promise<void> {
-    return this.request<void>(`/api/admin/vouchers/${id}`, {
+    return this.request<void>(`/api/admin/vouchers/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
   }
 
   async adminPublishVoucher(id: string, isPublic: boolean): Promise<void> {
-    const url = `/api/admin/vouchers/${id}/publish?isPublic=${isPublic}`;
+    const url = `/api/admin/vouchers/${encodeURIComponent(id)}/publish?isPublic=${isPublic}`;
     return this.request<void>(url, {
       method: "PATCH",
     });
@@ -1392,7 +1383,7 @@ class ApiClient {
 
   async adminGetProductSpecifications(productId: string): Promise<ProductSpecification[]> {
     return this.request<ProductSpecification[]>(
-      `/api/admin/products/${productId}/specifications`
+      `/api/admin/products/${encodeURIComponent(productId)}/specifications`
     );
   }
 
@@ -1401,7 +1392,7 @@ class ApiClient {
     data: CreateProductSpecificationRequest
   ): Promise<ProductSpecification> {
     return this.request<ProductSpecification>(
-      `/api/admin/products/${productId}/specifications`,
+      `/api/admin/products/${encodeURIComponent(productId)}/specifications`,
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -1415,7 +1406,7 @@ class ApiClient {
     data: UpdateProductSpecificationRequest
   ): Promise<ProductSpecification> {
     return this.request<ProductSpecification>(
-      `/api/admin/products/${productId}/specifications/${specificationId}`,
+      `/api/admin/products/${encodeURIComponent(productId)}/specifications/${encodeURIComponent(specificationId)}`,
       {
         method: "PUT",
         body: JSON.stringify(data),
@@ -1428,7 +1419,7 @@ class ApiClient {
     specificationId: string
   ): Promise<void> {
     return this.request<void>(
-      `/api/admin/products/${productId}/specifications/${specificationId}`,
+      `/api/admin/products/${encodeURIComponent(productId)}/specifications/${encodeURIComponent(specificationId)}`,
       {
         method: "DELETE",
       }
@@ -1440,7 +1431,7 @@ class ApiClient {
     data: BulkUpdateProductSpecificationsRequest
   ): Promise<ProductSpecification[]> {
     return this.request<ProductSpecification[]>(
-      `/api/admin/products/${productId}/specifications/bulk`,
+      `/api/admin/products/${encodeURIComponent(productId)}/specifications/bulk`,
       {
         method: "PUT",
         body: JSON.stringify(data),

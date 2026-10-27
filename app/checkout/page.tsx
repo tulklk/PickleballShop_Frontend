@@ -26,6 +26,7 @@ import { PaymentMethod } from "@/lib/api/types";
 import { getDefaultUserAddress } from "@/lib/utils/userAddresses";
 import type { SavedAddress } from "@/lib/utils/userAddresses";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { navigateToPayment } from "@/lib/security/safeUrl";
 import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 import { 
@@ -426,7 +427,7 @@ function CheckoutContent() {
         if (paymentData?.success && paymentData?.paymentUrl) {
           sessionStorage.setItem("payos_orderId", orderId);
           toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
-          window.location.href = paymentData.paymentUrl;
+          navigateToPayment(paymentData.paymentUrl);
           return;
         }
 
@@ -447,13 +448,13 @@ function CheckoutContent() {
         if (paymentResponse.success && paymentResponse.paymentUrl) {
           sessionStorage.setItem("payos_orderId", orderId);
           toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
-          window.location.href = paymentResponse.paymentUrl;
+          navigateToPayment(paymentResponse.paymentUrl);
           return;
         }
         
         // For MoMo, VNPay - redirect to payment URL
         if (paymentResponse.paymentUrl) {
-          window.location.href = paymentResponse.paymentUrl;
+          navigateToPayment(paymentResponse.paymentUrl);
           return;
         }
 
@@ -517,7 +518,7 @@ function CheckoutContent() {
           sessionStorage.setItem("payos_orderId", orderId);
           sessionStorage.setItem("guest_orderId", orderId);
           toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
-          window.location.href = paymentData.paymentUrl;
+          navigateToPayment(paymentData.paymentUrl);
           return;
         }
 
@@ -539,14 +540,14 @@ function CheckoutContent() {
           sessionStorage.setItem("payos_orderId", orderId);
           sessionStorage.setItem("guest_orderId", orderId);
           toast.success("Đặt hàng thành công! Đang chuyển đến trang thanh toán...");
-          window.location.href = paymentResponse.paymentUrl;
+          navigateToPayment(paymentResponse.paymentUrl);
           return;
         }
         
         // For MoMo, VNPay - redirect to payment URL
         if (paymentResponse.paymentUrl) {
           sessionStorage.setItem("guest_orderId", orderId);
-          window.location.href = paymentResponse.paymentUrl;
+          navigateToPayment(paymentResponse.paymentUrl);
           return;
         }
 

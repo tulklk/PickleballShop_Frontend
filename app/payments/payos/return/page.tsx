@@ -6,109 +6,105 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Home, Package, Mail } from "lucide-react";
 import { useUserMe } from "@/lib/api/hooks";
+import { apiClient } from "@/lib/api/client";
+import {
+  derivePayosHint,
+  isPaidPaymentStatus,
+  isValidOrderId,
+} from "@/lib/utils/paymentStatus";
 
 function PayOSReturnContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: userMe } = useUserMe();
-  const [status, setStatus] = useState<"loading" | "success" | "failed" | "cancelled">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "failed" | "cancelled" | "pending">("loading");
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
   const [isGuestOrder, setIsGuestOrder] = useState<boolean>(false);
 
   useEffect(() => {
-    const processPayment = () => {
-      // ĐỌC PARAMS CHÍNH
-      const code = searchParams.get("code") || "";
-      const statusParam = searchParams.get("status") || "";
-      const paymentStatus = searchParams.get("paymentStatus") || statusParam || "";
-      const orderCodeParam = searchParams.get("orderCode") || "";
-      const cancel = searchParams.get("cancel");
-      const errorMessage = searchParams.get("message");
+    let cancelled = false;
 
-      // LẤY orderId: ưu tiên orderId -> savedOrderId -> id -> sessionStorage
+    const readStoredId = (key: string): string | null => {
+      const v = sessionStorage.getItem(key);
+      return isValidOrderId(v) ? v.trim() : null;
+    };
+
+    const processPayment = async () => {
+      const errorMessage = searchParams.get("message");
+      setOrderCode((searchParams.get("orderCode") || "").slice(0, 32));
+
+      // orderId chỉ được tin khi đúng định dạng UUID (tránh chèn path lạ vào router.push).
       const orderIdParam =
         searchParams.get("orderId") ||
         searchParams.get("savedOrderId") ||
         searchParams.get("id") ||
         "";
+      const finalOrderId: string | null = isValidOrderId(orderIdParam)
+        ? orderIdParam.trim()
+        : readStoredId("payos_orderId");
 
-      let finalOrderId: string | null = null;
-      if (orderIdParam && orderIdParam.trim() && orderIdParam !== "null" && orderIdParam !== "undefined") {
-        finalOrderId = orderIdParam.trim();
-      } else {
-        const savedOrderId = sessionStorage.getItem("payos_orderId");
-        if (
-          savedOrderId &&
-          savedOrderId.trim() &&
-          savedOrderId !== "null" &&
-          savedOrderId !== "undefined"
-        ) {
-          finalOrderId = savedOrderId.trim();
-        }
-      }
+      if (finalOrderId) setOrderId(finalOrderId);
 
-      if (finalOrderId) {
-        setOrderId(finalOrderId);
-      }
-      setOrderCode(orderCodeParam);
-
-      // Check if this is a guest order
       const guestOrderId = sessionStorage.getItem("guest_orderId");
-      if (guestOrderId && guestOrderId === finalOrderId) {
-        setIsGuestOrder(true);
-      }
+      const isGuest = !!guestOrderId && guestOrderId === finalOrderId;
+      if (isGuest) setIsGuestOrder(true);
 
-      // XỬ LÝ TRẠNG THÁI - ƯU TIÊN SUCCESS TRƯỚC
-      const isSuccess =
-        (code === "00" && statusParam === "PAID") ||
-        (code === "00" && paymentStatus.toUpperCase() === "SUCCESS") ||
-        (paymentStatus.toUpperCase() === "SUCCESS") ||
-        (paymentStatus.toUpperCase() === "PAID") ||
-        (statusParam.toUpperCase() === "PAID");
+      // Query string chỉ là "gợi ý" (có thể bị giả mạo) => xem lib/utils/paymentStatus.ts
+      const hint = derivePayosHint(searchParams);
 
-      const isCancelled = cancel === "true" || statusParam === "CANCELLED" || paymentStatus.toUpperCase() === "CANCELLED";
-      const isError =
-        paymentStatus.toUpperCase() === "ERROR" ||
-        statusParam === "ERROR" ||
-        code === "99";
-
-      if (isSuccess) {
-        setStatus("success");
-        if (finalOrderId) {
-          sessionStorage.removeItem("payos_orderId");
-          sessionStorage.removeItem("guest_orderId");
-        }
-        return;
-      }
-
-      if (isCancelled) {
+      if (hint === "cancelled") {
         setStatus("cancelled");
-        if (finalOrderId) {
-          sessionStorage.removeItem("payos_orderId");
-        }
+        if (finalOrderId) sessionStorage.removeItem("payos_orderId");
         return;
       }
 
-      if (isError || (code && code !== "00")) {
+      if (hint === "failed") {
         setStatus("failed");
-        setMessage(errorMessage || "Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ.");
-        if (finalOrderId) {
-          sessionStorage.removeItem("payos_orderId");
-        }
+        setMessage(
+          (errorMessage || "").slice(0, 200) ||
+            "Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ."
+        );
+        if (finalOrderId) sessionStorage.removeItem("payos_orderId");
         return;
       }
 
-      setStatus("failed");
-      setMessage(errorMessage || "Không thể xác định trạng thái thanh toán. Vui lòng kiểm tra đơn hàng của bạn.");
-      if (finalOrderId) {
-        sessionStorage.removeItem("payos_orderId");
+      // hint === "success": CHỈ hiển thị "thành công" sau khi backend xác nhận đơn đã thanh toán.
+      if (!finalOrderId) {
+        setStatus("pending");
+        return;
       }
+
+      // Backend cập nhật trạng thái qua webhook nên có thể trễ vài giây => thử lại vài lần.
+      for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
+        try {
+          const order = isGuest
+            ? await apiClient.getGuestOrder(finalOrderId)
+            : await apiClient.getOrderById(finalOrderId);
+          if (isPaidPaymentStatus(order?.paymentStatus)) {
+            if (cancelled) return;
+            setStatus("success");
+            sessionStorage.removeItem("payos_orderId");
+            sessionStorage.removeItem("guest_orderId");
+            return;
+          }
+        } catch {
+          // Không đọc được đơn (chưa đăng nhập/hết phiên...) => dừng và báo "đang chờ xác nhận".
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+
+      if (!cancelled) setStatus("pending");
     };
 
     processPayment();
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams]);
+
 
   const renderContent = () => {
     switch (status) {
@@ -118,6 +114,41 @@ function PayOSReturnContent() {
             <Loader2 className="h-16 w-16 mx-auto mb-4 text-emerald-500 animate-spin" />
             <h2 className="text-2xl font-bold mb-2 text-emerald-900">Đang xác nhận thanh toán...</h2>
             <p className="text-muted-foreground">Vui lòng đợi trong giây lát</p>
+          </div>
+        );
+
+      case "pending":
+        return (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
+              <Loader2 className="h-12 w-12 text-amber-600" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2 text-amber-900">Đang chờ xác nhận thanh toán</h2>
+            <p className="text-muted-foreground mb-6">
+              Hệ thống chưa nhận được xác nhận cuối cùng từ cổng thanh toán. Trạng thái đơn hàng sẽ tự cập nhật,
+              bạn có thể kiểm tra lại trong mục đơn hàng sau ít phút.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+              {!isGuestOrder && (
+                <Button
+                  onClick={() => router.push(orderId ? `/account/orders/${orderId}` : "/account/orders")}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  <Package className="mr-2 h-4 w-4" />
+                  Xem đơn hàng
+                </Button>
+              )}
+              {isGuestOrder && (
+                <Button onClick={() => router.push("/order-lookup")} className="bg-amber-600 hover:bg-amber-700">
+                  <Package className="mr-2 h-4 w-4" />
+                  Tra cứu đơn hàng
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => router.push("/")} className="border-amber-200 text-amber-700 hover:bg-amber-50">
+                <Home className="mr-2 h-4 w-4" />
+                Về trang chủ
+              </Button>
+            </div>
           </div>
         );
 

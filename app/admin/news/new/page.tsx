@@ -12,6 +12,7 @@ import { Save, Eye, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import type { CreateNewsRequest } from "@/lib/api/types";
+import { uploadImage } from "@/lib/api/uploadImage";
 
 export default function CreateNewsPage() {
   const router = useRouter();
@@ -77,21 +78,7 @@ export default function CreateNewsPage() {
 
     setIsUploadingThumbnail(true);
     try {
-      const formData = new FormData();
-      formData.append("file", thumbnailFile);
-      formData.append("folder", "pickleball-shop/news/thumbnails");
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Lỗi khi upload ảnh");
-      }
-
-      const data = await response.json();
+      const data = await uploadImage(thumbnailFile, "pickleball-shop/news/thumbnails");
       return data.url;
     } finally {
       setIsUploadingThumbnail(false);

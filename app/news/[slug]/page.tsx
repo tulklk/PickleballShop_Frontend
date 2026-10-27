@@ -13,6 +13,8 @@ import NewsSidebar from "@/components/news/NewsSidebar";
 import { TableOfContents } from "@/components/news/TableOfContents";
 import { NewsComments } from "@/components/news/NewsComments";
 import Image from "next/image";
+import { SafeHtml } from "@/components/shared/SafeHtml";
+import { openExternal } from "@/lib/security/safeUrl";
 
 export default function NewsDetailPage() {
   const params = useParams();
@@ -169,9 +171,9 @@ export default function NewsDetailPage() {
           {/* Summary/Introduction */}
           {news.summary && (
             <div className="mb-4 md:mb-6 text-gray-700 leading-relaxed">
-              <div
+              <SafeHtml
                 className="prose prose-sm md:prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: news.summary }}
+                html={news.summary}
               />
             </div>
           )}
@@ -196,9 +198,8 @@ export default function NewsDetailPage() {
                 className="h-8 w-8 p-0 hover:border-emerald-600 hover:text-emerald-600"
                 onClick={() => {
                   const url = window.location.href;
-                  window.open(
-                    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-                    "_blank"
+                  openExternal(
+                    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
                   );
                 }}
               >
@@ -211,9 +212,8 @@ export default function NewsDetailPage() {
                 onClick={() => {
                   const url = window.location.href;
                   const text = news.title;
-                  window.open(
-                    `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-                    "_blank"
+                  openExternal(
+                    `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
                   );
                 }}
               >
@@ -237,9 +237,8 @@ export default function NewsDetailPage() {
                 className="h-8 w-8 p-0 hover:border-emerald-600 hover:text-emerald-600"
                 onClick={() => {
                   const url = window.location.href;
-                  window.open(
-                    `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
-                    "_blank"
+                  openExternal(
+                    `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`
                   );
                 }}
               >

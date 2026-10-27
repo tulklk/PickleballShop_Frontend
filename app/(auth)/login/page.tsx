@@ -8,6 +8,7 @@ import { z } from "zod";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { useLogin, useGoogleAuthLogin, useResendVerificationEmail } from "@/lib/api/hooks";
 import { isAdminUser } from "@/lib/auth/useAuth";
+import { resolvePostLoginPath } from "@/lib/security/safeUrl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +64,7 @@ export default function LoginPage() {
       const auth = await loginMutation.mutateAsync(data);
       setUnverifiedEmail(null); // Clear unverified email on success
       toast.success("Đăng nhập thành công!");
-      router.push(isAdminUser(auth.user) ? "/admin" : "/");
+      router.push(resolvePostLoginPath(window.location.search, isAdminUser(auth.user) ? "/admin" : "/"));
     } catch (error: any) {
       const errorMessage = error?.data?.message || "Đăng nhập thất bại";
       const lowerMessage = errorMessage.toLowerCase();
@@ -122,7 +123,7 @@ export default function LoginPage() {
     try {
       const auth = await googleLoginMutation.mutateAsync(credentialResponse.credential);
       toast.success("Đăng nhập thành công!");
-      router.push(isAdminUser(auth.user) ? "/admin" : "/");
+      router.push(resolvePostLoginPath(window.location.search, isAdminUser(auth.user) ? "/admin" : "/"));
     } catch (error: any) {
       if (DEBUG_API) {
         console.error("Google login error:", error);

@@ -4,12 +4,12 @@ import { DEBUG_API } from "@/lib/utils/debugApi";
 import { isUUID, extractIdFromSlug } from "@/lib/utils/productUrl";
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const identifier = params.id;
+    const { id: identifier } = await params;
     const isSlug = !isUUID(identifier);
     
     let product = null;

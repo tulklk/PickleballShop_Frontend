@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
+import { sanitizeHtml } from "@/lib/security/sanitizeHtml";
 
 interface NewsContentProps {
   content: string; // HTML content with Cloudinary image URLs
@@ -14,7 +15,8 @@ export function NewsContent({ content, className = "" }: NewsContentProps) {
   useEffect(() => {
     if (contentRef.current && content) {
       // Set HTML content
-      contentRef.current.innerHTML = content;
+      // Nội dung do admin soạn nhưng vẫn phải sanitize (defense-in-depth chống stored XSS).
+      contentRef.current.innerHTML = sanitizeHtml(content);
 
       // Add IDs to headings for table of contents
       const headings = contentRef.current.querySelectorAll("h1, h2, h3");

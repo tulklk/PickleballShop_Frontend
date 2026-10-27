@@ -3,6 +3,8 @@
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { uploadImage } from "@/lib/api/uploadImage";
+import { sanitizeHtml } from "@/lib/security/sanitizeHtml";
 
 interface RichTextEditorProps {
   value: string;
@@ -34,7 +36,8 @@ export function RichTextEditor({
       return;
     }
     if (editorRef.current && document.activeElement !== editorRef.current) {
-      editorRef.current.innerHTML = value || "";
+      // Sanitize: nội dung cũ có thể chứa payload (stored XSS) sẽ chạy trong phiên admin.
+      editorRef.current.innerHTML = sanitizeHtml(value || "");
     }
   }, [value]);
 
@@ -42,21 +45,7 @@ export function RichTextEditor({
   const handleImageUpload = async (file: File): Promise<string> => {
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", uploadFolder);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Lỗi khi upload ảnh");
-      }
-
-      const data = await response.json();
+      const data = await uploadImage(file, uploadFolder);
       return data.url; // Cloudinary URL
     } catch (error: any) {
       toast.error(error.message || "Không thể upload ảnh");

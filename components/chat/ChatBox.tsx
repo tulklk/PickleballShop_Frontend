@@ -10,6 +10,7 @@ import Link from "next/link";
 import logo from "@/app/img/logopickleball.png";
 import { cn } from "@/lib/utils";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { splitChatBold } from "@/lib/utils/chatFormat";
 import { useChatMessage } from "@/lib/api/hooks";
 import type { ChatMessage as ChatMessageType, ChatMessageResponse } from "@/lib/api/types";
 
@@ -59,16 +60,20 @@ export function ChatBox() {
   // Helper: format content from backend (support simple markdown **bold** and line breaks)
   const renderFormattedContent = (text: string) => {
     const paragraphs = text.split(/\n{2,}/);
+    // Render bằng React element (React tự escape) — KHÔNG dùng dangerouslySetInnerHTML.
     return paragraphs.map((para, idx) => {
-      const html = para
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\n/g, "<br/>");
+      const lines = para.split("\n");
       return (
-        <p
-          key={idx}
-          className="mb-1 last:mb-0"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <p key={idx} className="mb-1 last:mb-0">
+          {lines.map((line, li) => (
+            <span key={li}>
+              {li > 0 && <br />}
+              {splitChatBold(line).map((seg, si) =>
+                seg.bold ? <strong key={si}>{seg.text}</strong> : <span key={si}>{seg.text}</span>
+              )}
+            </span>
+          ))}
+        </p>
       );
     });
   };

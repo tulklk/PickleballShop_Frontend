@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { DeferredClientWidgets } from "@/components/layout/DeferredClientWidgets";
 import { Toaster } from "sonner";
+import { connection } from "next/server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -94,11 +95,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // CSP dùng nonce theo request (middleware.ts) => bắt buộc render động, nếu không
+  // HTML tĩnh sẽ không có nonce và script bị CSP chặn.
+  await connection();
   const apiOrigin =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     process.env.NEXT_PUBLIC_API_URL ||

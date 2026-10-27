@@ -33,7 +33,7 @@ function VNPayReturnContent() {
         <CardHeader className="bg-linear-to-r from-emerald-50 to-emerald-100/50 border-b border-emerald-100">
           <CardTitle className="text-center text-emerald-900">
             {status === "loading" && "Đang xử lý thanh toán..."}
-            {status === "success" && "Thanh toán thành công"}
+            {status === "success" && "Đã nhận kết quả thanh toán"}
             {status === "error" && "Thanh toán thất bại"}
           </CardTitle>
         </CardHeader>
@@ -49,9 +49,9 @@ function VNPayReturnContent() {
               <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-100 flex items-center justify-center">
                 <CheckCircle2 className="h-12 w-12 text-emerald-600" />
               </div>
-              <h2 className="text-3xl font-bold mb-2 text-emerald-900">Thanh toán thành công!</h2>
+              <h2 className="text-3xl font-bold mb-2 text-emerald-900">Đã nhận kết quả thanh toán</h2>
               <p className="text-muted-foreground mb-4">
-                Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đang được xử lý.
+                Cảm ơn bạn. Trạng thái thanh toán cuối cùng sẽ được hệ thống xác nhận với cổng thanh toán; vui lòng kiểm tra mục Đơn hàng để xem kết quả chính thức.
               </p>
               
               {/* Email confirmation notification */}
@@ -60,7 +60,7 @@ function VNPayReturnContent() {
                   <Mail className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
                   <div className="text-left flex-1">
                     <p className="text-sm font-medium text-emerald-900 mb-1">
-                      Email xác nhận đã được gửi
+                      Email xác nhận sẽ được gửi sau khi thanh toán được xác nhận
                     </p>
                     {userEmail && (
                       <p className="text-xs text-emerald-700 mb-2">

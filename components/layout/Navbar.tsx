@@ -144,8 +144,10 @@ export function Navbar() {
       }
     }
     // Clear all tokens (useLogout hook already does this, but ensure it's done)
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    // Luôn xóa phiên phía client kể cả khi API logout lỗi (token trong bộ nhớ + localStorage + cache dữ liệu cá nhân).
+    apiClient.setAccessToken(null);
+    apiClient.setRefreshToken(null);
+    queryClient.clear();
     router.push("/");
   };
 

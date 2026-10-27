@@ -687,13 +687,6 @@ export function useGuestOrder(id: string) {
   });
 }
 
-export function useLookupGuestOrder() {
-  return useMutation({
-    mutationFn: (params: { phoneNumber: string; orderNumber?: string }) => 
-      apiClient.lookupGuestOrder(params),
-  });
-}
-
 export function useCreateGuestPayment() {
   return useMutation({
     mutationFn: (orderId: string) => apiClient.createGuestPayment(orderId),

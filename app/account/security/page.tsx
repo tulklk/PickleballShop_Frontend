@@ -14,7 +14,12 @@ import { useChangePassword } from "@/lib/api/hooks";
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(6, "Mật khẩu hiện tại tối thiểu 6 ký tự"),
-    newPassword: z.string().min(8, "Mật khẩu mới phải từ 8 ký tự trở lên"),
+    newPassword: z
+      .string()
+      .min(8, "Mật khẩu mới phải từ 8 ký tự trở lên")
+      .max(128, "Mật khẩu tối đa 128 ký tự")
+      .regex(/[A-Za-z]/, "Mật khẩu mới phải có ít nhất 1 chữ cái")
+      .regex(/\d/, "Mật khẩu mới phải có ít nhất 1 chữ số"),
     confirmNewPassword: z.string().min(8, "Vui lòng nhập lại mật khẩu mới"),
   })
   .refine((data) => data.newPassword === data.confirmNewPassword, {

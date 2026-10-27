@@ -24,7 +24,12 @@ import { TypingText } from "@/components/shared/TypingText";
 const registerSchema = z
   .object({
     email: z.string().email("Email không hợp lệ"),
-    password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+    password: z
+      .string()
+      .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
+      .max(128, "Mật khẩu tối đa 128 ký tự")
+      .regex(/[A-Za-z]/, "Mật khẩu phải có ít nhất 1 chữ cái")
+      .regex(/\d/, "Mật khẩu phải có ít nhất 1 chữ số"),
     confirmPassword: z.string(),
     fullName: z.string().min(2, "Họ và tên là bắt buộc"),
     phoneNumber: z.string().min(10, "Số điện thoại phải có ít nhất 10 số"),

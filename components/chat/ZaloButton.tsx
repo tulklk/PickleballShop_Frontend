@@ -7,7 +7,7 @@ import zaloIcon from "@/app/img/zalo_icon.png";
 export function ZaloButton() {
   const handleZaloClick = () => {
     // Open Zalo in new tab
-    window.open("https://zalo.me/0911.221.474", "_blank");
+    window.open("https://zalo.me/0911.221.474", "_blank", "noopener,noreferrer");
   };
 
   return (

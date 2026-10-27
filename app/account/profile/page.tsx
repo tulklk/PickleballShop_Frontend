@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { formatDate } from "@/lib/utils/formatDate";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { uploadImage } from "@/lib/api/uploadImage";
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(1, "Họ tên không được để trống"),
@@ -105,29 +106,15 @@ function ProfileContent() {
 
     try {
       setUploadingAvatar(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "pickleball-shop/avatars");
-
       // Create AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
 
       try {
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          signal: controller.signal,
-        });
+        const data = await uploadImage(file, "pickleball-shop/avatars", controller.signal);
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Upload thất bại");
-        }
-
-        const data = await response.json();
         const avatarUrl = data.url;
         
         if (DEBUG_API) {

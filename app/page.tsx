@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { safeJsonLd } from "@/lib/security/jsonLd";
 import { ArrowRight, ShieldCheck, Sparkles, Trophy, Zap, ChevronLeft, ChevronRight, Star, Clock, Truck, Phone, Mail, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
@@ -114,7 +115,7 @@ export default function HomePage() {
       {/* Structured Data (JSON-LD) for SEO */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationStructuredData) }}
       />
       <div className="min-h-screen bg-white">
       {/* Hero Banner Slider */}

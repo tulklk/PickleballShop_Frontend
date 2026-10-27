@@ -94,13 +94,13 @@ export const supportChatService = {
 
   getAdminConversationMessages(customerId: string, params?: PagingParams) {
     return request<SupportConversationMessagesDto>(
-      `/api/admin/support-chat/conversations/${customerId}/messages${buildQuery(params)}`
+      `/api/admin/support-chat/conversations/${encodeURIComponent(customerId)}/messages${buildQuery(params)}`
     );
   },
 
   sendAdminMessage(customerId: string, content: string) {
     return request<SupportMessageDto>(
-      `/api/admin/support-chat/conversations/${customerId}/messages`,
+      `/api/admin/support-chat/conversations/${encodeURIComponent(customerId)}/messages`,
       {
         method: "POST",
         body: JSON.stringify({ content }),
@@ -110,7 +110,7 @@ export const supportChatService = {
 
   markAdminConversationRead(customerId: string) {
     return request<void>(
-      `/api/admin/support-chat/conversations/${customerId}/read`,
+      `/api/admin/support-chat/conversations/${encodeURIComponent(customerId)}/read`,
       {
         method: "POST",
         body: "{}",

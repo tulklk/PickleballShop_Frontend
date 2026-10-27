@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { coerceStockQuantity } from "@/lib/utils/productFormUtils";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { uploadImage } from "@/lib/api/uploadImage";
 
 const devLog = DEBUG_API ? console.log.bind(console) : () => {};
 const devWarn = DEBUG_API ? console.warn.bind(console) : () => {};
@@ -276,28 +277,15 @@ export function ProductForm({
           throw new Error(`File ${file.name} quá lớn (tối đa 5MB). Vui lòng nén ảnh trước khi upload.`);
         }
 
-        const formData = new FormData();
-        formData.append("file", file);
-
         // Create AbortController for timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
 
         try {
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-            signal: controller.signal,
-          });
+          const data = await uploadImage(file, "pickleball-shop/products", controller.signal);
 
           clearTimeout(timeoutId);
 
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || "Lỗi khi upload ảnh");
-          }
-
-          const data = await response.json();
           return data.url;
         } catch (error: any) {
           clearTimeout(timeoutId);

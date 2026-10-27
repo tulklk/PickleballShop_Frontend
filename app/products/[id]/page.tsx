@@ -29,6 +29,11 @@ import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
 import { getProductUrl } from "@/lib/utils/productUrl";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { uploadImage } from "@/lib/api/uploadImage";
+import { SafeHtml } from "@/components/shared/SafeHtml";
+import { openExternal } from "@/lib/security/safeUrl";
+import { safeCloudinaryUrl } from "@/lib/security/imageHosts";
+import { safeJsonLd } from "@/lib/security/jsonLd";
 
 function getVariantDisplayInfo(v: ProductVariantDto | null): string | null {
   if (!v) return null;
@@ -360,22 +365,13 @@ export default function ProductDetailPage() {
       // Upload image to Cloudinary if exists
       if (reviewImage) {
         setIsUploadingImage(true);
-        const formData = new FormData();
-        formData.append("file", reviewImage);
-        formData.append("folder", "pickleball-shop/reviews");
-
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || "Lỗi khi upload ảnh");
+        try {
+          const uploadData = await uploadImage(reviewImage, "pickleball-shop/reviews");
+          reviewImageUrl = uploadData.url;
+        } catch (uploadError) {
+          setIsUploadingImage(false);
+          throw uploadError;
         }
-
-        const uploadData = await uploadResponse.json();
-        reviewImageUrl = uploadData.url;
         setIsUploadingImage(false);
       }
 
@@ -456,7 +452,7 @@ export default function ProductDetailPage() {
       {/* Structured Data (JSON-LD) for SEO */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }}
       />
     <div className="container mx-auto px-3 md:px-4 py-4 md:py-8 bg-white">
       {/* Review Modal */}
@@ -1052,7 +1048,7 @@ export default function ProductDetailPage() {
             <Button
               variant="outline"
               className="flex-1 h-12 rounded-full border-blue-500 text-blue-500 hover:bg-blue-50 font-semibold shadow-sm"
-              onClick={() => window.open("https://zalo.me", "_blank")}
+              onClick={() => openExternal("https://zalo.me")}
             >
               <Image
                 src="/img/zalo_icon.png"
@@ -1067,7 +1063,7 @@ export default function ProductDetailPage() {
             <Button
               variant="outline"
               className="flex-1 h-12 rounded-full border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold shadow-sm"
-              onClick={() => window.open("https://facebook.com", "_blank")}
+              onClick={() => openExternal("https://facebook.com")}
             >
               <Image
                 src="/img/fb_icon.png"
@@ -1141,9 +1137,9 @@ export default function ProductDetailPage() {
                         const isHtmlDescription = /<[a-z][\s\S]*>/i.test(product.description) || product.description.includes("</");
                         if (isHtmlDescription) {
                           return (
-                            <div
+                            <SafeHtml
                               className="text-gray-700 leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_img]:my-4 [&_img]:block"
-                              dangerouslySetInnerHTML={{ __html: product.description }}
+                              html={product.description}
                             />
                           );
                         }
@@ -1437,25 +1433,16 @@ export default function ProductDetailPage() {
                             )}
 
                             {/* Review Image */}
-                            {review.reviewImageUrl && (
+                            {/* Chỉ hiển thị ảnh từ Cloudinary của shop (host thật sự), tránh tracking pixel/URL lạ từ API */}
+                            {safeCloudinaryUrl(review.reviewImageUrl) && (
                               <div className="mt-3">
-                                {review.reviewImageUrl.includes("cloudinary.com") || review.reviewImageUrl.startsWith("data:") ? (
-                                  <img
-                                    src={review.reviewImageUrl}
-                                    alt="Review image"
-                                    className="max-w-xs max-h-64 rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() => window.open(review.reviewImageUrl || "", "_blank")}
-                                  />
-                                ) : (
-                                  <Image
-                                    src={review.reviewImageUrl}
-                                    alt="Review image"
-                                    width={300}
-                                    height={200}
-                                    className="rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() => window.open(review.reviewImageUrl || "", "_blank")}
-                                  />
-                                )}
+                                <img
+                                  src={safeCloudinaryUrl(review.reviewImageUrl)!}
+                                  alt="Review image"
+                                  referrerPolicy="no-referrer"
+                                  className="max-w-xs max-h-64 rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => openExternal(review.reviewImageUrl)}
+                                />
                               </div>
                             )}
                           </div>

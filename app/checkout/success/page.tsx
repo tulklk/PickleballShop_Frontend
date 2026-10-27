@@ -10,8 +10,15 @@ import { CheckCircle2, Package, ShoppingBag } from "lucide-react";
 function SuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
-  const orderNumber = searchParams.get("orderNumber");
-  const email = searchParams.get("email");
+  // Query string do người dùng kiểm soát: chỉ hiển thị khi đúng định dạng (chống giả mạo nội dung / crash).
+  const rawOrderNumber = searchParams.get("orderNumber");
+  const orderNumber =
+    rawOrderNumber && /^[A-Za-z0-9_-]{1,40}$/.test(rawOrderNumber) ? rawOrderNumber : null;
+  const rawEmail = searchParams.get("email");
+  const email =
+    rawEmail && rawEmail.length <= 254 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(rawEmail)
+      ? rawEmail
+      : null;
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
@@ -55,7 +62,7 @@ function SuccessContent() {
                     Email xác nhận đã được gửi đến
                   </p>
                   <p className="text-sm font-medium text-emerald-700 mt-1">
-                    {decodeURIComponent(email)}
+                    {email}
                   </p>
                 </div>
               )}

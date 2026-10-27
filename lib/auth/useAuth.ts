@@ -5,16 +5,10 @@ import { useEffect } from "react";
 import { apiClient } from "../api/client";
 import { useSession } from "../api/hooks";
 import type { UserDto } from "../api/types";
+import { isAdminUser } from "./roles";
 
 /** Dùng sau login/register (response) — không dùng `useAuth().isAdmin` ngay trong cùng handler vì state chưa re-render. */
-export function isAdminUser(
-  user: { role?: string | number | null } | null | undefined
-): boolean {
-  const r = user?.role;
-  if (r === null || r === undefined) return false;
-  if (r === "Admin" || r === 2 || r === "2") return true;
-  return String(r).toLowerCase() === "admin";
-}
+export { isAdminUser };
 
 export function useAuth() {
   const queryClient = useQueryClient();
