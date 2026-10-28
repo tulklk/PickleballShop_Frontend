@@ -18,6 +18,7 @@ import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/lib/auth/useAuth";
 import { useRouter } from "next/navigation";
 import { getGuestCart, clearGuestCart } from "@/lib/utils/guestCart";
+import { MAX_ITEM_QUANTITY } from "@/lib/utils/orderPayload";
 import type { CartItemDto } from "@/lib/api/types";
 import { formatVariantInfoWithMm } from "@/lib/utils/variantDisplay";
 
@@ -36,6 +37,10 @@ function CartContent() {
 
   const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
+    if (newQuantity > MAX_ITEM_QUANTITY) {
+      toast.error(`Số lượng tối đa cho mỗi sản phẩm là ${MAX_ITEM_QUANTITY}`);
+      return;
+    }
     
     if (!isAuthenticated) {
       // Update guest cart
@@ -330,8 +335,9 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
                 </button>
                 <span className="w-10 text-center text-sm font-medium">{item.quantity}</span>
                 <button
-                  className="h-8 w-8 flex items-center justify-center text-gray-700 hover:bg-emerald-50"
+                  className="h-8 w-8 flex items-center justify-center text-gray-700 hover:bg-emerald-50 disabled:opacity-40"
                   onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                  disabled={item.quantity >= MAX_ITEM_QUANTITY}
                 >
                   <Plus className="h-4 w-4" />
                 </button>

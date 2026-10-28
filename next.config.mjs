@@ -9,6 +9,13 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
 
+  // Không public source map ở production; xoá mọi console.* trong bundle production
+  // (tránh lộ token/mật khẩu/PII qua log trình duyệt).
+  productionBrowserSourceMaps: false,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+
   // Build Vercel: không fail vì ESLint chưa cấu hình đầy đủ — vẫn kiểm tra TypeScript
   eslint: {
     ignoreDuringBuilds: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,11 +14,14 @@ function SuccessContent() {
   const rawOrderNumber = searchParams.get("orderNumber");
   const orderNumber =
     rawOrderNumber && /^[A-Za-z0-9_-]{1,40}$/.test(rawOrderNumber) ? rawOrderNumber : null;
-  const rawEmail = searchParams.get("email");
-  const email =
-    rawEmail && rawEmail.length <= 254 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(rawEmail)
-      ? rawEmail
-      : null;
+  // Email guest được lưu ở sessionStorage khi đặt hàng (không đưa vào URL).
+  const [email, setEmail] = useState<string | null>(null);
+  useEffect(() => {
+    const stored = sessionStorage.getItem("guest_email");
+    setEmail(
+      stored && stored.length <= 254 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(stored) ? stored : null
+    );
+  }, []);
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
@@ -52,6 +55,9 @@ function SuccessContent() {
                   <p className="text-sm text-gray-600 mb-1">Mã đơn hàng</p>
                   <p className="text-xl font-bold text-emerald-700 font-mono">
                     {orderNumber}
+                  </p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Vui lòng lưu lại mã đơn hàng này. Bạn cần mã đơn hàng cùng email đặt hàng để tra cứu đơn.
                   </p>
                 </div>
               )}

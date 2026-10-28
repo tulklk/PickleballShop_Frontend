@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Mail, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { useCooldown } from "@/lib/hooks/useCooldown";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -31,6 +32,7 @@ export default function ForgotPasswordPage() {
   const forgotPasswordMutation = useForgotPassword();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const cooldown = useCooldown();
 
   const {
     register,
@@ -43,13 +45,16 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       await forgotPasswordMutation.mutateAsync(data);
-      setIsSubmitted(true);
-      setSubmittedEmail(data.email);
-      toast.success("Email đặt lại mật khẩu đã được gửi!");
     } catch (error: any) {
-      const errorMessage = error?.data?.message || "Gửi email thất bại. Vui lòng thử lại.";
-      toast.error(errorMessage);
+      // Rate limit: báo rõ và khóa nút theo Retry-After.
+      if (cooldown.start(error)) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+        return;
+      }
+      // Các lỗi khác (kể cả email không tồn tại): KHÔNG tiết lộ, luôn hiện cùng một thông báo.
     }
+    setIsSubmitted(true);
+    setSubmittedEmail(data.email);
   };
 
   return (
@@ -82,12 +87,12 @@ export default function ForgotPasswordPage() {
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-emerald-900">
-                        Email đã được gửi thành công!
+                        Yêu cầu đã được tiếp nhận
                       </p>
                       <p className="mt-1 text-sm text-emerald-800">
-                        Chúng tôi đã gửi link đặt lại mật khẩu đến email{" "}
-                        <span className="font-medium">{submittedEmail}</span>.
-                        Vui lòng kiểm tra hộp thư và làm theo hướng dẫn.
+                        Nếu email{" "}
+                        <span className="font-medium">{submittedEmail}</span>{" "}
+                        tồn tại, chúng tôi đã gửi link đặt lại mật khẩu. Vui lòng kiểm tra hộp thư và làm theo hướng dẫn.
                       </p>
                       <p className="mt-2 text-xs text-emerald-700">
                         💡 Nếu không thấy email, vui lòng kiểm tra thư mục spam.
@@ -140,11 +145,13 @@ export default function ForgotPasswordPage() {
                 <Button
                   type="submit"
                   className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  disabled={forgotPasswordMutation.isPending}
+                  disabled={forgotPasswordMutation.isPending || cooldown.isCoolingDown}
                 >
                   {forgotPasswordMutation.isPending
                     ? "Đang gửi..."
-                    : "Gửi link đặt lại mật khẩu"}
+                    : cooldown.isCoolingDown
+                      ? `Thử lại sau ${cooldown.secondsLeft}s`
+                      : "Gửi link đặt lại mật khẩu"}
                 </Button>
               </form>
             )}

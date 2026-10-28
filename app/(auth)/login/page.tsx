@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
+import { useCooldown } from "@/lib/hooks/useCooldown";
 import { useLogin, useGoogleAuthLogin, useResendVerificationEmail } from "@/lib/api/hooks";
 import { isAdminUser } from "@/lib/auth/useAuth";
 import { resolvePostLoginPath } from "@/lib/security/safeUrl";
@@ -46,6 +47,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const cooldown = useCooldown();
 
   useEffect(() => {
     setMounted(true);
@@ -66,38 +68,20 @@ export default function LoginPage() {
       toast.success("Đăng nhập thành công!");
       router.push(resolvePostLoginPath(window.location.search, isAdminUser(auth.user) ? "/admin" : "/"));
     } catch (error: any) {
-      const errorMessage = error?.data?.message || "Đăng nhập thất bại";
-      const lowerMessage = errorMessage.toLowerCase();
-
-      // Check if account is locked / inactive
-      if (
-        lowerMessage.includes("inactive") ||
-        lowerMessage.includes("deactivated") ||
-        lowerMessage.includes("bị khóa") ||
-        lowerMessage.includes("locked") ||
-        lowerMessage.includes("isactive")
-      ) {
+      if (cooldown.start(error)) {
         setUnverifiedEmail(null);
-        toast.error(
-          "Tài khoản của bạn đã bị khóa, vui lòng liên hệ Admin để được hỗ trợ."
-        );
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
         return;
       }
-
-      // Check if error is about email not verified
-      if (
-        lowerMessage.includes("xác thực") ||
-        lowerMessage.includes("verify") ||
-        lowerMessage.includes("email chưa") ||
-        lowerMessage.includes("email not verified") ||
-        lowerMessage.includes("chưa xác nhận")
-      ) {
-        setUnverifiedEmail(data.email); // Store email for resend verification
-        toast.error("Bạn phải xác nhận tài khoản trước khi đăng nhập. Vui lòng kiểm tra email để xác thực.");
-      } else {
-        setUnverifiedEmail(null);
-        toast.error(errorMessage);
-      }
+      // Backend trả thông báo CHUNG cho mọi lỗi đăng nhập; không suy luận từ nội dung lỗi
+      // (không phân biệt email không tồn tại / sai mật khẩu / chưa xác thực / bị khóa).
+      toast.error(
+        error?.status === 400 || error?.status === 401 || error?.status === 403
+          ? "Email hoặc mật khẩu không đúng."
+          : "Đăng nhập thất bại. Vui lòng thử lại sau."
+      );
+      // Gợi ý trung tính: cho phép gửi lại email xác thực cho địa chỉ vừa nhập.
+      setUnverifiedEmail(data.email);
     }
   };
 
@@ -106,14 +90,14 @@ export default function LoginPage() {
 
     try {
       await resendVerificationMutation.mutateAsync({ email: unverifiedEmail });
-      toast.success("Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn.");
     } catch (error: any) {
-      toast.error(
-        error?.data?.message || "Gửi lại email xác thực thất bại. Vui lòng thử lại."
-      );
+      if (cooldown.start(error)) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+        return;
+      }
     }
+    toast.success("Nếu email hợp lệ, chúng tôi đã gửi email xác thực. Vui lòng kiểm tra hộp thư.");
   };
-
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
       toast.error("Không nhận được thông tin từ Google.");
@@ -128,12 +112,17 @@ export default function LoginPage() {
       if (DEBUG_API) {
         console.error("Google login error:", error);
       }
-      toast.error(error?.data?.message || "Đăng nhập Google thất bại");
+      if (cooldown.start(error)) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+        return;
+      }
+      // Thông báo chung (vd. email Google chưa được xác minh).
+      toast.error("Đăng nhập Google thất bại. Vui lòng thử lại hoặc dùng email và mật khẩu.");
     }
   };
 
   const isSubmitting =
-    loginMutation.isPending || googleLoginMutation.isPending;
+    loginMutation.isPending || googleLoginMutation.isPending || cooldown.isCoolingDown;
 
   const handleGoogleError = () => {
     if (DEBUG_API) {
@@ -235,17 +224,17 @@ export default function LoginPage() {
                   <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-amber-900">
-                      Email chưa được xác thực
+                      Không đăng nhập được?
                     </p>
                     <p className="mt-1 text-sm text-amber-800">
-                      Tài khoản <span className="font-medium">{unverifiedEmail}</span> chưa được xác thực. 
-                      Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập.
+                      Nếu bạn vừa đăng ký, hãy xác thực email <span className="font-medium">{unverifiedEmail}</span> trước khi đăng nhập.
+                      Bạn có thể gửi lại email xác thực bên dưới.
                     </p>
                     <div className="mt-3 flex gap-2">
                       <Button
                         type="button"
                         onClick={handleResendVerification}
-                        disabled={resendVerificationMutation.isPending}
+                        disabled={resendVerificationMutation.isPending || cooldown.isCoolingDown}
                         size="sm"
                         className="bg-amber-600 hover:bg-amber-700 text-white"
                       >

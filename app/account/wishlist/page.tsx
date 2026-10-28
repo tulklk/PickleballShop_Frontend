@@ -58,7 +58,7 @@ function WishlistProductCard({
   const handleAddToCart = async () => {
     // Guest user: lưu vào localStorage
     if (!isAuthenticated) {
-      addToGuestCart({
+      const added = addToGuestCart({
         productId: product.id,
         quantity: 1,
         productName: product.name || undefined,
@@ -66,6 +66,10 @@ function WishlistProductCard({
           product.primaryImageUrl || product.imageUrls?.[0] || undefined,
         unitPrice: product.price,
       });
+      if (!added) {
+        toast.error("Không thể thêm vào giỏ hàng (giỏ hàng tối đa 50 sản phẩm khác nhau).");
+        return;
+      }
       toast.success("Đã thêm vào giỏ hàng!");
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       return;

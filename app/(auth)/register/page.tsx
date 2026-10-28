@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRegister, useResendVerificationEmail } from "@/lib/api/hooks";
+import { passwordSchema } from "@/lib/validation/password";
+import { useCooldown } from "@/lib/hooks/useCooldown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,12 +26,7 @@ import { TypingText } from "@/components/shared/TypingText";
 const registerSchema = z
   .object({
     email: z.string().email("Email không hợp lệ"),
-    password: z
-      .string()
-      .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
-      .max(128, "Mật khẩu tối đa 128 ký tự")
-      .regex(/[A-Za-z]/, "Mật khẩu phải có ít nhất 1 chữ cái")
-      .regex(/\d/, "Mật khẩu phải có ít nhất 1 chữ số"),
+    password: passwordSchema,
     confirmPassword: z.string(),
     fullName: z.string().min(2, "Họ và tên là bắt buộc"),
     phoneNumber: z.string().min(10, "Số điện thoại phải có ít nhất 10 số"),
@@ -47,6 +44,7 @@ export default function RegisterPage() {
   const resendVerificationMutation = useResendVerificationEmail();
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const cooldown = useCooldown();
 
   useEffect(() => {
     setMounted(true);
@@ -63,24 +61,25 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      const response = await registerMutation.mutateAsync(data);
-      if (response.refreshToken) {
-        localStorage.setItem("refreshToken", response.refreshToken);
-      }
-      setRegisteredEmail(data.email); // Store email for resend verification
-      toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
-      // Don't redirect immediately, show message that email verification is required
-      // User should check their email
+      // Backend luôn trả cùng một thông báo thành công (dù email đã tồn tại hay chưa) và KHÔNG cấp token.
+      await registerMutation.mutateAsync(data);
     } catch (error: any) {
-      const errorMessage = error?.data?.message || "Đăng ký thất bại";
-      setRegisteredEmail(null);
-      // Check if error is about email already exists or other validation
-      if (errorMessage.toLowerCase().includes("email") || errorMessage.toLowerCase().includes("đã tồn tại")) {
-        toast.error(errorMessage);
-      } else {
-        toast.error(errorMessage);
+      if (cooldown.start(error)) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+        return;
       }
+      setRegisteredEmail(null);
+      // Chỉ lỗi định dạng dữ liệu (400/422) mới hiển thị message của server; lỗi khác dùng thông báo chung.
+      const status = error?.status;
+      toast.error(
+        (status === 400 || status === 422) && error?.data?.message
+          ? error.data.message
+          : "Đăng ký thất bại. Vui lòng kiểm tra thông tin và thử lại."
+      );
+      return;
     }
+    setRegisteredEmail(data.email); // Dùng cho nút "Gửi lại email xác thực"
+    toast.success("Vui lòng kiểm tra email để xác thực tài khoản.");
   };
 
   const handleResendVerification = async () => {
@@ -88,14 +87,15 @@ export default function RegisterPage() {
 
     try {
       await resendVerificationMutation.mutateAsync({ email: registeredEmail });
-      toast.success("Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn.");
     } catch (error: any) {
-      toast.error(
-        error?.data?.message || "Gửi lại email xác thực thất bại. Vui lòng thử lại."
-      );
+      if (cooldown.start(error)) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+        return;
+      }
+      // Không tiết lộ email có tồn tại/đã xác thực hay không: luôn báo cùng một thông điệp.
     }
+    toast.success("Nếu email hợp lệ, chúng tôi đã gửi email xác thực. Vui lòng kiểm tra hộp thư.");
   };
-
   return (
     <section className="relative overflow-hidden bg-linear-to-b from-[#f1fff6] via-white to-[#e8fbf0]">
       <div className="absolute inset-0">
@@ -183,17 +183,17 @@ export default function RegisterPage() {
                   <Mail className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-emerald-900">
-                      Đăng ký thành công!
+                      Vui lòng kiểm tra email để xác thực tài khoản
                     </p>
                     <p className="mt-1 text-sm text-emerald-800">
-                      Chúng tôi đã gửi email xác thực đến <span className="font-medium">{registeredEmail}</span>. 
-                      Vui lòng kiểm tra hộp thư và nhấp vào link để xác thực tài khoản.
+                      Nếu thông tin hợp lệ, chúng tôi đã gửi email xác thực đến <span className="font-medium">{registeredEmail}</span>. 
+                      Nhấp vào link trong email để kích hoạt tài khoản, sau đó đăng nhập.
                     </p>
                     <div className="mt-3">
                       <Button
                         type="button"
                         onClick={handleResendVerification}
-                        disabled={resendVerificationMutation.isPending}
+                        disabled={resendVerificationMutation.isPending || cooldown.isCoolingDown}
                         size="sm"
                         variant="outline"
                         className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
@@ -290,11 +290,13 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 className="w-full transition-all duration-300 hover:scale-105"
-                disabled={registerMutation.isPending}
+                disabled={registerMutation.isPending || cooldown.isCoolingDown}
               >
                 {registerMutation.isPending
                   ? "Đang tạo tài khoản..."
-                  : "Đăng ký"}
+                  : cooldown.isCoolingDown
+                    ? `Thử lại sau ${cooldown.secondsLeft}s`
+                    : "Đăng ký"}
               </Button>
             </form>
 

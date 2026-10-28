@@ -28,16 +28,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Dynamic product pages - use slug for SEO-friendly URLs
   try {
-    const response = await fetch(`${apiBaseUrl}/api/Products?PageSize=1000`, {
-      method: "GET",
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return staticPages;
+    const allItems: ProductItem[] = [];
+    let totalPages = 1;
+    for (let page = 1; page <= Math.min(totalPages, 30); page++) {
+      const response = await fetch(`${apiBaseUrl}/api/Products?Page=${page}&PageSize=100`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        if (page === 1) return staticPages;
+        break;
+      }
+      const pageData = (await response.json()) as { items?: ProductItem[]; totalPages?: number };
+      allItems.push(...(pageData?.items || []));
+      totalPages = pageData?.totalPages || 1;
     }
-
-    const productsData = (await response.json()) as { items?: ProductItem[] };
+    const productsData = { items: allItems };
     const productPages: MetadataRoute.Sitemap = (productsData?.items || []).map((product) => {
       // Use slug if available, fallback to ID
       const productSlug = product.slug || product.id;

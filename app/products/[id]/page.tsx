@@ -24,6 +24,7 @@ import { ShoppingCart, ChevronLeft, ChevronRight, X, ZoomIn, Star, MessageCircle
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth/useAuth";
 import { addToGuestCart } from "@/lib/utils/guestCart";
+import { MAX_ITEM_QUANTITY } from "@/lib/utils/orderPayload";
 import { useQueryClient } from "@tanstack/react-query";
 import { VariantSelector } from "@/components/shared/VariantSelector";
 import type { ProductVariantDto } from "@/lib/api/types";
@@ -31,7 +32,7 @@ import { getProductUrl } from "@/lib/utils/productUrl";
 import { DEBUG_API } from "@/lib/utils/debugApi";
 import { uploadImage } from "@/lib/api/uploadImage";
 import { SafeHtml } from "@/components/shared/SafeHtml";
-import { openExternal } from "@/lib/security/safeUrl";
+import { openExternal, safeHttpUrl } from "@/lib/security/safeUrl";
 import { safeCloudinaryUrl } from "@/lib/security/imageHosts";
 import { safeJsonLd } from "@/lib/security/jsonLd";
 
@@ -191,7 +192,7 @@ export default function ProductDetailPage() {
 
     // If not authenticated, save to localStorage (guest cart)
     if (!isAuthenticated) {
-      addToGuestCart({
+      const added = addToGuestCart({
         productId: product.id,
         productVariantId: variantId ?? undefined,
         quantity,
@@ -200,6 +201,10 @@ export default function ProductDetailPage() {
         unitPrice: displayPrice,
         variantInfo: getVariantDisplayInfo(selectedVariant) ?? undefined,
       });
+      if (!added) {
+        toast.error("Không thể thêm vào giỏ hàng (giỏ hàng tối đa 50 sản phẩm khác nhau).");
+        return;
+      }
       toast.success("Đã thêm vào giỏ hàng!");
       // Invalidate cart query to update cart count in navbar
       queryClient.invalidateQueries({ queryKey: ["cart"] });
@@ -367,7 +372,11 @@ export default function ProductDetailPage() {
         setIsUploadingImage(true);
         try {
           const uploadData = await uploadImage(reviewImage, "pickleball-shop/reviews");
-          reviewImageUrl = uploadData.url;
+          const safeUrl = safeHttpUrl(uploadData.url);
+          if (!safeUrl) {
+            throw new Error("URL ảnh không hợp lệ (chỉ chấp nhận http/https).");
+          }
+          reviewImageUrl = safeUrl;
         } catch (uploadError) {
           setIsUploadingImage(false);
           throw uploadError;
@@ -999,7 +1008,7 @@ export default function ProductDetailPage() {
                   const maxStock = selectedVariant 
                     ? selectedVariant.stockQuantity 
                     : product.stockQuantity;
-                  setQuantity((q) => Math.min(maxStock, q + 1));
+                  setQuantity((q) => Math.min(maxStock, MAX_ITEM_QUANTITY, q + 1));
                 }}
               >
                 +

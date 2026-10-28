@@ -1,4 +1,5 @@
-export type PaymentHint = "success" | "cancelled" | "failed";
+/** "unknown": URL không có thông tin rõ ràng — vẫn phải hỏi backend (có thể webhook chưa tới). */
+export type PaymentHint = "success" | "cancelled" | "failed" | "unknown";
 
 type ParamsLike = { get(name: string): string | null };
 
@@ -13,7 +14,7 @@ export function isValidOrderId(value: string | null | undefined): value is strin
  * Gợi ý trạng thái từ query string của PayOS.
  * CHÚ Ý: query string do trình duyệt cung cấp nên KHÔNG đáng tin (bất kỳ ai cũng có thể tự gõ
  * `?status=PAID`). Kết quả này chỉ là "hint"; trạng thái thanh toán thật phải được xác nhận
- * bằng cách đọc đơn hàng từ backend (backend cập nhật qua webhook đã verify chữ ký).
+ * bằng `POST /api/payments/payos/confirm` (backend đối chiếu với PayOS / webhook đã verify chữ ký).
  */
 export function derivePayosHint(params: ParamsLike): PaymentHint {
   const code = params.get("code") || "";
@@ -34,7 +35,9 @@ export function derivePayosHint(params: ParamsLike): PaymentHint {
     cancel === "true" || statusParam === "CANCELLED" || paymentStatus === "CANCELLED";
   if (isCancelled) return "cancelled";
 
-  return "failed";
+  // Có mã lỗi tường minh từ PayOS (code khác "00") => thất bại; ngược lại không đủ thông tin.
+  if (code && code !== "00") return "failed";
+  return "unknown";
 }
 
 /** Backend trả paymentStatus dạng chuỗi hoặc số; coi các giá trị "đã thanh toán" là hợp lệ. */

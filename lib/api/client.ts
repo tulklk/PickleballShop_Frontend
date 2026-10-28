@@ -7,6 +7,8 @@ import type {
   VerifyEmailRequest,
   ResendVerificationEmailRequest,
   ForgotPasswordRequest,
+  ResetPasswordRequest,
+  PayosConfirmResponse,
   CategoryDto,
   ProductListDtoPagedResultDto,
   ProductDto,
@@ -62,6 +64,8 @@ import type {
   BulkUpdateProductSpecificationsRequest,
 } from "./types";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { sanitizeGuestOrderPayload, sanitizeOrderItems } from "@/lib/utils/orderPayload";
+import { MAX_PAGE_SIZE, normalizeQueryValue } from "@/lib/utils/pagination";
 
 // Ensure URL has protocol and no trailing slash
 const getApiBaseUrl = () => {
@@ -74,11 +78,35 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-class ApiError extends Error {
+/** Endpoint xác thực: 401 ở đây là "sai thông tin/token", KHÔNG được kích hoạt refresh hay logout. */
+const AUTH_ENDPOINT_RE = /\/api\/auth\/(login|register|refresh|forgot-password|reset-password|verify-email|resend-verification)/i;
+
+/** Sự kiện phát ra khi phiên hết hạn không thể khôi phục (refresh thất bại). */
+export const SESSION_EXPIRED_EVENT = "auth:session-expired";
+
+/** Đọc header Retry-After (giây hoặc HTTP-date) -> số giây, giới hạn 1..3600. */
+export function parseRetryAfter(value: string | null | undefined, now: number = Date.now()): number | undefined {
+  if (!value) return undefined;
+  const v = value.trim();
+  let seconds: number;
+  if (/^\d+$/.test(v)) {
+    seconds = parseInt(v, 10);
+  } else {
+    const t = Date.parse(v);
+    if (Number.isNaN(t)) return undefined;
+    seconds = Math.ceil((t - now) / 1000);
+  }
+  if (!Number.isFinite(seconds)) return undefined;
+  return Math.min(3600, Math.max(1, seconds));
+}
+
+export class ApiError extends Error {
   constructor(
     public status: number,
     public statusText: string,
-    public data?: unknown
+    public data?: unknown,
+    /** Với HTTP 429: số giây cần chờ (từ header Retry-After). */
+    public retryAfterSeconds?: number
   ) {
     // Don't include stack trace in message to avoid triggering Next.js error overlay
     super(`API Error: ${status}`);
@@ -150,9 +178,54 @@ class ApiClient {
     return this.accessToken;
   }
 
+  private refreshPromise: Promise<boolean> | null = null;
+
+  /**
+   * Làm mới phiên bằng refresh token (single-flight: nhiều request 401 cùng lúc chỉ gọi refresh 1 lần).
+   * Refresh token XOAY VÒNG: luôn lưu cả access + refresh token MỚI, bỏ token cũ.
+   * Trả về true nếu thành công; nếu thất bại thì xóa phiên và phát SESSION_EXPIRED_EVENT.
+   */
+  refreshSession(): Promise<boolean> {
+    if (this.refreshPromise) return this.refreshPromise;
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) return Promise.resolve(false);
+
+    this.refreshPromise = (async () => {
+      try {
+        const res = await this.request<AuthResponse>("/api/Auth/refresh", {
+          method: "POST",
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!res?.accessToken) throw new Error("Empty refresh response");
+        this.setAccessToken(res.accessToken);
+        if (res.refreshToken) this.setRefreshToken(res.refreshToken);
+        return true;
+      } catch (error) {
+        const status = (error as { status?: number })?.status;
+        // Lỗi mạng/5xx/429 tạm thời: giữ phiên, để lần sau thử lại. 400/401/403: refresh token vô hiệu.
+        if (status === undefined || status >= 500 || status === 429) return false;
+        this.clearSession();
+        return false;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+    return this.refreshPromise;
+  }
+
+  /** Xóa token và báo cho UI (xóa cache, chuyển tới /login). */
+  clearSession() {
+    this.setAccessToken(null);
+    this.setRefreshToken(null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
+  }
+
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    hasRetried = false
   ): Promise<T> {
     // Ensure endpoint starts with /
     const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
@@ -183,6 +256,24 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      // 401 với access token hết hạn/thu hồi: thử refresh đúng 1 lần rồi gửi lại request gốc.
+      if (
+        response.status === 401 &&
+        !hasRetried &&
+        this.accessToken &&
+        !AUTH_ENDPOINT_RE.test(normalizedEndpoint)
+      ) {
+        const refreshed = await this.refreshSession();
+        if (refreshed) {
+          return this.request<T>(endpoint, options, true);
+        }
+        // Refresh không khả dụng: phiên đã được xóa trong refreshSession (nếu token vô hiệu).
+        if (!this.getRefreshToken()) this.clearSession();
+      }
+
+      const retryAfterSeconds =
+        response.status === 429 ? parseRetryAfter(response.headers.get("retry-after")) : undefined;
+
       let errorData: unknown;
       let errorText = "";
       
@@ -270,23 +361,20 @@ class ApiClient {
           errorMessage = String(errorData.detail);
         }
         
-        // For 500 errors, try to get more details
-        if (response.status === 500 && errorMessage === "Unknown error") {
-          if ("stackTrace" in errorData && errorData.stackTrace) {
-            errorMessage = "Lỗi máy chủ: Vui lòng kiểm tra dữ liệu và thử lại";
-          }
-        }
       }
       
       // Provide friendly Vietnamese error messages for common status codes
-      if (response.status === 401) {
-        // Clear tokens on 401 error
-        this.setAccessToken(null);
-        this.setRefreshToken(null);
-        
-        errorMessage = errorMessage.includes("đăng nhập") 
-          ? errorMessage 
-          : "Bạn cần đăng nhập để thực hiện thao tác này. Vui lòng đăng nhập lại.";
+      if (response.status === 429) {
+        errorMessage = retryAfterSeconds
+          ? `Bạn thao tác quá nhanh, vui lòng thử lại sau ${retryAfterSeconds} giây.`
+          : "Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.";
+      } else if (response.status === 401) {
+        // Token đã được xử lý ở trên (refresh/clear). Endpoint đăng nhập giữ message gốc của server.
+        if (!AUTH_ENDPOINT_RE.test(normalizedEndpoint)) {
+          errorMessage = errorMessage.includes("đăng nhập") 
+            ? errorMessage 
+            : "Bạn cần đăng nhập để thực hiện thao tác này. Vui lòng đăng nhập lại.";
+        }
       } else if (response.status === 403) {
         errorMessage = errorMessage.includes("quyền") 
           ? errorMessage 
@@ -307,7 +395,12 @@ class ApiClient {
         });
       }
       
-      throw new ApiError(response.status, errorMessage, errorData);
+      if (response.status === 429) {
+        // Các form đọc `error.data.message` => đảm bảo luôn là thông báo thân thiện.
+        errorData = { message: errorMessage, retryAfterSeconds };
+      }
+
+      throw new ApiError(response.status, errorMessage, errorData, retryAfterSeconds);
     }
 
     // Handle empty responses
@@ -514,6 +607,13 @@ class ApiClient {
     });
   }
 
+  async resetPassword(data: ResetPasswordRequest): Promise<void> {
+    return this.request<void>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   // Categories endpoints
   async getCategories(): Promise<CategoryDto[]> {
     return this.request<CategoryDto[]>("/api/Categories");
@@ -548,7 +648,7 @@ class ApiClient {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          searchParams.append(key, normalizeQueryValue(key, value));
         }
       });
     }
@@ -556,6 +656,21 @@ class ApiClient {
     return this.request<ProductListDtoPagedResultDto>(
       `/api/Products${query ? `?${query}` : ""}`
     );
+  }
+
+  /** Lấy toàn bộ sản phẩm bằng cách duyệt từng trang (mỗi trang tối đa 100). */
+  async getAllProducts(
+    params?: Omit<Parameters<ApiClient["getProducts"]>[0] & object, "Page" | "PageSize">,
+    maxPages = 30
+  ): Promise<ProductListDtoPagedResultDto> {
+    const first = await this.getProducts({ ...params, Page: 1, PageSize: MAX_PAGE_SIZE });
+    const items = [...(first.items ?? [])];
+    const totalPages = Math.min(first.totalPages || 1, maxPages);
+    for (let page = 2; page <= totalPages; page++) {
+      const next = await this.getProducts({ ...params, Page: page, PageSize: MAX_PAGE_SIZE });
+      items.push(...(next.items ?? []));
+    }
+    return { ...first, items, page: 1, pageSize: items.length, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
   }
 
   async getProductById(id: string): Promise<ProductDto> {
@@ -647,7 +762,7 @@ class ApiClient {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          searchParams.append(key, normalizeQueryValue(key, value));
         }
       });
     }
@@ -719,9 +834,10 @@ class ApiClient {
 
   // Guest Orders endpoints
   async createGuestOrder(data: CreateGuestOrderRequest): Promise<OrderDto | CreateOrderResponse> {
-    const response = await this.request<OrderDto | CreateOrderResponse>("/api/guest/orders", {
+    // Chỉ gửi {productId, productVariantId?, quantity} cho mỗi item — giá/tổng tiền do server tính.
+    const response = await this.request<OrderDto | CreateOrderResponse>("/api/guest-orders", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(sanitizeGuestOrderPayload(data)),
     });
     if (DEBUG_API) {
       console.log("API createGuestOrder raw response:", response);
@@ -729,17 +845,48 @@ class ApiClient {
     return response;
   }
 
-  async getGuestOrder(id: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/guest/orders/${encodeURIComponent(id)}`);
+  /** Tra cứu đơn guest: BẮT BUỘC cả email và mã đơn. Backend trả mảng tối đa 1 đơn (hoặc 404). */
+  async lookupGuestOrder(params: { email: string; orderNumber: string }): Promise<OrderDto[]> {
+    const qs = new URLSearchParams({
+      email: params.email.trim(),
+      orderNumber: params.orderNumber.trim(),
+    });
+    const result = await this.request<OrderDto[] | OrderDto | null>(
+      `/api/guest-orders/lookup?${qs.toString()}`
+    );
+    if (!result) return [];
+    return Array.isArray(result) ? result : [result];
   }
 
-  async getGuestOrderByNumber(orderNumber: string): Promise<OrderDto> {
-    return this.request<OrderDto>(`/api/guest/orders/status/${encodeURIComponent(orderNumber)}`);
+  async getGuestOrder(id: string, email: string): Promise<OrderDto> {
+    return this.request<OrderDto>(
+      `/api/guest-orders/${encodeURIComponent(id)}?${new URLSearchParams({ email: email.trim() })}`
+    );
   }
 
-  async createGuestPayment(orderId: string): Promise<CreatePaymentResponse> {
-    return this.request<CreatePaymentResponse>(`/api/guest/orders/${encodeURIComponent(orderId)}/payment`, {
+  async getGuestOrderByNumber(orderNumber: string, email: string): Promise<OrderDto> {
+    return this.request<OrderDto>(
+      `/api/guest-orders/status/${encodeURIComponent(orderNumber)}?${new URLSearchParams({ email: email.trim() })}`
+    );
+  }
+
+  async createGuestPayment(orderId: string, email: string): Promise<CreatePaymentResponse> {
+    return this.request<CreatePaymentResponse>(
+      `/api/guest-orders/${encodeURIComponent(orderId)}/payment?${new URLSearchParams({ email: email.trim() })}`,
+      { method: "POST" }
+    );
+  }
+
+  /**
+   * Xác nhận thanh toán PayOS phía server. KHÔNG tin `status`/`code` trên URL.
+   * Tự gắn Authorization nếu đã đăng nhập (đơn của user chỉ chủ đơn mới xác nhận được).
+   */
+  async confirmPayosPayment(data: { orderCode: number; orderId?: string }): Promise<PayosConfirmResponse> {
+    const body: { orderCode: number; orderId?: string } = { orderCode: data.orderCode };
+    if (data.orderId) body.orderId = data.orderId;
+    return this.request<PayosConfirmResponse>("/api/payments/payos/confirm", {
       method: "POST",
+      body: JSON.stringify(body),
     });
   }
 
@@ -804,7 +951,7 @@ class ApiClient {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          searchParams.append(key, normalizeQueryValue(key, value));
         }
       });
     }
@@ -910,7 +1057,7 @@ class ApiClient {
     } catch (error) {
       // Fallback to /api/Products endpoint with authentication for admin list
       // This endpoint returns paginated results
-      const result = await this.request<ProductListDtoPagedResultDto>("/api/Products?PageSize=1000");
+      const result = await this.getAllProducts();
       if (!result.items || result.items.length === 0) {
         return [];
       }
@@ -1221,10 +1368,6 @@ class ApiClient {
     });
   }
 
-  async checkChatHealth(): Promise<{ status: string }> {
-    return this.request<{ status: string }>("/api/Chat/health");
-  }
-
   // News endpoints (Public)
   async getNews(params?: {
     Page?: number;
@@ -1237,7 +1380,7 @@ class ApiClient {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          searchParams.append(key, normalizeQueryValue(key, value));
         }
       });
     }
@@ -1268,7 +1411,7 @@ class ApiClient {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          searchParams.append(key, normalizeQueryValue(key, value));
         }
       });
     }
@@ -1312,7 +1455,7 @@ class ApiClient {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
+          searchParams.append(key, normalizeQueryValue(key, value));
         }
       });
     }
@@ -1361,9 +1504,10 @@ class ApiClient {
   async applyVoucherForUser(
     data: ApplyVoucherRequest
   ): Promise<ApplyVoucherResponse> {
+    // Server tự tính giá trên giỏ hàng: chỉ gửi mã.
     return this.request<ApplyVoucherResponse>("/api/Orders/apply-voucher", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ code: data.code }),
     });
   }
 
@@ -1371,10 +1515,14 @@ class ApiClient {
     data: GuestApplyVoucherRequest
   ): Promise<GuestApplyVoucherResponse> {
     return this.request<GuestApplyVoucherResponse>(
-      "/api/guest/orders/apply-voucher",
+      "/api/guest-orders/apply-voucher",
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          email: data.email,
+          code: data.code,
+          items: sanitizeOrderItems(data.items),
+        }),
       }
     );
   }
@@ -1441,5 +1589,5 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
-export { ApiError };
+
 

@@ -16,7 +16,8 @@ import {
   Truck, 
   XCircle,
   ArrowRight,
-  Hash
+  Hash,
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api/client";
@@ -24,6 +25,8 @@ import { formatDateTime } from "@/lib/utils/formatDate";
 import type { OrderDto } from "@/lib/api/types";
 import { Badge } from "@/components/ui/badge";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { useCooldown } from "@/lib/hooks/useCooldown";
+import { isValidEmail } from "@/lib/utils/orderPayload";
 
 function getStatusConfig(orderStatus: string | null) {
   if (!orderStatus) return { label: "Không xác định", color: "gray", icon: Clock };
@@ -66,14 +69,24 @@ function getPaymentStatusConfig(paymentStatus: string | null) {
 export default function OrderLookupPage() {
   const router = useRouter();
   const [orderNumber, setOrderNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const cooldown = useCooldown();
   const [isLoading, setIsLoading] = useState(false);
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!orderNumber.trim()) {
+
+    const cleanEmail = email.trim();
+    const cleanOrderNumber = orderNumber.trim();
+
+    // Backend yêu cầu CẢ email và mã đơn (không còn tra cứu danh sách đơn theo email).
+    if (!isValidEmail(cleanEmail)) {
+      toast.error("Vui lòng nhập email đã dùng khi đặt hàng");
+      return;
+    }
+    if (!cleanOrderNumber) {
       toast.error("Vui lòng nhập mã đơn hàng");
       return;
     }
@@ -83,11 +96,13 @@ export default function OrderLookupPage() {
     setNotFound(false);
 
     try {
-      // Try to get order by order number using the status endpoint
-      const response = await apiClient.getGuestOrderByNumber(orderNumber.trim());
-      
-      if (response) {
-        setOrder(response);
+      const results = await apiClient.lookupGuestOrder({
+        email: cleanEmail,
+        orderNumber: cleanOrderNumber,
+      });
+      // Kết quả chỉ có tối đa 1 đơn.
+      if (results.length > 0) {
+        setOrder(results[0]);
       } else {
         setNotFound(true);
       }
@@ -95,7 +110,9 @@ export default function OrderLookupPage() {
       if (DEBUG_API) {
         console.error("Order lookup error:", error);
       }
-      if (error?.status === 404) {
+      if (cooldown.start(error)) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+      } else if (error?.status === 404) {
         setNotFound(true);
       } else {
         toast.error(error?.data?.message || "Không thể tra cứu đơn hàng. Vui lòng thử lại.");
@@ -104,7 +121,6 @@ export default function OrderLookupPage() {
       setIsLoading(false);
     }
   };
-
   const statusConfig = order ? getStatusConfig(order.orderStatus) : null;
   const paymentConfig = order ? getPaymentStatusConfig(order.paymentStatus) : null;
   const StatusIcon = statusConfig?.icon || Clock;
@@ -121,13 +137,30 @@ export default function OrderLookupPage() {
             Tra cứu đơn hàng
           </h1>
           <p className="text-sm sm:text-base text-gray-600 px-4">
-            Nhập mã đơn hàng để kiểm tra trạng thái đơn hàng của bạn
+            Nhập email đặt hàng và mã đơn hàng để kiểm tra trạng thái đơn hàng của bạn
           </p>
         </div>
 
         {/* Search Form */}
         <div className="max-w-md mx-auto mb-6 sm:mb-8 px-2 sm:px-0">
           <form onSubmit={handleLookup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-2 text-emerald-900 text-sm sm:text-base">
+                <Mail className="h-4 w-4" />
+                Email đặt hàng <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                maxLength={254}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="border-emerald-200 focus:border-emerald-500 h-11 sm:h-12 text-sm sm:text-base"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="orderNumber" className="flex items-center gap-2 text-emerald-900 text-sm sm:text-base">
                 <Hash className="h-4 w-4" />
@@ -145,7 +178,7 @@ export default function OrderLookupPage() {
             <Button
               type="submit"
               className="w-full bg-emerald-600 hover:bg-emerald-700 h-11 sm:h-12 text-sm sm:text-base"
-              disabled={isLoading}
+              disabled={isLoading || cooldown.isCoolingDown}
             >
               {isLoading ? (
                 <>
@@ -155,7 +188,7 @@ export default function OrderLookupPage() {
               ) : (
                 <>
                   <Search className="mr-2 h-4 w-4" />
-                  Tra cứu đơn hàng
+                  {cooldown.isCoolingDown ? `Thử lại sau ${cooldown.secondsLeft}s` : "Tra cứu đơn hàng"}
                 </>
               )}
             </Button>
@@ -175,7 +208,7 @@ export default function OrderLookupPage() {
                     Không tìm thấy đơn hàng
                   </h3>
                   <p className="text-amber-700 text-xs sm:text-sm px-2">
-                    Mã đơn hàng &quot;{orderNumber}&quot; không tồn tại. Vui lòng kiểm tra lại mã đơn hàng trong email xác nhận.
+                    Không tìm thấy đơn hàng khớp với email và mã đơn hàng đã nhập. Vui lòng kiểm tra lại thông tin trong email xác nhận.
                   </p>
                 </div>
               </CardContent>

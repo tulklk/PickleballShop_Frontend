@@ -35,6 +35,7 @@ export const noStoreSources = [
   "/login",
   "/register",
   "/forgot-password",
+  "/reset-password",
   "/verify-email",
   "/auth/:path*",
   "/api/:path*",

@@ -6,7 +6,7 @@ import { useQueries } from "@tanstack/react-query";
 import {
   useAdminProducts,
   useAdminDeleteProduct,
-  useProducts,
+  useAllProducts,
   useCategoryTree,
 } from "@/lib/api/hooks";
 import { apiClient } from "@/lib/api/client";
@@ -70,8 +70,8 @@ export default function AdminProductsPage() {
     staleTime: 0,
   });
 
-  const { data: publicProducts, isLoading: isLoadingPublic } = useProducts(
-    { Page: 1, PageSize: 1000 },
+  const { data: publicProducts, isLoading: isLoadingPublic } = useAllProducts(
+    undefined,
     { refetchOnMount: true, staleTime: 0 }
   );
   const { data: categoryTree } = useCategoryTree();

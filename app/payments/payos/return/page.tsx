@@ -7,11 +7,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, Home, Package, Mail } from "lucide-react";
 import { useUserMe } from "@/lib/api/hooks";
 import { apiClient } from "@/lib/api/client";
-import {
-  derivePayosHint,
-  isPaidPaymentStatus,
-  isValidOrderId,
-} from "@/lib/utils/paymentStatus";
+import { derivePayosHint, isValidOrderId } from "@/lib/utils/paymentStatus";
+import { confirmPayosWithRetry, parseOrderCode } from "@/lib/utils/payosConfirm";
 
 function PayOSReturnContent() {
   const searchParams = useSearchParams();
@@ -21,6 +18,7 @@ function PayOSReturnContent() {
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
+  const [failTitle, setFailTitle] = useState<string>("Thanh toán thất bại");
   const [isGuestOrder, setIsGuestOrder] = useState<boolean>(false);
 
   useEffect(() => {
@@ -33,7 +31,8 @@ function PayOSReturnContent() {
 
     const processPayment = async () => {
       const errorMessage = searchParams.get("message");
-      setOrderCode((searchParams.get("orderCode") || "").slice(0, 32));
+      const rawOrderCode = searchParams.get("orderCode");
+      setOrderCode((rawOrderCode || "").slice(0, 32));
 
       // orderId chỉ được tin khi đúng định dạng UUID (tránh chèn path lạ vào router.push).
       const orderIdParam =
@@ -51,52 +50,62 @@ function PayOSReturnContent() {
       const isGuest = !!guestOrderId && guestOrderId === finalOrderId;
       if (isGuest) setIsGuestOrder(true);
 
-      // Query string chỉ là "gợi ý" (có thể bị giả mạo) => xem lib/utils/paymentStatus.ts
+      // Query string chỉ là "gợi ý" (có thể bị giả mạo). Trạng thái thật do POST /payments/payos/confirm quyết định.
       const hint = derivePayosHint(searchParams);
 
-      if (hint === "cancelled") {
-        setStatus("cancelled");
-        if (finalOrderId) sessionStorage.removeItem("payos_orderId");
-        return;
-      }
-
-      if (hint === "failed") {
+      const code = parseOrderCode(rawOrderCode);
+      if (code === null) {
+        setFailTitle("Thiếu thông tin giao dịch");
+        setMessage("Liên kết thanh toán không hợp lệ (thiếu mã giao dịch).");
         setStatus("failed");
-        setMessage(
-          (errorMessage || "").slice(0, 200) ||
-            "Giao dịch không thành công. Vui lòng thử lại hoặc liên hệ hỗ trợ."
-        );
-        if (finalOrderId) sessionStorage.removeItem("payos_orderId");
         return;
       }
 
-      // hint === "success": CHỈ hiển thị "thành công" sau khi backend xác nhận đơn đã thanh toán.
-      if (!finalOrderId) {
-        setStatus("pending");
-        return;
-      }
+      const outcome = await confirmPayosWithRetry({
+        confirm: (data) => apiClient.confirmPayosPayment(data),
+        orderCode: code,
+        orderId: finalOrderId ?? undefined,
+        hint,
+        isCancelled: () => cancelled,
+      });
+      if (cancelled) return;
 
-      // Backend cập nhật trạng thái qua webhook nên có thể trễ vài giây => thử lại vài lần.
-      for (let attempt = 0; attempt < 6 && !cancelled; attempt++) {
-        try {
-          const order = isGuest
-            ? await apiClient.getGuestOrder(finalOrderId)
-            : await apiClient.getOrderById(finalOrderId);
-          if (isPaidPaymentStatus(order?.paymentStatus)) {
-            if (cancelled) return;
-            setStatus("success");
-            sessionStorage.removeItem("payos_orderId");
-            sessionStorage.removeItem("guest_orderId");
-            return;
-          }
-        } catch {
-          // Không đọc được đơn (chưa đăng nhập/hết phiên...) => dừng và báo "đang chờ xác nhận".
+      switch (outcome.kind) {
+        case "success":
+          setStatus("success");
+          sessionStorage.removeItem("payos_orderId");
+          sessionStorage.removeItem("guest_orderId");
           break;
-        }
-        await new Promise((r) => setTimeout(r, 2000));
+        case "cancelled":
+          setStatus("cancelled");
+          sessionStorage.removeItem("payos_orderId");
+          break;
+        case "notPaid":
+          setFailTitle("Thanh toán chưa thành công");
+          setMessage(
+            (outcome.message || errorMessage || "").slice(0, 200) ||
+              "Hệ thống chưa ghi nhận thanh toán cho đơn hàng này. Nếu bạn đã chuyển tiền, vui lòng liên hệ hỗ trợ."
+          );
+          setStatus("failed");
+          break;
+        case "forbidden":
+          setFailTitle("Không thể xem đơn hàng này");
+          setMessage("Đơn hàng này không thuộc về tài khoản của bạn. Vui lòng đăng nhập đúng tài khoản đã đặt hàng.");
+          setStatus("failed");
+          break;
+        case "notFound":
+          setFailTitle("Không tìm thấy giao dịch");
+          setMessage("Không tìm thấy đơn hàng ứng với giao dịch này. Vui lòng kiểm tra lại hoặc liên hệ hỗ trợ.");
+          setStatus("failed");
+          break;
+        case "rateLimited":
+          setMessage("Bạn thao tác quá nhanh, hệ thống chưa thể xác nhận thanh toán. Vui lòng tải lại trang sau ít phút.");
+          setStatus("pending");
+          break;
+        default:
+          setMessage("Chưa thể xác nhận thanh toán do lỗi hệ thống. Vui lòng kiểm tra lại đơn hàng sau ít phút.");
+          setStatus("pending");
       }
-
-      if (!cancelled) setStatus("pending");
     };
 
     processPayment();
@@ -104,7 +113,6 @@ function PayOSReturnContent() {
       cancelled = true;
     };
   }, [searchParams]);
-
 
   const renderContent = () => {
     switch (status) {
@@ -125,8 +133,8 @@ function PayOSReturnContent() {
             </div>
             <h2 className="text-2xl font-bold mb-2 text-amber-900">Đang chờ xác nhận thanh toán</h2>
             <p className="text-muted-foreground mb-6">
-              Hệ thống chưa nhận được xác nhận cuối cùng từ cổng thanh toán. Trạng thái đơn hàng sẽ tự cập nhật,
-              bạn có thể kiểm tra lại trong mục đơn hàng sau ít phút.
+              {message ||
+                "Hệ thống chưa nhận được xác nhận cuối cùng từ cổng thanh toán. Trạng thái đơn hàng sẽ tự cập nhật, bạn có thể kiểm tra lại trong mục đơn hàng sau ít phút."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
               {!isGuestOrder && (
@@ -304,7 +312,7 @@ function PayOSReturnContent() {
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-100 flex items-center justify-center">
               <XCircle className="h-12 w-12 text-red-600" />
             </div>
-            <h2 className="text-3xl font-bold mb-2 text-red-900">Thanh toán thất bại</h2>
+            <h2 className="text-3xl font-bold mb-2 text-red-900">{failTitle}</h2>
             <p className="text-muted-foreground mb-6">
               {message || "Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại hoặc liên hệ hỗ trợ."}
             </p>

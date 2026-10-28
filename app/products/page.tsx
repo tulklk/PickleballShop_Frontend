@@ -6,7 +6,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ProductGrid } from "@/components/shared/ProductGrid";
 import { ProductGridSkeleton } from "@/components/shared/ProductSkeleton";
-import { useProducts, useCategories, useCategoryTree } from "@/lib/api/hooks";
+import { useProducts, useAllProducts, useCategories, useCategoryTree } from "@/lib/api/hooks";
 import { CategoryFilterSidebar } from "@/components/products/CategoryFilterSidebar";
 import { ProductSorting } from "@/components/products/ProductSorting";
 import { Button } from "@/components/ui/button";
@@ -85,9 +85,7 @@ function ProductsPageContent() {
   });
 
   // Fetch all products for brand extraction (with larger page size)
-  const { data: allProductsData } = useProducts({
-    Page: 1,
-    PageSize: 1000,
+  const { data: allProductsData } = useAllProducts({
     CategoryId: categoryId,
     SearchTerm: searchTerm || undefined,
   });

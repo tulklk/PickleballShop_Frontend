@@ -2,6 +2,7 @@
 
 import type { AddCartItemRequest } from "@/lib/api/types";
 import { DEBUG_API } from "@/lib/utils/debugApi";
+import { MAX_ITEM_QUANTITY, MAX_ORDER_LINES } from "@/lib/utils/orderPayload";
 
 const GUEST_CART_KEY = "guestCart";
 
@@ -15,8 +16,9 @@ export interface GuestCartItem extends AddCartItemRequest {
 
 export type GuestCartItemInput = Omit<GuestCartItem, "addedAt">;
 
-const MAX_QTY = 999;
-const MAX_ITEMS = 100;
+// Khớp giới hạn backend: quantity 1-100, tối đa 50 dòng sản phẩm.
+const MAX_QTY = MAX_ITEM_QUANTITY;
+const MAX_ITEMS = MAX_ORDER_LINES;
 
 const str = (v: unknown, max: number): string | undefined =>
   typeof v === "string" ? v.slice(0, max) : undefined;
@@ -62,8 +64,9 @@ export function getGuestCart(): GuestCartItem[] {
   }
 }
 
-export function addToGuestCart(item: GuestCartItemInput): void {
-  if (typeof window === "undefined") return;
+/** Trả về false nếu không thể thêm (vượt giới hạn số dòng hoặc lỗi lưu). */
+export function addToGuestCart(item: GuestCartItemInput): boolean {
+  if (typeof window === "undefined") return false;
   try {
     const cart = getGuestCart();
     const existingItemIndex = cart.findIndex(
@@ -79,18 +82,22 @@ export function addToGuestCart(item: GuestCartItemInput): void {
         MAX_QTY
       );
     } else {
+      if (cart.length >= MAX_ITEMS) return false;
       // Add new item
       cart.push({
         ...item,
+        quantity: Math.min(Math.max(1, Math.trunc(item.quantity) || 1), MAX_QTY),
         addedAt: Date.now(),
       });
     }
 
     localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cart));
+    return true;
   } catch (error) {
     if (DEBUG_API) {
       console.warn("Failed to save guest cart:", error);
     }
+    return false;
   }
 }
 

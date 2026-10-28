@@ -14,11 +14,16 @@ import { z } from "zod";
 import { formatDate } from "@/lib/utils/formatDate";
 import { DEBUG_API } from "@/lib/utils/debugApi";
 import { uploadImage } from "@/lib/api/uploadImage";
+import { safeHttpUrl } from "@/lib/security/safeUrl";
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(1, "Họ tên không được để trống"),
   phoneNumber: z.string().optional().or(z.literal("")),
-  avatarUrl: z.string().url("URL không hợp lệ").optional().or(z.literal("")),
+  avatarUrl: z
+    .string()
+    .max(2048, "URL tối đa 2048 ký tự")
+    .refine((v) => v === "" || safeHttpUrl(v) !== null, "URL ảnh phải bắt đầu bằng http:// hoặc https://")
+    .optional(),
 });
 
 type UpdateProfileFormData = z.infer<typeof updateProfileSchema>;

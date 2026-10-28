@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useCart, useUpdateCartItem, useDeleteCartItem } from "@/lib/api/hooks";
 import { useAuth } from "@/lib/auth/useAuth";
 import { getGuestCart, GuestCartItem } from "@/lib/utils/guestCart";
+import { MAX_ITEM_QUANTITY } from "@/lib/utils/orderPayload";
+import type { CartItemDto } from "@/lib/api/types";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { formatVariantInfoWithMm } from "@/lib/utils/variantDisplay";
 import { useState, useEffect } from "react";
@@ -38,6 +40,10 @@ export function CartPreview({ onClose }: CartPreviewProps) {
   const handleUpdateQuantity = async (cartItemId: string, newQuantity: number, currentQuantity: number) => {
     if (newQuantity < 1) return;
     if (newQuantity === currentQuantity) return;
+    if (newQuantity > MAX_ITEM_QUANTITY) {
+      toast.error(`Số lượng tối đa cho mỗi sản phẩm là ${MAX_ITEM_QUANTITY}`);
+      return;
+    }
     
     if (!isAuthenticated) {
       // Update guest cart
@@ -94,8 +100,9 @@ export function CartPreview({ onClose }: CartPreviewProps) {
     ? cart?.items || []
     : guestCartItems;
 
+  // Người dùng đăng nhập: chỉ hiển thị số do server trả về (subTotal). Giỏ guest chỉ là giá tham khảo.
   const totalAmount = isAuthenticated
-    ? (cart?.subTotal || cart?.items?.reduce((sum, item) => sum + (item.lineTotal || item.unitPrice * item.quantity), 0) || 0)
+    ? (cart?.subTotal ?? 0)
     : guestCartItems.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0);
 
   // Helper to get valid image URL
@@ -148,12 +155,14 @@ export function CartPreview({ onClose }: CartPreviewProps) {
           const productName = isAuthenticated
             ? (item as any).productName
             : (item as GuestCartItem).productName;
-          // Try multiple price fields - backend may return unitPrice, price, or lineTotal
+          // Giá do server tính (unitPrice/lineTotal). Không tự suy ra giá ở client cho user đăng nhập.
           const unitPrice = isAuthenticated
-            ? ((item as any).unitPrice || (item as any).price || ((item as any).lineTotal / item.quantity) || 0)
+            ? ((item as CartItemDto).unitPrice ?? 0)
             : ((item as GuestCartItem).unitPrice || 0);
           const quantity = item.quantity;
-          const lineTotal = (item as any).lineTotal || unitPrice * quantity;
+          const lineTotal = isAuthenticated
+            ? ((item as CartItemDto).lineTotal ?? 0)
+            : unitPrice * quantity;
 
           const cartItemId = isAuthenticated ? (item as any).id : `guest-${index}`;
           const variantInfo = isAuthenticated
@@ -241,7 +250,8 @@ export function CartPreview({ onClose }: CartPreviewProps) {
                         e.stopPropagation();
                         handleUpdateQuantity(cartItemId, quantity + 1, quantity);
                       }}
-                      className="p-1 hover:bg-gray-100 transition-colors"
+                      className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-40"
+                      disabled={quantity >= MAX_ITEM_QUANTITY}
                       aria-label="Tăng số lượng"
                     >
                       <Plus className="h-3 w-3 text-gray-600" />

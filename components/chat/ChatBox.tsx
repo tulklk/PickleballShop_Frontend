@@ -11,6 +11,8 @@ import logo from "@/app/img/logopickleball.png";
 import { cn } from "@/lib/utils";
 import { DEBUG_API } from "@/lib/utils/debugApi";
 import { splitChatBold } from "@/lib/utils/chatFormat";
+import { CHAT_MESSAGE_MAX, clampChatMessage, sanitizeChatHistory } from "@/lib/utils/chatLimits";
+import { ApiError } from "@/lib/api/client";
 import { useChatMessage } from "@/lib/api/hooks";
 import type { ChatMessage as ChatMessageType, ChatMessageResponse } from "@/lib/api/types";
 
@@ -87,7 +89,7 @@ export function ChatBox() {
   }, [messages, isOpen]);
 
   const handleSend = async (preset?: string) => {
-    const content = (preset ?? input).trim();
+    const content = clampChatMessage((preset ?? input).trim());
     if (!content || chatMutation.isPending) return;
 
     const userMessage: Message = {
@@ -106,7 +108,7 @@ export function ChatBox() {
 
     try {
       // Build conversation history for context
-      const conversationHistory: ChatMessageType[] = [
+      const conversationHistory: ChatMessageType[] = sanitizeChatHistory([
         ...messages.map((msg) => ({
           role: msg.role as "user" | "assistant",
           content: msg.content,
@@ -115,7 +117,7 @@ export function ChatBox() {
           role: "user",
           content,
         },
-      ];
+      ]);
 
       const response: ChatMessageResponse = await chatMutation.mutateAsync({
         message: content,
@@ -138,7 +140,10 @@ export function ChatBox() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.",
+        content:
+          error instanceof ApiError && error.status === 429
+            ? error.statusText
+            : "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -382,6 +387,7 @@ export function ChatBox() {
                       setShowSuggestions(false);
                     }
                   }}
+                  maxLength={CHAT_MESSAGE_MAX}
                   onKeyPress={handleKeyPress}
                   placeholder="Nhập câu hỏi của bạn..."
                   disabled={chatMutation.isPending}

@@ -172,6 +172,13 @@ Mới: `middleware.ts`, `security-headers.mjs`, `vitest.config.mts`, `lib/securi
 Sửa: `app/api/upload/route.ts`, `app/layout.tsx`, `next.config.mjs`, `package.json`/lock, `.env.example`, `.gitignore`, trang login/register/security/profile/checkout/success/payments (payos, momo, vnpay), news/products/home, `components/{chat,news,admin,layout}/*`, `lib/api/{client,hooks}.ts`, `lib/auth/useAuth.ts`, `lib/utils/{debugApi,guestCart}.ts`, `src/services/supportChatService.ts`, admin news/products forms.
 Xóa: `app/api/chat/route.ts`.
 
+### 16b. Cập nhật khớp backend hardening (đợt 2)
+Mới: `app/(auth)/reset-password/page.tsx`, `components/auth/SessionExpiryListener.tsx`, `lib/hooks/useCooldown.ts`, `lib/validation/password.ts`, `lib/utils/{orderPayload,payosConfirm,chatLimits,pagination}.ts`, `tests/security/{hardening,apiClient}.test.ts`.
+Sửa: `lib/api/{client,hooks,types}.ts` (429 + Retry-After, refresh xoay vòng single-flight, `/api/guest-orders/*`, `/api/payments/payos/confirm`, reset-password, voucher chỉ `{code}` / `{email,code,items}`, chặn PageSize ≤ 100, `getAllProducts`), `lib/utils/{guestCart,paymentStatus}.ts`, `app/(auth)/{login,register,forgot-password,verify-email}`, `app/auth/verify-email`, `app/account/{security,profile,wishlist}`, `app/{order-lookup,cart,checkout,checkout/success,payments/payos/return,products,products/[id],providers,sitemap}`, `app/admin/products`, `components/{chat/ChatBox,layout/CartPreview}`, `next.config.mjs` (`removeConsole` ở production, tắt source map), `security-headers.mjs` (`/reset-password` no-store), `tests/security/misc.test.ts`.
+Không đổi: CSP/`middleware.ts` (connect-src đã có backend + wss); không thêm `vercel.json` theo quyết định của chủ dự án.
+
+Kết quả: `tsc` exit 0 · Vitest 97/97 · `npm run build` OK (có `/reset-password`) · `npm audit` 0 lỗ hổng · header runtime của `/reset-password` và `/order-lookup` có đủ CSP nonce + no-store. `npm run lint` không chạy được tự động (ESLint chưa được cấu hình, `next lint` hỏi tương tác).
+
 ## 17. Required Manual Actions
 1. **Quét lịch sử git** (agent không thực hiện được): `git log --all -p -S"CLOUDINARY_API_SECRET"`, `git log --all --name-only -- "*.env*"`, hoặc dùng `gitleaks detect` / `trufflehog git file://.`. Bằng chứng đã có: `.env.local` **không** từng được commit (kiểm tra lịch sử đường dẫn trước khi sửa) và hiện chỉ `.env.example` được track.
 2. **Rotate** `CLOUDINARY_API_SECRET` (và `OPENAI_API_KEY` nếu từng đặt trên Vercel) nếu có khả năng đã lộ, vì `/api/upload` từng công khai; cập nhật trên Vercel Environment Variables.
@@ -181,7 +188,9 @@ Xóa: `app/api/chat/route.ts`.
 6. Sau deploy, kiểm tra CSP không chặn tài nguyên hợp lệ (Google login, ảnh, SignalR, PayOS redirect) trên staging; nếu có, thêm host cụ thể vào `lib/security/csp.ts`.
 
 ## 18. Remaining Risks
-- Token ở localStorage (SEC-007); mọi XSS còn sót = chiếm tài khoản.
+- Token ở localStorage (SEC-007); mọi XSS còn sót = chiếm tài khoản. Chuyển access token sang in-memory chưa làm vì refresh token vẫn phải lưu để phiên sống qua F5 và admin/SignalR đọc token trực tiếp; giải pháp triệt để là refresh token trong cookie HttpOnly do backend cấp.
+- Đường dẫn chat vẫn là `/api/Chat/message` (spec chỉ nói "POST /api/chat"); cần xác nhận với backend.
+- Trường địa chỉ guest vẫn tên `shippingAddress.phoneNumber`; cần xác nhận với backend nếu họ đổi thành `phone`.
 - Toàn bộ authZ/pricing/payment integrity phụ thuộc backend chưa được kiểm thử ở đây.
 - Rate limit không bền vững trên serverless (SEC-010).
 - `img-src https:` & `style-src 'unsafe-inline'` là đánh đổi có chủ ý.

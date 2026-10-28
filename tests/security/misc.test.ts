@@ -79,7 +79,7 @@ describe("payment return helpers", () => {
     expect(derivePayosHint(p("status=PAID&code=00"))).toBe("success");
     expect(derivePayosHint(p("cancel=true"))).toBe("cancelled");
     expect(derivePayosHint(p("code=99"))).toBe("failed");
-    expect(derivePayosHint(p(""))).toBe("failed");
+    expect(derivePayosHint(p(""))).toBe("unknown");
     expect(isPaidPaymentStatus("Completed")).toBe(true);
     expect(isPaidPaymentStatus(3)).toBe(true);
     expect(isPaidPaymentStatus("Pending")).toBe(false);
@@ -99,7 +99,7 @@ describe("sanitizeGuestCart (localStorage tampering)", () => {
       "x",
     ]);
     expect(out.map((i) => i.productId)).toEqual(["abc-123", "ok-1"]);
-    expect(out[1].quantity).toBe(999);
+    expect(out[1].quantity).toBe(100);
     expect(out[1].unitPrice).toBeUndefined();
   });
   it("không phải mảng => rỗng", () => {

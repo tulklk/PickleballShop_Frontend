@@ -23,6 +23,8 @@ import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/useAuth";
 import { PaymentMethod } from "@/lib/api/types";
+import type { CreateGuestOrderRequest } from "@/lib/api/types";
+import { validateGuestOrder } from "@/lib/utils/orderPayload";
 import { getDefaultUserAddress } from "@/lib/utils/userAddresses";
 import type { SavedAddress } from "@/lib/utils/userAddresses";
 import { DEBUG_API } from "@/lib/utils/debugApi";
@@ -473,7 +475,7 @@ function CheckoutContent() {
           return;
         }
 
-        orderResponse = await createGuestOrder.mutateAsync({
+        const guestOrderRequest: CreateGuestOrderRequest = {
           email: data.email!,
           fullName: data.fullName,
           shippingAddress: {
@@ -487,7 +489,17 @@ function CheckoutContent() {
           paymentMethod: Number(data.paymentMethod), // 0=COD, 1=MoMo, 2=VNPay, 3=PayOS
           items: guestCartItems,
           voucherCode: appliedVoucherCode || undefined,
-        });
+        };
+
+        // Validate sớm ở client (backend vẫn là nơi quyết định): quantity 1-100, tối đa 50 dòng, email, phone.
+        const guestOrderError = validateGuestOrder(guestOrderRequest);
+        if (guestOrderError) {
+          toast.error(guestOrderError);
+          return;
+        }
+
+        // Payload chỉ gồm {productId, productVariantId?, quantity} — KHÔNG gửi giá/tổng tiền.
+        orderResponse = await createGuestOrder.mutateAsync(guestOrderRequest);
 
         if (DEBUG_API) {
           console.log("Create guest order response:", orderResponse);
@@ -505,11 +517,14 @@ function CheckoutContent() {
           return;
         }
 
+        // Lưu email guest cho các bước sau (thanh toán/tra cứu) — ở sessionStorage thay vì đưa vào URL.
+        sessionStorage.setItem("guest_email", data.email!);
+
         // If payment method is COD, show success message and redirect to guest success page
         if (data.paymentMethod === PaymentMethod.COD) {
           toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
           // Redirect to guest order success page
-          router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
+          router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}`);
           return;
         }
 
@@ -523,7 +538,7 @@ function CheckoutContent() {
         }
 
         // If payment method is not COD and no payment data, create guest payment
-        const paymentResponse = await createGuestPayment.mutateAsync(orderId);
+        const paymentResponse = await createGuestPayment.mutateAsync({ orderId, email: data.email! });
         if (DEBUG_API) {
           console.log("Create guest payment response:", paymentResponse);
         }
@@ -531,7 +546,7 @@ function CheckoutContent() {
         // Check if it's COD from response
         if (paymentResponse.isCod) {
           toast.success("Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.");
-          router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
+          router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}`);
           return;
         }
         
@@ -552,7 +567,7 @@ function CheckoutContent() {
         }
 
         toast.success("Đặt hàng thành công!");
-        router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}&email=${encodeURIComponent(data.email!)}`);
+        router.push(`/checkout/success?orderId=${orderId}&orderNumber=${orderData?.orderNumber || ""}`);
       }
     } catch (error: any) {
       if (DEBUG_API) {
@@ -1168,6 +1183,11 @@ function CheckoutContent() {
                       {formatCurrency(finalTotal ?? cart.subTotal)}
                     </span>
                   </div>
+                  {!isAuthenticated && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Giá hiển thị chỉ mang tính tham khảo. Số tiền phải trả do hệ thống xác nhận khi đặt hàng.
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>

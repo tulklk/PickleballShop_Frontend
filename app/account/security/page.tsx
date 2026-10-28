@@ -10,17 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Shield, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useChangePassword } from "@/lib/api/hooks";
+import { apiClient } from "@/lib/api/client";
+import { passwordSchema } from "@/lib/validation/password";
 
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(6, "Mật khẩu hiện tại tối thiểu 6 ký tự"),
-    newPassword: z
-      .string()
-      .min(8, "Mật khẩu mới phải từ 8 ký tự trở lên")
-      .max(128, "Mật khẩu tối đa 128 ký tự")
-      .regex(/[A-Za-z]/, "Mật khẩu mới phải có ít nhất 1 chữ cái")
-      .regex(/\d/, "Mật khẩu mới phải có ít nhất 1 chữ số"),
-    confirmNewPassword: z.string().min(8, "Vui lòng nhập lại mật khẩu mới"),
+    newPassword: passwordSchema,
+    confirmNewPassword: z.string().min(1, "Vui lòng nhập lại mật khẩu mới"),
   })
   .refine((data) => data.newPassword === data.confirmNewPassword, {
     message: "Mật khẩu nhập lại không khớp",
@@ -44,8 +41,10 @@ export default function SecurityPage() {
   const onSubmit = async (values: ChangePasswordForm) => {
     try {
       await changePassword.mutateAsync(values);
-      toast.success("Đổi mật khẩu thành công");
       reset();
+      // Backend thu hồi mọi refresh token sau khi đổi mật khẩu => đăng xuất phía client và yêu cầu đăng nhập lại.
+      toast.success("Đổi mật khẩu thành công. Vui lòng đăng nhập lại.");
+      apiClient.clearSession();
     } catch (error: any) {
       const message =
         error?.data?.message ||

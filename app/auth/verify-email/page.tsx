@@ -66,8 +66,11 @@ function VerifyEmailContent() {
       }, 2000);
     } catch (error: any) {
       setIsError(true);
+      // Thông báo chung: không tiết lộ email có tồn tại / đã xác thực hay chưa.
       toast.error(
-        error?.data?.message || "Xác thực email thất bại. Vui lòng thử lại."
+        error?.status === 429
+          ? error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau."
+          : "Link xác thực không hợp lệ hoặc đã hết hạn. Bạn có thể yêu cầu gửi lại email xác thực."
       );
     } finally {
       setIsVerifying(false);
@@ -93,12 +96,14 @@ function VerifyEmailContent() {
 
     try {
       await resendMutation.mutateAsync({ email });
-      toast.success("Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư.");
     } catch (error: any) {
-      toast.error(
-        error?.data?.message || "Gửi lại email xác thực thất bại. Vui lòng thử lại."
-      );
+      if (error?.status === 429) {
+        toast.error(error?.data?.message || "Bạn thao tác quá nhanh, vui lòng thử lại sau.");
+        return;
+      }
+      // Không tiết lộ trạng thái tài khoản: luôn báo cùng một thông điệp.
     }
+    toast.success("Nếu email hợp lệ, chúng tôi đã gửi email xác thực. Vui lòng kiểm tra hộp thư.");
   };
 
   return (

@@ -16,6 +16,7 @@ import type {
   VerifyEmailRequest,
   ResendVerificationEmailRequest,
   ForgotPasswordRequest,
+  ResetPasswordRequest,
   UpdateOrderStatusRequest,
   OrderStatus,
   PaymentStatus,
@@ -123,24 +124,10 @@ export function useLogin() {
 }
 
 export function useRegister() {
-  const queryClient = useQueryClient();
   return useMutation({
+    // Backend luôn trả cùng một thông báo thành công (dù email đã tồn tại hay chưa) và KHÔNG cấp token:
+    // không tự đăng nhập, người dùng phải xác thực email rồi đăng nhập.
     mutationFn: (data: RegisterRequest) => apiClient.register(data),
-    onSuccess: async (data) => {
-      // Save tokens to localStorage
-      if (data.accessToken) {
-        apiClient.setAccessToken(data.accessToken);
-      }
-      if (data.refreshToken) {
-        apiClient.setRefreshToken(data.refreshToken);
-      }
-      // Save user info to React Query cache
-      queryClient.setQueryData(["user"], data.user);
-      // Sync guest cart to server after register
-      await syncGuestCart();
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
-    },
   });
 }
 
@@ -274,6 +261,32 @@ export function useCategoryBySlug(slug: string) {
 }
 
 // Products hooks
+/** Lấy toàn bộ sản phẩm (duyệt từng trang, mỗi trang tối đa 100 theo giới hạn backend). */
+export function useAllProducts(
+  params?: {
+    CategoryId?: string;
+    MinPrice?: number;
+    MaxPrice?: number;
+    SortBy?: string;
+    ProductType?: string;
+    SkillLevel?: string;
+    Brand?: string;
+    SearchTerm?: string;
+  },
+  queryOptions?: { refetchOnMount?: boolean; staleTime?: number }
+) {
+  return useQuery({
+    queryKey: ["products", "all", params],
+    queryFn: () => apiClient.getAllProducts(params),
+    staleTime: queryOptions?.staleTime ?? 15 * 60 * 1000,
+    gcTime: 45 * 60 * 1000,
+    retry: 1,
+    retryOnMount: false,
+    placeholderData: (previousData) => previousData,
+    refetchOnMount: queryOptions?.refetchOnMount,
+  });
+}
+
 export function useProducts(
   params?: {
     Page?: number;
@@ -677,11 +690,11 @@ export function useCreateGuestOrder() {
   });
 }
 
-export function useGuestOrder(id: string) {
+export function useGuestOrder(id: string, email: string) {
   return useQuery({
-    queryKey: ["guestOrder", id],
-    queryFn: () => apiClient.getGuestOrder(id),
-    enabled: !!id,
+    queryKey: ["guestOrder", id, email],
+    queryFn: () => apiClient.getGuestOrder(id, email),
+    enabled: !!id && !!email,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -689,7 +702,21 @@ export function useGuestOrder(id: string) {
 
 export function useCreateGuestPayment() {
   return useMutation({
-    mutationFn: (orderId: string) => apiClient.createGuestPayment(orderId),
+    mutationFn: ({ orderId, email }: { orderId: string; email: string }) =>
+      apiClient.createGuestPayment(orderId, email),
+  });
+}
+
+export function useConfirmPayosPayment() {
+  return useMutation({
+    mutationFn: (data: { orderCode: number; orderId?: string }) =>
+      apiClient.confirmPayosPayment(data),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (data: ResetPasswordRequest) => apiClient.resetPassword(data),
   });
 }
 
@@ -1043,87 +1070,50 @@ export function useSession() {
   return useQuery({
     queryKey: ["session"],
     queryFn: async () => {
-      // Check if we have tokens in localStorage
+      // Access token hết hạn/thu hồi: apiClient tự refresh 1 lần (refresh token xoay vòng, lưu token MỚI)
+      // rồi gửi lại request. Chỉ khi refresh thất bại mới rơi vào nhánh 401 bên dưới.
       const accessToken = apiClient.getAccessToken();
       const refreshToken = apiClient.getRefreshToken();
+      const anonymous = { user: null, isAuthenticated: false } as const;
 
-      // If we have accessToken, try to get current user
+      const loadUser = async () => {
+        const user = await apiClient.getCurrentUser();
+        queryClient.setQueryData(["user"], user);
+        return { user, isAuthenticated: true } as const;
+      };
+
       if (accessToken) {
         try {
-          const user = await apiClient.getCurrentUser();
-          queryClient.setQueryData(["user"], user);
-          return { user, isAuthenticated: true };
+          return await loadUser();
         } catch (error: any) {
-          // If accessToken is invalid/expired, try to refresh
-          if (error?.status === 401 && refreshToken) {
-            try {
-              const refreshResponse = await apiClient.refreshToken({
-                refreshToken,
-              });
-              // Save new tokens
-              if (refreshResponse.accessToken) {
-                apiClient.setAccessToken(refreshResponse.accessToken);
-              }
-              if (refreshResponse.refreshToken) {
-                apiClient.setRefreshToken(refreshResponse.refreshToken);
-              }
-              if (refreshResponse.user) {
-                queryClient.setQueryData(["user"], refreshResponse.user);
-                return { user: refreshResponse.user, isAuthenticated: true };
-              }
-            } catch (refreshError) {
-              // Refresh failed, clear session
-              apiClient.setAccessToken(null);
-              apiClient.setRefreshToken(null);
-              queryClient.setQueryData(["user"], null);
-              return { user: null, isAuthenticated: false };
-            }
-          }
-          // If error is not 401, don't clear session - might be network issue
-          // Only clear if it's definitely an auth error
           if (error?.status === 401) {
-            apiClient.setAccessToken(null);
-            apiClient.setRefreshToken(null);
+            // Phiên không còn hợp lệ. Nếu vẫn còn refresh token (lỗi tạm thời) thì giữ lại để thử lần sau.
+            if (!apiClient.getRefreshToken()) apiClient.setAccessToken(null);
             queryClient.setQueryData(["user"], null);
-            return { user: null, isAuthenticated: false };
+            return anonymous;
           }
-          // For other errors, return existing user data if available
+          // Lỗi mạng/5xx: không xóa phiên, dùng dữ liệu đã có nếu có.
           const existingUser = queryClient.getQueryData<UserDto>(["user"]);
-          if (existingUser) {
-            return { user: existingUser, isAuthenticated: true };
-          }
-          return { user: null, isAuthenticated: false };
+          if (existingUser) return { user: existingUser, isAuthenticated: true } as const;
+          return anonymous;
         }
       }
 
-      // If we have refreshToken but no accessToken, try to refresh
+      // Có refresh token nhưng chưa có access token (vd. vừa mở lại tab): lấy access token mới.
       if (refreshToken && !accessToken) {
-        try {
-          const refreshResponse = await apiClient.refreshToken({
-            refreshToken,
-          });
-          // Save new tokens
-          if (refreshResponse.accessToken) {
-            apiClient.setAccessToken(refreshResponse.accessToken);
+        if (await apiClient.refreshSession()) {
+          try {
+            return await loadUser();
+          } catch {
+            return anonymous;
           }
-          if (refreshResponse.refreshToken) {
-            apiClient.setRefreshToken(refreshResponse.refreshToken);
-          }
-          if (refreshResponse.user) {
-            queryClient.setQueryData(["user"], refreshResponse.user);
-            return { user: refreshResponse.user, isAuthenticated: true };
-          }
-        } catch (refreshError) {
-          // Refresh failed, clear session
-          apiClient.setRefreshToken(null);
-          queryClient.setQueryData(["user"], null);
-          return { user: null, isAuthenticated: false };
         }
+        queryClient.setQueryData(["user"], null);
+        return anonymous;
       }
 
-      // No tokens, not authenticated
       queryClient.setQueryData(["user"], null);
-      return { user: null, isAuthenticated: false };
+      return anonymous;
     },
     enabled: typeof window !== "undefined", // Only run on client
     retry: false, // Don't retry on failure

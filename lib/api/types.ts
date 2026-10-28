@@ -119,6 +119,22 @@ export interface ForgotPasswordRequest {
   email: string;
 }
 
+export interface ResetPasswordRequest {
+  email: string;
+  token: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+/** Kết quả POST /api/payments/payos/confirm — nguồn sự thật duy nhất về trạng thái thanh toán PayOS. */
+export interface PayosConfirmResponse {
+  success: boolean;
+  message?: string | null;
+  orderId?: string | null;
+  orderNumber?: string | null;
+  paymentStatus?: string | null;
+}
+
 export interface AuthResponse {
   accessToken: string | null;
   refreshToken: string | null;
@@ -613,8 +629,6 @@ export interface ProductReview {
   productId: string;
   userId?: string | null;
   fullName: string;
-  phoneNumber: string;
-  email?: string | null;
   rating: number;
   comment: string | null;
   reviewImageUrl?: string | null;

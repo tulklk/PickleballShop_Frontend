@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider } from "next-themes";
 import { useMemo, useState } from "react";
 import { AdminNotificationsProvider } from "@/components/admin/AdminNotificationsProvider";
+import { SessionExpiryListener } from "@/components/auth/SessionExpiryListener";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -52,6 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Render without GoogleOAuthProvider if clientId is missing
     return (
       <QueryClientProvider client={queryClient}>
+        <SessionExpiryListener />
         <AdminNotificationsProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
             {children}
@@ -63,6 +65,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+        <SessionExpiryListener />
       <GoogleOAuthProvider clientId={googleClientId}>
         <AdminNotificationsProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
